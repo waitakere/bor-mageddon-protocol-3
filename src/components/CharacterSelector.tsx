@@ -1,166 +1,126 @@
-import React, { useEffect, useRef, useState } from 'react';
-import * as THREE from 'three';
+import React, { useState } from 'react';
 
 interface CharacterSelectorProps {
-  onSelect: (characterName: string) => void;
+    onSelect: (characterId: string) => void;
 }
 
-const CHARACTER_DB: Record<string, { name: string; desc: string; spd: number; pwr: number }> = {
-  marko: { name: "MARKO", desc: "Former miner turned union enforcer. Armed with an M70 assault rifle.", spd: 65, pwr: 80 },
-  darko: { name: "DARKO", desc: "Street-smart smuggler. Quick on his feet, carries forbidden tapes.", spd: 85, pwr: 50 },
-  maja: { name: "MAJA", desc: "Underground resistance leader. Specialises in devastating close-quarters combat.", spd: 75, pwr: 90 }
-};
+// 1993 Yugoslav Roster Data
+const ROSTER = [
+    {
+        id: 'marko',
+        name: 'MARKO',
+        occupation: 'RTB ELECTRICIAN',
+        weapon: 'CHAIN-LINK BELT / BARE KNUCKLES',
+        stats: { power: 8, speed: 5, smf: 7 },
+        description: 'Fired for attempting to unionize the copper mines. Now he is here to dismantle the corrupt RTB management piece by piece.'
+    },
+    {
+        id: 'maja',
+        name: 'MAJA',
+        occupation: 'UNDERGROUND COURIER',
+        weapon: 'SMEDEREVAC STOVE DOOR / LEAD PIPE',
+        stats: { power: 5, speed: 9, smf: 8 },
+        description: 'Lost her life savings to the hyperinflation banks. She moves fast, hits hard, and takes no prisoners.'
+    }
+];
 
 export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }) => {
-  const mountRef = useRef<HTMLDivElement>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [activeCard, setActiveCard] = useState<string | null>(null);
-  const [audioOn, setAudioOn] = useState(true);
+    // Controls whether we are on the Title Screen or the Character Select Screen
+    const [activeStep, setActiveStep] = useState<'TITLE' | 'ROSTER'>('TITLE');
+    const [selectedCharId, setSelectedCharId] = useState<string>(ROSTER[0].id);
 
-  useEffect(() => {
-    if (!mountRef.current) return;
+    // Get the currently highlighted character object
+    const activeChar = ROSTER.find(c => c.id === selectedCharId) || ROSTER[0];
 
-    // SCENE SETUP
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#050505');
-    scene.fog = new THREE.FogExp2('#050505', 0.05);
+    return (
+        <div className="relative w-full h-full flex justify-center items-center p-4 z-10">
+            
+            {/* =========================================
+                STEP 1: THE TITLE SCREEN
+            ========================================= */}
+            {activeStep === 'TITLE' && (
+                <div className="start-box flex flex-col items-center w-full max-w-3xl animate-in fade-in zoom-in duration-500">
+                    
+                    <h1 className="font-metal text-white text-6xl md:text-8xl tracking-widest drop-shadow-[4px_4px_0px_#ff3333] mb-4">
+                        BOR-MAGEDDON
+                    </h1>
+                    
+                    <h2 className="font-mono-title text-xl md:text-2xl text-gray-400 mb-12">
+                        [TERMINAL_01]
+                    </h2>
 
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 1, 6);
+                    <hr className="w-full border-t border-red-900 mb-8 opacity-50" />
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    mountRef.current.appendChild(renderer.domElement);
+                    <button 
+                        id="initialize-btn" 
+                        onClick={() => setActiveStep('ROSTER')}
+                    >
+                        INITIALIZE PROTOCOL
+                    </button>
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-    scene.add(ambientLight);
-    
-    const spotLight = new THREE.SpotLight(0xff8c00, 50);
-    spotLight.position.set(0, 5, 5);
-    scene.add(spotLight);
+                    <p className="mt-8 text-green-500 font-mono text-sm tracking-widest animate-pulse">
+                        ESTABLISHING SECURE CONNECTION...
+                    </p>
+                </div>
+            )}
 
-    // 3D CAROUSEL
-    const carouselGroup = new THREE.Group();
-    scene.add(carouselGroup);
+            {/* =========================================
+                STEP 2: THE ROSTER SELECTION
+            ========================================= */}
+            {activeStep === 'ROSTER' && (
+                <div className="start-box flex flex-col w-full max-w-4xl animate-in fade-in duration-300 text-left">
+                    
+                    <div className="text-center mb-8">
+                        <h1 className="font-metal text-white text-4xl md:text-5xl tracking-widest drop-shadow-[3px_3px_0px_#ff3333] mb-2">
+                            SELECT OPERATIVE
+                        </h1>
+                        <p className="font-mono text-red-500 text-sm tracking-widest">
+                            WARNING: PERMADEATH PROTOCOLS ACTIVE
+                        </p>
+                    </div>
 
-    const characters = ['marko', 'darko', 'maja'];
-    const radius = 3;
+                    <div className="flex flex-col md:flex-row gap-8 w-full">
+                        
+                        {/* Left Column: Character List */}
+                        <div className="flex flex-col gap-4 w-full md:w-1/3 border-r border-red-900/50 pr-8">
+                            {ROSTER.map((char) => (
+                                <button
+                                    key={char.id}
+                                    onClick={() => setSelectedCharId(char.id)}
+                                    className={`
+                                        font-mono-title text-left px-4 py-3 border-2 transition-all
+                                        ${selectedCharId === char.id 
+                                            ? 'bg-red-600 border-red-500 text-black shadow-[4px_4px_0px_#660000]' 
+                                            : 'bg-black border-zinc-800 text-gray-500 hover:border-red-500 hover:text-white'}
+                                    `}
+                                >
+                                    {char.name}
+                                </button>
+                            ))}
+                        </div>
 
-    characters.forEach((char, index) => {
-      const angle = (index / characters.length) * Math.PI * 2;
-      const geometry = new THREE.BoxGeometry(1.5, 2.5, 0.2);
-      const material = new THREE.MeshStandardMaterial({ 
-        color: 0x222222, metalness: 0.8, roughness: 0.2,
-        emissive: index === 0 ? 0x39FF14 : 0x000000,
-        emissiveIntensity: 0.2
-      });
-      
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
-      mesh.rotation.y = -angle + Math.PI / 2;
-      mesh.userData = { characterName: char };
-      carouselGroup.add(mesh);
-    });
+                        {/* Right Column: Character Stats & Lore */}
+                        <div className="flex flex-col w-full md:w-2/3">
+                            <h2 className="font-metal text-white text-4xl mb-1 text-shadow-sm">
+                                {activeChar.name}
+                            </h2>
+                            <p className="font-mono text-red-500 font-bold mb-4 tracking-wider">
+                                // {activeChar.occupation}
+                            </p>
+                            
+                            <div className="bg-black/50 border border-zinc-800 p-4 mb-6 font-mono text-sm text-gray-300 leading-relaxed">
+                                {activeChar.description}
+                            </div>
 
-    // INTERACTIVITY
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-    let isDragging = false;
-    let previousMousePosition = { x: 0, y: 0 };
-
-    const onMouseDown = (e: MouseEvent) => { isDragging = true; previousMousePosition = { x: e.clientX, y: e.clientY }; };
-    const onMouseMove = (e: MouseEvent) => {
-      if (isDragging) {
-        carouselGroup.rotation.y += (e.clientX - previousMousePosition.x) * 0.01;
-        previousMousePosition = { x: e.clientX, y: e.clientY };
-      }
-    };
-    const onMouseUp = (e: MouseEvent) => {
-      isDragging = false;
-      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-      raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(carouselGroup.children);
-      if (intersects.length > 0) setActiveCard(intersects[0].object.userData.characterName);
-    };
-
-    window.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-
-    const handleResize = () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    };
-    window.addEventListener('resize', handleResize);
-
-    let animationFrameId: number;
-    const animate = () => {
-      animationFrameId = requestAnimationFrame(animate);
-      if (!isDragging && !activeCard) carouselGroup.rotation.y += 0.002;
-      carouselGroup.position.y = Math.sin(Date.now() * 0.001) * 0.1;
-      renderer.render(scene, camera);
-    };
-    animate();
-
-    return () => {
-      window.removeEventListener('mousedown', onMouseDown);
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-      window.removeEventListener('resize', handleResize);
-      cancelAnimationFrame(animationFrameId);
-      if (mountRef.current && renderer.domElement) mountRef.current.removeChild(renderer.domElement);
-      renderer.dispose();
-    };
-  }, [activeCard]);
-
-  const currentStats = activeCard ? CHARACTER_DB[activeCard] : null;
-
-  return (
-    <div className="absolute inset-0 w-full h-full text-white font-mono pointer-events-none select-none">
-      <div ref={mountRef} className="absolute inset-0 w-full h-full -z-10 pointer-events-auto cursor-grab active:cursor-grabbing" />
-
-      {!isInitialized && (
-        <div id="start-overlay" className="absolute inset-0 flex items-center justify-center bg-black/90 z-50 pointer-events-auto">
-          <div className="border-2 border-orange-700 p-8 bg-black/80 text-center shadow-[0_0_30px_rgba(194,65,12,0.5)]">
-            <h1 className="font-metal text-5xl mb-6 text-orange-500 tracking-widest">BOR-MAGEDDON</h1>
-            <h2 className="text-xl mb-8 text-zinc-400 border-b border-zinc-700 pb-2">[TERMINAL_01]</h2>
-            <button onClick={() => setIsInitialized(true)} className="bg-orange-900 px-8 py-3 text-lg hover:bg-orange-600 font-bold border border-orange-500 cursor-pointer">
-              INITIALIZE PROTOCOL
-            </button>
-            <p className="mt-6 text-xs text-[#39FF14] animate-pulse">ESTABLISHING SECURE CONNECTION...</p>
-          </div>
-        </div>
-      )}
-
-      {isInitialized && (
-        <div id="terminal-header" className="absolute top-0 left-0 w-full p-4 flex justify-between items-center bg-black/60 border-b border-zinc-800 pointer-events-auto z-20">
-          <div id="hint" className="text-xs text-[#39FF14] animate-pulse">SYSTEM_STATUS: [DRAG_TO_ROTATE] // [CLICK_CARD_FOR_ARCHIVE]</div>
-          <button onClick={() => setAudioOn(!audioOn)} className="text-xs border border-zinc-600 px-3 py-1 bg-black/50 hover:bg-white hover:text-black cursor-pointer">
-            AUDIO: [{audioOn ? 'ON' : 'OFF'}]
-          </button>
-        </div>
-      )}
-
-      {isInitialized && activeCard && currentStats && (
-        <div id="expanded-card" className="absolute bottom-12 right-12 w-96 bg-black/95 border-2 border-orange-800 p-6 z-30 pointer-events-auto shadow-[0_0_50px_rgba(0,0,0,0.9)] transition-all">
-          <button onClick={() => setActiveCard(null)} className="absolute top-3 right-4 text-zinc-500 hover:text-red-500 font-bold text-xl cursor-pointer">X</button>
-          <div className="card-header border-b border-zinc-700 pb-3 mb-4">
-            <span className="text-[10px] text-[#39FF14] block mb-1 tracking-widest">DE-ENCRYPTION SUCCESSFUL</span>
-            <h2 className="font-metal text-4xl text-orange-600 mt-1">{currentStats.name}</h2>
-          </div>
-          <p className="text-sm text-zinc-300 mb-6 leading-relaxed h-20">{currentStats.desc}</p>
-          <div className="flex gap-6 mb-8 text-sm font-bold border border-zinc-800 p-3 bg-zinc-900/50">
-            <div className="flex-1">SPD: <span className="text-orange-500 text-lg ml-2">{currentStats.spd}</span></div>
-            <div className="flex-1">PWR: <span className="text-orange-500 text-lg ml-2">{currentStats.pwr}</span></div>
-          </div>
-          <button onClick={() => onSelect(activeCard)} className="w-full bg-orange-800 text-white py-4 text-lg hover:bg-orange-600 font-bold border border-orange-500 cursor-pointer shadow-[0_0_15px_rgba(194,65,12,0.4)]">
-            INITIATE DEPLOYMENT
-          </button>
-        </div>
-      )}
-    </div>
-  );
-};
+                            <div className="space-y-3 font-mono text-sm mb-8">
+                                <div className="flex items-center">
+                                    <span className="w-24 text-gray-500">WEAPON:</span>
+                                    <span className="text-white">{activeChar.weapon}</span>
+                                </div>
+                                <div className="flex items-center">
+                                    <span className="w-24 text-gray-500">POWER:</span>
+                                    <span className="text-red-500 tracking-widest">
+                                        {'█'.repeat(activeChar.stats.power)}{'░'.repeat(10 - activeChar.stats.power)}
+                                    </span>
+                                </div>
+                                <div className="flex items-center
