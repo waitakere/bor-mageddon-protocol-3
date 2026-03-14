@@ -9,7 +9,6 @@ const THEME = { bg: 0x050404, fog: 0x1a0a05, particle: 0xff3333, ambient: 0xffff
 const RAW_URL = 'https://raw.githubusercontent.com/ivanatag/bor-mageddon-protocol-2/main/public/assets/images/characters/';
 const BGM_URL = 'https://raw.githubusercontent.com/ivanatag/bor-mageddon-protocol-2/main/public/assets/audio/bgm/bormageddon-character-menu-soundtrack.wav';
 
-// Character stats data updated to match user request
 const CARDS_DATA = [
   { 
     id: 'marko', title: 'MARKO', accent: '#ff3333', spd: 50, pwr: 50, gradient: ['#3a1010', '#150505'], label: 'CLASS: BRAWLER', file: 'marko_idle.png', 
@@ -25,17 +24,15 @@ const CARDS_DATA = [
   }
 ];
 
-// Utility: Canvas Textures for 3D Cards
-// Restored "Metal Mania" font for the title texture
+// Utility: Canvas Textures for 3D Cards using the required fonts
 function createTitleTexture() {
     const c = document.createElement('canvas'); c.width = 1024; c.height = 256;
     const ctx = c.getContext('2d')!; ctx.textAlign = 'center';
-    ctx.font = '900 130px "Metal Mania", Impact, sans-serif';
+    ctx.font = '900 130px "Metal Mania", cursive';
     ctx.fillStyle = '#ff3333'; ctx.fillText('BORMAGEDDON', 512, 128);
     return new THREE.CanvasTexture(c);
 }
 
-// Fixed function for creating immutable textures
 function createCardTexture(card: any, img: HTMLImageElement | null = null) {
     const c = document.createElement('canvas'); c.width = 512; c.height = 700;
     const ctx = c.getContext('2d')!;
@@ -48,14 +45,13 @@ function createCardTexture(card: any, img: HTMLImageElement | null = null) {
         ctx.drawImage(img, (512 - img.width * 2.8)/2, (700 - img.height * 2.8)/2 + 20, img.width * 2.8, img.height * 2.8); 
     }
     
-    // Restored "Space Mono" font for card details
     ctx.strokeStyle = card.accent; ctx.lineWidth = 20; ctx.strokeRect(10,10,492,680);
-    ctx.fillStyle = card.accent; ctx.font = 'bold 24px "Space Mono"'; ctx.fillText(card.label, 50, 75);
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 75px "Space Mono"'; ctx.fillText(card.title, 50, 610);
+    ctx.fillStyle = card.accent; ctx.font = 'bold 24px "Space Mono", monospace'; ctx.fillText(card.label, 50, 75);
+    ctx.fillStyle = '#fff'; ctx.font = '900 75px "Metal Mania", cursive'; ctx.fillText(card.title, 50, 610);
     
     const tex = new THREE.CanvasTexture(c); 
     tex.magFilter = THREE.NearestFilter;
-    tex.minFilter = THREE.LinearFilter; // LinearFilter optimization added for performance
+    tex.minFilter = THREE.LinearFilter;
     return tex;
 }
 
@@ -70,7 +66,6 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
   const targetRotationRef = useRef<number | null>(null);
   const isDraggingRef = useRef<boolean>(false);
 
-  // Unified logic for setting active card state and ref
   const handleSetActiveCard = (cardId: string | null) => {
       setActiveCard(cardId);
       activeCardRef.current = cardId;
@@ -80,7 +75,6 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
   useEffect(() => {
     if (!mountRef.current) return;
 
-    // Three.js Scene Setup
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(THEME.fog, 0.08);
     const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -88,7 +82,7 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio); // Maintain pixel density across devices
+    renderer.setPixelRatio(window.devicePixelRatio);
     mountRef.current.appendChild(renderer.domElement);
 
     const listener = new THREE.AudioListener();
@@ -108,8 +102,8 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     pointLight.position.set(0, 5, 10);
     scene.add(pointLight);
 
-    const titleMesh = new THREE.Mesh(new THREE.PlaneGeometry(24, 6), new THREE.MeshBasicMaterial({ map: createTitleTexture(), transparent: true, opacity: 0.5, depthWrite: false }));
-    titleMesh.position.set(0, 2, -5);
+    const titleMesh = new THREE.Mesh(new THREE.PlaneGeometry(24, 6), new THREE.MeshBasicMaterial({ map: createTitleTexture(), transparent: true, opacity: 0.2, depthWrite: false }));
+    titleMesh.position.set(0, 2, -6);
     scene.add(titleMesh);
 
     const carouselGroup = new THREE.Group();
@@ -122,7 +116,6 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
 
     CARDS_DATA.forEach((card, i) => {
         const theta = i * ANGLE_STEP;
-        // Restored previous complex material logic for correct rendering
         const mesh = new THREE.Mesh(
             new THREE.BoxGeometry(4, 6, 0.15), 
             [new THREE.MeshStandardMaterial({color: 0x111111}), new THREE.MeshStandardMaterial({color: 0x111111}), new THREE.MeshStandardMaterial({color: 0x111111}), new THREE.MeshStandardMaterial({color: 0x111111}), new THREE.MeshBasicMaterial({transparent: true}), new THREE.MeshStandardMaterial({color: 0x000000})]
@@ -133,31 +126,32 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         const img = new Image(); img.crossOrigin = "anonymous";
         img.onload = () => { 
             const newTex = createCardTexture(card, img);
-            mesh.material[4].map?.dispose(); // Proper clean up for old textures
+            mesh.material[4].map?.dispose(); 
             mesh.material[4].map = newTex;
             mesh.material[4].needsUpdate = true; 
         };
         img.src = RAW_URL + card.file;
 
-        // Position on carousel
         mesh.position.set(Math.sin(theta) * RADIUS, 0, Math.cos(theta) * RADIUS);
-        // Face the card toward the center
         mesh.rotation.y = theta;
         carouselGroup.add(mesh);
         cardMeshes.push(mesh);
     });
 
-    // Carousel Interaction logic
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
-    let totalMouseMoveX = 0;
     let prevX = 0;
+    let totalMouseMoveX = 0;
+
+    // We attach events ONLY to the canvas so clicking the UI buttons doesn't select characters
+    const canvas = renderer.domElement;
 
     const onMouseDown = (e: MouseEvent) => { 
         isDraggingRef.current = true; 
         totalMouseMoveX = 0;
         prevX = e.clientX; 
     };
+    
     const onMouseMove = (e: MouseEvent) => {
         if (!isDraggingRef.current) return;
         const deltaX = e.clientX - prevX;
@@ -165,9 +159,9 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         carouselGroup.rotation.y += deltaX * 0.007;
         prevX = e.clientX;
     };
+    
     const onMouseUp = (e: MouseEvent) => {
         isDraggingRef.current = false;
-        // Raycasting for card selection only if mouse movement was minimal
         if (totalMouseMoveX < 5) {
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
@@ -175,16 +169,15 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
             const intersects = raycaster.intersectObjects(cardMeshes);
             if (intersects.length > 0) {
                 const charId = intersects[0].object.userData.id;
-                // Snapping target for smooth rotation
                 targetRotationRef.current = -(intersects[0].object.userData.index * ANGLE_STEP);
                 handleSetActiveCard(charId);
             }
         }
     };
 
-    window.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
+    canvas.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove); // Keep window for drag-off-screen
+    window.addEventListener('mouseup', onMouseUp);     // Keep window for drag-release
 
     const handleResize = () => {
         camera.aspect = window.innerWidth / window.innerHeight;
@@ -193,19 +186,16 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     };
     window.addEventListener('resize', handleResize);
 
-    // Main animation loop
     const animate = () => {
-        const frameId = requestAnimationFrame(animate);
+        requestAnimationFrame(animate);
         
-        // Auto-rotation when not selected or being dragged
-        if (!isDraggingRef.current && !activeCardRef.current) {
+        // Auto-rotation fix: explicitly checks if a card is selected
+        if (!isDraggingRef.current && activeCardRef.current === null) {
             carouselGroup.rotation.y += 0.003;
-        } else if (activeCardRef.current && targetRotationRef.current !== null) {
-            // Smoothly snap to selected card
+        } else if (activeCardRef.current !== null && targetRotationRef.current !== null) {
             carouselGroup.rotation.y += (targetRotationRef.current - carouselGroup.rotation.y) * 0.1;
         }
         
-        // Moving particles
         const pos = ashSystem.geometry.attributes.position.array as Float32Array;
         for(let i = 1; i < pos.length; i += 3) { 
             pos[i] += 0.02; 
@@ -216,19 +206,16 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     };
     animate();
 
-    // Clean up function on component unmount
     return () => {
-        window.removeEventListener('mousedown', onMouseDown);
+        canvas.removeEventListener('mousedown', onMouseDown);
         window.removeEventListener('mousemove', onMouseMove);
         window.removeEventListener('mouseup', onMouseUp);
         window.removeEventListener('resize', handleResize);
         if (soundtrackRef.current?.isPlaying) soundtrackRef.current.stop();
         renderer.dispose();
-        if (mountRef.current) mountRef.current.innerHTML = ''; // Proper mounting point clear
     };
   }, []);
 
-  // Handle music initialization on explicit user action
   const handleInitialize = () => {
     setIsInitialized(true);
     new THREE.AudioLoader().load(BGM_URL, (buffer) => {
@@ -239,111 +226,89 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     });
   };
 
-  // Sound toggle control function
   const toggleAudio = () => {
       if (soundtrackRef.current) {
-          if (audioOn) {
-              soundtrackRef.current.setVolume(0);
-              setAudioOn(false);
-          } else {
-              soundtrackRef.current.setVolume(0.5);
-              setAudioOn(true);
-          }
-      } else {
-          setAudioOn(!audioOn);
+          if (audioOn) soundtrackRef.current.setVolume(0);
+          else soundtrackRef.current.setVolume(0.5);
       }
+      setAudioOn(!audioOn);
   };
 
   const currentStats = CARDS_DATA.find(c => c.id === activeCard);
 
   return (
-    <div className="absolute inset-0 w-full h-full pointer-events-none select-none z-10 overflow-hidden">
-      <div ref={mountRef} className="absolute inset-0 pointer-events-auto cursor-grab active:cursor-grabbing" />
+    <div className="absolute inset-0 w-full h-full pointer-events-none select-none z-10 overflow-hidden bg-[#050404]">
+      
+      {/* Required Overlays from your CSS */}
+      <div className="scanlines" />
+      <div className="crt-overlay" />
+
+      {/* 3D Container (Allows pointer events so we can spin it) */}
+      <div ref={mountRef} className="absolute inset-0 pointer-events-auto cursor-grab active:cursor-grabbing z-0" />
       
       {!isInitialized ? (
-        <div className="absolute inset-0 flex items-center justify-center bg-[#050404] z-50 pointer-events-auto">
-          {/* TERMINAL 01 START-OVERLAY LAYOUT RESTORED */}
-          <div className="relative p-12 border-4 border-orange-700/50 bg-black shadow-[0_0_50px_rgba(154,52,18,0.3)] flex flex-col items-center">
-            
-            <h1 className="text-white text-6xl md:text-8xl font-black italic tracking-tighter mb-2 drop-shadow-[4px_4px_0px_#ff3333] [font-family:Impact,sans-serif]">
-              BOR-MAGEDDON
-            </h1>
-            
-            <div className="text-gray-400 font-mono text-xl tracking-[0.4em] mb-12 bg-zinc-900/80 px-4 py-1 border border-zinc-700">
+        <div id="start-overlay" className="pointer-events-auto z-50">
+          <div className="start-box">
+            <h1 className="font-metal">BOR-MAGEDDON</h1>
+            <div className="font-mono-title" style={{ marginTop: '10px', letterSpacing: '4px' }}>
               [TERMINAL_01]
             </div>
             
-            <div className="w-full h-[2px] bg-gradient-to-r from-transparent via-zinc-700 to-transparent mb-12" />
-
-            <button 
-                onClick={handleInitialize} 
-                className="group relative bg-[#4a1d0d] border-2 border-orange-900 px-16 py-6 text-white font-mono text-2xl shadow-[0_0_20px_rgba(154,52,18,0.4)] hover:bg-orange-800 hover:scale-105 transition-all active:scale-95 cursor-pointer"
-            >
-                <span className="relative z-10 tracking-[0.2em] font-bold">INITIALIZE PROTOCOL</span>
-                <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <button id="initialize-btn" onClick={handleInitialize}>
+              INITIALIZE PROTOCOL
             </button>
             
-            <div className="mt-12 text-green-600 font-mono text-xs tracking-widest animate-pulse font-bold">
-                ESTABLISHING SECURE CONNECTION...
-            </div>
+            <p style={{ color: '#00ff00', marginTop: '30px', animation: 'pulse 2s infinite', fontSize: '12px' }}>
+              ESTABLISHING SECURE CONNECTION...
+            </p>
           </div>
         </div>
       ) : (
-        <div className="absolute inset-0 pointer-events-none p-10">
-          <div className="absolute top-10 right-10 flex gap-3 z-20">
-              <button 
-                  onClick={toggleAudio}
-                  className="pointer-events-auto bg-black/90 border-2 border-orange-800 text-orange-400 font-mono text-xs px-4 py-2 hover:bg-orange-950/20 active:scale-95 transition-all tracking-[0.2em]"
-              >
-                  AUDIO: [{audioOn ? 'ON' : 'OFF'}]
-              </button>
+        <>
+          {/* Header UI */}
+          <div id="terminal-header" className="pointer-events-auto">
+            <div id="hint">SYSTEM_STATUS: [SCANNING_AGENTS]</div>
+            <button id="music-toggle" onClick={toggleAudio}>
+                AUDIO: [{audioOn ? 'ON' : 'OFF'}]
+            </button>
           </div>
           
-          <div className="text-red-500 font-mono text-xs tracking-[0.3em] uppercase opacity-80">
-            SYSTEM_STATUS: [SCANNING_AGENTS]
+          {/* Expanded Card Details */}
+          <div id="expanded-card" className={activeCard ? 'active' : ''} style={{ display: activeCard ? 'flex' : 'none', pointerEvents: 'auto' }}>
+            {activeCard && currentStats && (
+              <div className="card-content">
+                <button className="close-btn" onClick={() => handleSetActiveCard(null)}>X</button>
+                
+                <div style={{ color: '#00ff00', fontSize: '10px', fontWeight: 'bold', marginBottom: '10px' }}>
+                  DE-ENCRYPTION SUCCESSFUL
+                </div>
+                
+                <h2 className="card-title font-metal">{currentStats.title}</h2>
+                <p className="card-desc mb-6">{currentStats.desc}</p>
+                
+                <div style={{ border: '1px solid rgba(255,51,51,0.3)', padding: '15px', marginBottom: '20px', background: 'rgba(255,51,51,0.05)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '5px' }}>
+                    <span className="stat-label">POWER</span> <span className="stat-label">{currentStats.pwr}%</span>
+                  </div>
+                  <div style={{ height: '4px', background: '#333', marginBottom: '15px' }}>
+                    <div style={{ height: '100%', width: `${currentStats.pwr}%`, background: '#ff3333' }} />
+                  </div>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '5px' }}>
+                    <span className="stat-label">SPEED</span> <span className="stat-label">{currentStats.spd}%</span>
+                  </div>
+                  <div style={{ height: '4px', background: '#333' }}>
+                    <div style={{ height: '100%', width: `${currentStats.spd}%`, background: '#00ffff' }} />
+                  </div>
+                </div>
+                
+                <button className="select-btn" onClick={() => onSelect(activeCard)}>
+                  DEPLOY TO BOR
+                </button>
+              </div>
+            )}
           </div>
-          
-          {/* Expanded Card detail logic restored. Starts closed, opens on click */}
-          {activeCard && currentStats && (
-            <div className="absolute bottom-12 right-12 w-96 bg-black/95 border-2 border-red-600 p-8 z-30 pointer-events-auto animate-in fade-in slide-in-from-right-10 shadow-[20px_20px_0px_#000]">
-               <div className="mb-4 border-b border-red-900/50 pb-4">
-                 <div className="text-green-500 text-[10px] mb-1 font-bold tracking-widest">DE-ENCRYPTION SUCCESSFUL</div>
-                 <h2 className="text-5xl font-black italic text-white uppercase tracking-tighter [font-family:Impact,sans-serif]">
-                  {currentStats.title}
-                 </h2>
-               </div>
-               
-               <p className="text-zinc-400 text-xs mb-8 leading-relaxed font-bold h-16 [font-family:'Space Mono',monospace]">
-                {currentStats.desc}
-               </p>
-               
-               <div className="space-y-4 mb-8 border border-red-900/30 p-4 bg-red-950/10">
-                <div>
-                  <div className="flex justify-between text-[10px] mb-1 text-zinc-500 font-bold tracking-widest"><span>POWER</span><span>{currentStats.pwr}%</span></div>
-                  <div className="h-1 bg-zinc-800"><div className="h-full bg-red-600" style={{ width: `${currentStats.pwr}%` }} /></div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-[10px] mb-1 text-zinc-500 font-bold tracking-widest"><span>SPEED</span><span>{currentStats.spd}%</span></div>
-                  <div className="h-1 bg-zinc-800"><div className="h-full bg-cyan-400" style={{ width: `${currentStats.spd}%` }} /></div>
-                </div>
-               </div>
-               
-               <button 
-                onClick={() => onSelect(activeCard)}
-                className="w-full bg-red-600 py-4 font-black text-black text-xl hover:bg-white transition-all uppercase italic shadow-[4px_4px_0px_#440000] cursor-pointer"
-               >
-                DEPLOY TO BOR
-               </button>
-               
-               <button 
-                onClick={() => handleSetActiveCard(null)} 
-                className="w-full mt-4 text-zinc-600 text-[10px] hover:text-white uppercase tracking-widest transition-colors cursor-pointer"
-               >
-                [BACK_TO_SELECTOR]
-               </button>
-            </div>
-          )}
-        </div>
+        </>
       )}
     </div>
   );
