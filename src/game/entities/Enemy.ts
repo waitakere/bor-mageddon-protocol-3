@@ -29,14 +29,25 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        // Standard 16-bit hitbox calibrated for the 250px industrial road belt [cite: 2051-2052]
+        // 1. FIX: ANCHORING & ORIENTATION
+        this.setOrigin(0.5, 1); // Anchor at feet for proper depth sorting and floor alignment
+        this.setRotation(0);     // Force upright
+        
+        // 2. HITBOX CALIBRATION
+        // Hitbox is now a flat "pancake" at the feet for better 2.5D collisions
         this.setCollideWorldBounds(true);
-        this.body.setSize(80, 40); 
-        this.body.setOffset(88, 210); // Positions box at character's boots [cite: 1403-1405]
+        if (this.body) {
+            this.body.setSize(80, 30); 
+            this.body.setOffset(this.width / 2 - 40, this.height - 30);
+            
+            // 3. FIX: PREVENT ROTATION DRIFT
+            // This stops Arcade Physics from tilting the sprite when it hits walls or moves
+            (this.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
+        }
     }
 
     /**
-     * "The Stalker" AI Logic: Aligns with player's vertical lane then approaches on X-axis [cite: 706-708, 717].
+     * "The Stalker" AI Logic: Aligns with player's vertical lane then approaches on X-axis.
      */
     public updateAI(player: Phaser.Physics.Arcade.Sprite) {
         if (this.isDead || this.isHurt || this.isAttacking || this.isKnockedDown) {
@@ -44,62 +55,67 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
+        // Always force rotation to 0 in case external forces impact the body
+        this.setRotation(0);
+
         const distanceX = player.x - this.x;
         const distanceY = player.y - this.y;
         const absDistX = Math.abs(distanceX);
         const absDistY = Math.abs(distanceY);
 
-        // 1. Lane Alignment (Z-axis/Y movement) [cite: 718-719]
+        // 1. Lane Alignment (Z-axis/Y movement)
         if (absDistY > 15) {
             this.setVelocityY(distanceY > 0 ? 100 : -100);
         } else {
             this.setVelocityY(0);
         }
 
-        // 2. Approach (X-axis movement) [cite: 723-725]
-        if (absDistX > 180) {
+        // 2. Approach (X-axis movement)
+        if (absDistX > 100) { // Tighter follow distance for 16-bit feel
             this.setVelocityX(distanceX > 0 ? 120 : -120);
             this.setFlipX(distanceX < 0);
             this.play(`${this.enemyType}_walk`, true);
         } 
-        // 3. Attack Trigger [cite: 729-734]
-        else if (absDistX <= 180 && absDistY <= 20) {
+        // 3. Attack Trigger
+        else if (absDistX <= 100 && absDistY <= 30) {
             this.setVelocityX(0);
             this.executeEnemyAttack();
         } else {
             this.setVelocityX(0);
-            this.play(`${this.characterName}_idle`, true);
+            this.play(`${this.enemyType}_idle`, true);
         }
     }
 
     protected executeEnemyAttack() {
-        // Overridden by specific enemy classes (e.g., Dizel knife slash) [cite: 2109]
+        // Overridden by specific enemy classes (e.g., MUP nightstick swing)
     }
 
     /**
-     * Damage Logic: Accounts for Armor Break multipliers and gore feedback [cite: 2057-2058].
+     * Damage Logic: Accounts for Armor Break multipliers and gore feedback.
      */
     public takeDamage(amount: number) {
         if (this.isDead) return;
 
-        // Apply 1.5x multiplier if armor is broken (triggered by Maja) [cite: 1017, 1136-1137].
         const finalDamage = this.isArmorBroken ? Math.floor(amount * 1.5) : amount;
         this.hp -= finalDamage;
         
         this.isHurt = true;
-        this.setTint(this.isArmorBroken ? 0xB87333 : 0xff0000); // Maintain Copper tint if broken
+        
+        // Final Fight red flash effect
+        this.setTint(0xff0000); 
 
-        // Audio grunts and screen shake juice [cite: 2060, 2193]
+        // Audio & Juice
         this.audio.playMaleDamageGrunt();
         this.scene.cameras.main.shake(100, 0.005);
 
-        // Spawn "Bureaucratic Gore" particles 
-        this.scene.events.emit('spawn-gore', this.x, this.y - 100, 'BUREAUCRATIC', 'HIT');
+        // Spawn particles 
+        this.scene.events.emit('spawn-gore', this.x, this.y - (this.height / 2), 'BUREAUCRATIC', 'HIT');
 
         this.scene.time.delayedCall(200, () => {
             if (!this.isDead) {
                 this.isHurt = false;
-                if (!this.isArmorBroken) this.clearTint();
+                // If armor is broken, return to Copper tint, otherwise clear
+                this.isArmorBroken ? this.setTint(0xB87333) : this.clearTint();
             }
         });
 
@@ -107,18 +123,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     /**
-     * Applies Armor Break state: Reduces defense and tints sprite Copper/Rust[cite: 1017].
+     * Applies Armor Break state: Reduces defense and tints sprite Copper/Rust.
      */
     public applyArmorBreak() {
         if (this.isDead) return;
 
         this.isArmorBroken = true;
-        this.setTint(0xB87333); // Visual feedback for exposed armor [cite: 1843]
+        this.setTint(0xB87333); 
         
-        // Impact FX
-        this.scene.events.emit('spawn-industrial-debris', { x: this.x, y: this.y - 100 });
+        this.scene.events.emit('spawn-industrial-debris', { x: this.x, y: this.y - (this.height / 2) });
 
-        // Auto-recovery after 5 seconds
         if (this.armorBreakTimer) this.armorBreakTimer.remove();
         this.armorBreakTimer = this.scene.time.delayedCall(5000, () => {
             this.isArmorBroken = false;
@@ -129,22 +143,29 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     protected die() {
         this.isDead = true;
         this.setVelocity(0, 0);
-        this.body.enable = false; // Prevents further collisions [cite: 2066]
+        if (this.body) this.body.enable = false; 
 
-        // Final "Fatality" Gore burst [cite: 805, 1348]
-        this.scene.events.emit('spawn-gore', this.x, this.y - 100, 'BUREAUCRATIC', 'FINISHER');
+        this.scene.events.emit('spawn-gore', this.x, this.y - (this.height / 2), 'BUREAUCRATIC', 'FINISHER');
         this.audio.playRandomSFX(['Break_1', 'Break_2', 'Break_3'], 0.8);
         
         this.play(`${this.enemyType}_die`);
 
-        // Sinking Archive Tween: Body sinks into the industrial floor runoff [cite: 1349-1356, 1474-1476]
+        // Sinking Archive Tween: Final Fight style fade out
         this.scene.tweens.add({
             targets: this,
             alpha: 0,
-            y: this.y + 60,
-            duration: 3500,
-            delay: 2000,
-            onComplete: () => this.destroy()
+            duration: 100,
+            repeat: 5,
+            yoyo: true,
+            onComplete: () => {
+                this.scene.tweens.add({
+                    targets: this,
+                    alpha: 0,
+                    y: this.y + 20,
+                    duration: 1000,
+                    onComplete: () => this.destroy()
+                });
+            }
         });
     }
 }
