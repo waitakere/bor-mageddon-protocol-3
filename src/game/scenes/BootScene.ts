@@ -30,7 +30,7 @@ export class BootScene extends Phaser.Scene {
         // Audio
         this.load.audioSprite('sfx_atlas', 'assets/audio/sfx_atlas.json', ['assets/audio/sfx_atlas.mp3']);
 
-        // Global animation crash protector
+        // Safety override
         const originalPlay = Phaser.GameObjects.Sprite.prototype.play;
         Phaser.GameObjects.Sprite.prototype.play = function(key: any, ignoreIfPlaying?: boolean) {
             try { return originalPlay.call(this, key, ignoreIfPlaying); } 
@@ -41,6 +41,11 @@ export class BootScene extends Phaser.Scene {
     create() {
         this.createPlayerAnimations();
         this.createEnemy1993Animations();
+
+        // Get character from data attribute set in GameContainer.tsx
+        const selected = this.game.canvas.parentElement?.getAttribute('data-selected-character') || 'marko';
+        this.registry.set('selectedCharacter', selected);
+
         this.scene.start('MainLevel');
     }
 
@@ -60,16 +65,7 @@ export class BootScene extends Phaser.Scene {
 
     private createPlayerAnimations() {
         const characters = ['marko', 'maja', 'darko'];
-        const actionMap: Record<string, string> = {
-            'idle': 'idle',
-            'walk': 'walk',
-            'run': 'run', // Added run support
-            'punch': 'punch',
-            'kick': 'kick', // Added kick support
-            'damage': 'damage_&_hurt',
-            'die': 'knockdown'
-        };
-
+        const actionMap = { 'idle': 'idle', 'walk': 'walk', 'run': 'run', 'punch': 'punch', 'kick': 'kick', 'damage': 'damage_&_hurt', 'die': 'knockdown' };
         characters.forEach(char => {
             Object.entries(actionMap).forEach(([key, folder]) => {
                 this.createAutoAnimation(char, `${char}_${key}`, `${char}-${folder}/frame_`, key === 'idle' || key === 'walk' || key === 'run');
