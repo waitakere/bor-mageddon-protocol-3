@@ -6,61 +6,103 @@ export class BootScene extends Phaser.Scene {
     }
 
     preload() {
-        console.log("SAFE BOOT INITIATED: Generating placeholder assets to bypass Vite 404s...");
+        console.log("REAL BOOT INITIATED: Loading actual assets...");
 
+        // ==========================================
+        // 1. LOAD REAL TEXTURE ATLASES
+        // ==========================================
+        // Paths updated to match your flat 'assets/sprites/' structure
+        this.load.atlas('marko', 'assets/sprites/marko.png', 'assets/sprites/marko.json');
+        this.load.atlas('maja', 'assets/sprites/maja.png', 'assets/sprites/maja.json');
+        this.load.atlas('darko', 'assets/sprites/darko.png', 'assets/sprites/darko.json');
+        
+        this.load.atlas('enemies_1993', 'assets/sprites/enemies_1993.png', 'assets/sprites/enemies_1993.json');
+
+        // ==========================================
+        // 2. LOAD REAL AUDIO SPRITE
+        // ==========================================
+        this.load.audioSprite('sfx_atlas', 'assets/audio/sfx_atlas.json', [
+            'assets/audio/sfx_atlas.mp3'
+        ]);
+
+        // ==========================================
+        // 3. GENERATE PLACEHOLDERS FOR MISSING ASSETS
+        // ==========================================
+        // (We keep these as colored boxes until you upload the real art!)
         const graphics = this.add.graphics();
 
-        // 1. Generate Player Placeholders
-        graphics.fillStyle(0xff3333, 1); // Red
-        graphics.fillRect(0, 0, 64, 128);
-        graphics.generateTexture('marko', 64, 128);
-        graphics.clear();
-
-        // 2. Generate Enemy Placeholders (Matches your console errors)
-        graphics.fillStyle(0x0066cc, 1); // Blue
-        graphics.fillRect(0, 0, 64, 128);
-        graphics.generateTexture('enemies_1993', 64, 128);
-        graphics.clear();
-
-        graphics.fillStyle(0x9900ff, 1); // Purple
+        graphics.fillStyle(0x9900ff, 1); 
         graphics.fillRect(0, 0, 128, 200);
         graphics.generateTexture('boss_slobodan_93', 128, 200);
         graphics.clear();
 
-        // 3. Generate Environment & Item Placeholders (Matches your console errors)
-        graphics.fillStyle(0x555555, 1); // Gray
-        graphics.fillRect(0, 0, 128, 128);
-        graphics.generateTexture('kiosk', 128, 128);
-        graphics.clear();
+        graphics.fillStyle(0x555555, 1); graphics.fillRect(0, 0, 128, 128); graphics.generateTexture('kiosk', 128, 128); graphics.clear();
+        graphics.fillStyle(0x00ff00, 1); graphics.fillRect(0, 0, 32, 32); graphics.generateTexture('item_dinar', 32, 32); graphics.generateTexture('item_health', 32, 32); graphics.generateTexture('item_pickaxe', 32, 32); graphics.clear();
+        graphics.fillStyle(0x111122, 1); graphics.fillRect(0, 0, 1920, 1080); graphics.generateTexture('part1_sky', 1920, 1080); graphics.clear();
 
-        graphics.fillStyle(0x00ff00, 1); // Green
-        graphics.fillRect(0, 0, 32, 32);
-        graphics.generateTexture('item_dinar', 32, 32);
-        graphics.generateTexture('item_health', 32, 32);
-        graphics.generateTexture('item_pickaxe', 32, 32);
-        graphics.clear();
-
-        // Generate Sky Background Placeholder
-        graphics.fillStyle(0x111122, 1); // Dark Blue Night
-        graphics.fillRect(0, 0, 1920, 1080);
-        graphics.generateTexture('part1_sky', 1920, 1080);
-        graphics.clear();
-
-        // OVERRIDE: Prevent Phaser from crashing when it tries to play animations
-        // that haven't been properly loaded from JSON atlases yet.
+        // Safety override so missing animations don't crash the engine
         const originalPlay = Phaser.GameObjects.Sprite.prototype.play;
         Phaser.GameObjects.Sprite.prototype.play = function(key: string | Phaser.Types.Animations.PlayAnimationConfig, ignoreIfPlaying?: boolean) {
             try {
                 return originalPlay.call(this, key, ignoreIfPlaying);
             } catch (e) {
-                // Animation doesn't exist? Fail silently and stay a colored box!
                 return this;
             }
         };
     }
 
     create() {
-        console.log("SAFE BOOT COMPLETE. Launching MainLevel...");
+        // Generate the 1993 enemy animations from the real Mega-Atlas
+        this.createEnemy1993Animations();
+
+        console.log("BOOT COMPLETE. Launching MainLevel...");
         this.scene.start('MainLevel');
+    }
+
+    /**
+     * Reads the folder names from your JSON atlas and turns them into animations.
+     */
+    private createEnemy1993Animations() {
+        const enemyRoster = [
+            {
+                character: 'MUP',
+                animations: ['mup-idle', 'mup-walk', 'mup-punch-1', 'mup-punch-2', 'mup-damage', 'mup-dying', 'mup-knockdown-get-up']
+            },
+            {
+                character: 'Dizelaš', 
+                animations: ['dizel-walk', 'dizel-run', 'dizel-punch-1', 'dizel-throw', 'dizel-damage', 'dizel-dying', 'dizel-knockdown-get-up']
+            },
+            {
+                character: 'Dizelčić', 
+                animations: ['dizelcic-walk', 'dizelcic-punch-1', 'dizelcic-damage', 'dizelcic-dying', 'dizelcic-knockdown-get-up']
+            },
+            {
+                character: 'Miner',
+                animations: ['miner-walk', 'miner-melee', 'miner-damage', 'miner-dying', 'miner-knockdown-get-up']
+            }
+        ];
+
+        enemyRoster.forEach(enemy => {
+            enemy.animations.forEach(animName => {
+                const isLooping = animName.includes('walk') || animName.includes('run') || animName.includes('idle');
+                
+                try {
+                    this.anims.create({
+                        key: animName, 
+                        frames: this.anims.generateFrameNames('enemies_1993', {
+                            prefix: `${animName}/`, 
+                            suffix: '.png',
+                            start: 1,
+                            end: 8, 
+                            zeroPad: 3 
+                        }),
+                        frameRate: 10, 
+                        repeat: isLooping ? -1 : 0
+                    });
+                } catch (error) {
+                    console.warn(`Animation missing in JSON: ${animName}`);
+                }
+            });
+        });
     }
 }
