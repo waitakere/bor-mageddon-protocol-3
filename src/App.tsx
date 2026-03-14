@@ -6,27 +6,18 @@ import { WorldMap } from './components/WorldMap';
 import { GameHUD } from './components/GameHUD';
 
 export default function App() {
-  // --- Core Game Flow State ---
   const [gameState, setGameState] = useState<'MENU' | 'PLAYING'>('MENU');
   const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null);
-  
-  // --- UI Overlays & Polish State ---
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [crtEnabled, setCrtEnabled] = useState(true);
   const [volume, setVolume] = useState(0.5);
-
-  // --- 1993 Particle State ---
   const [particles, setParticles] = useState<{ id: number; left: string; delay: string; duration: string; size: string }[]>([]);
 
   useEffect(() => {
-      // Generate 30 random upward-falling red particles for the menu
       const newParticles = Array.from({ length: 30 }).map((_, i) => ({
-          id: i,
-          left: `${Math.random() * 100}vw`,
-          delay: `${Math.random() * 5}s`,
-          duration: `${4 + Math.random() * 6}s`,
-          size: `${2 + Math.random() * 4}px`
+          id: i, left: `${Math.random() * 100}vw`, delay: `${Math.random() * 5}s`,
+          duration: `${4 + Math.random() * 6}s`, size: `${2 + Math.random() * 4}px`
       }));
       setParticles(newParticles);
   }, []);
@@ -39,23 +30,14 @@ export default function App() {
   return (
     <div className="w-screen h-screen bg-black overflow-hidden relative">
       
-      {/* --- RED EMBERS (Only show on Menu) --- */}
       {gameState === 'MENU' && particles.map(p => (
-          <div 
-              key={p.id} 
-              className="particle"
-              style={{
-                  left: p.left,
-                  animationDelay: p.delay,
-                  animationDuration: p.duration,
-                  width: p.size,
-                  height: p.size
-              }}
+          <div key={p.id} className="particle"
+              style={{ left: p.left, animationDelay: p.delay, animationDuration: p.duration, width: p.size, height: p.size }}
           />
       ))}
 
-      {/* Top Right Navigation UI */}
-      <div className="absolute top-4 right-4 z-50 flex gap-3">
+      {/* FIXED: Shifted from top-4 to top-32 to clear the HUD */}
+      <div className="absolute top-32 right-4 z-50 flex flex-col gap-3 items-end">
         {gameState === 'PLAYING' && (
           <button 
             onClick={() => setIsMapOpen(true)}
@@ -64,7 +46,6 @@ export default function App() {
             [OPERATIVNA MAPA]
           </button>
         )}
-        
         <button 
           onClick={() => setIsSettingsOpen(true)}
           className="text-white font-mono text-xs border border-zinc-600 px-3 py-1 bg-black/80 hover:bg-white hover:text-black transition-colors uppercase tracking-widest"
@@ -73,7 +54,6 @@ export default function App() {
         </button>
       </div>
 
-      {/* --- MAIN GAME STATE ROUTING --- */}
       {gameState === 'MENU' && (
         <CharacterSelector onSelect={handleCharacterSelect} />
       )}
@@ -84,30 +64,19 @@ export default function App() {
         </div>
       )}
 
-      {/* --- HUD & OVERLAYS --- */}
-      
-      {/* Permanent Controls Reminder */}
       {gameState === 'PLAYING' && <ControlsHUD />}
-
-      {/* Modern React Game HUD */}
       {gameState === 'PLAYING' && <GameHUD />}
 
-      {/* Settings Modal */}
       <SettingsMenu 
-        isOpen={isSettingsOpen} 
-        onClose={() => setIsSettingsOpen(false)} 
-        crtEnabled={crtEnabled}
-        onCrtToggle={setCrtEnabled}
-        volume={volume}
-        onVolumeChange={setVolume}
+        isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} 
+        crtEnabled={crtEnabled} onCrtToggle={setCrtEnabled}
+        volume={volume} onVolumeChange={setVolume}
       />
 
-      {/* World Map / Level Selector Modal */}
       {isMapOpen && (
         <WorldMap onClose={() => setIsMapOpen(false)} />
       )}
 
-      {/* 1993 CRT Scanline & Phosphor Overlay */}
       {crtEnabled && (
         <div 
           className="pointer-events-none absolute inset-0 z-40 mix-blend-overlay opacity-30"
