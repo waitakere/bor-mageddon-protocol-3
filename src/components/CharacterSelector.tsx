@@ -64,15 +64,19 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
   const [activeCard, setActiveCard] = useState<string | null>(null);
   const [audioOn, setAudioOn] = useState(true);
   
-  // Refs for Three.js to read without triggering re-renders
+  // Refs for Three.js
   const soundtrackRef = useRef<THREE.Audio | null>(null);
   const activeCardRef = useRef<string | null>(null);
   const isInitializedRef = useRef<boolean>(false);
+  const targetRotationRef = useRef<number | null>(null);
 
   // Sync React state to our Three.js Ref
   const handleSetActiveCard = (cardId: string | null) => {
       setActiveCard(cardId);
       activeCardRef.current = cardId;
+      if (!cardId) {
+          targetRotationRef.current = null; // Clear target when closing card
+      }
   };
 
   useEffect(() => {
@@ -125,8 +129,6 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
 
     const cardMeshes: THREE.Mesh[] = [];
     const RADIUS = 3.8; 
-    
-    // Push group back so cards orbit the center perfectly
     carouselGroup.position.z = -RADIUS;
     
     const ANGLE_STEP = (Math.PI * 2) / CARDS_DATA.length;
@@ -172,7 +174,7 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     let totalMove = 0;
 
     const onMouseDown = (e: MouseEvent) => {
-        if (!isInitializedRef.current) return; // Prevent interaction before boot
+        if (!isInitializedRef.current) return; 
         isDragging = true;
         totalMove = 0;
         previousMousePosition = { x: e.clientX, y: e.clientY };
@@ -198,8 +200,13 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
             const intersects = raycaster.intersectObjects(cardMeshes);
             
             if (intersects.length > 0) {
-                const clickedChar = intersects[0].object.userData.characterName;
-                handleSetActiveCard(clickedChar); // Safely sets UI and Ref!
+                const clickedObj = intersects[0].object;
+                const clickedChar = clickedObj.userData.characterName;
+                const clickedIndex = clickedObj.userData.index;
+                
+                // Calculate the exact opposite angle to snap to front
+                targetRotationRef.current = -(clickedIndex * ANGLE_STEP);
+                handleSetActiveCard(clickedChar); 
             }
         }
     };
@@ -223,9 +230,11 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         animationFrameId = requestAnimationFrame(animate);
         time++;
         
-        // Use the Ref here! This way it doesn't need to be in the useEffect dependencies
         if (!isDragging && !activeCardRef.current) {
             carouselGroup.rotation.y += 0.002;
+        } else if (activeCardRef.current && targetRotationRef.current !== null) {
+            // Smoothly lerp (slide) to the target rotation
+            carouselGroup.rotation.y += (targetRotationRef.current - carouselGroup.rotation.y) * 0.1;
         }
         
         carouselGroup.position.y = Math.sin(time * 0.02) * 0.1;
@@ -254,12 +263,12 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         }
         renderer.dispose();
     };
-  }, []); // <--- THE MAGIC FIX: EMPTY DEPENDENCY ARRAY!
+  }, []); 
 
   // --- AUDIO LOGIC ---
   const handleInitialize = () => {
     setIsInitialized(true);
-    isInitializedRef.current = true; // Unlock 3D interactions
+    isInitializedRef.current = true;
     
     if (soundtrackRef.current) {
         const audioCtx = THREE.AudioContext.getContext();
