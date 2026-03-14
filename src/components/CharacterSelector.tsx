@@ -24,7 +24,6 @@ const CARDS_DATA = [
   }
 ];
 
-// Helper functions for 3D Textures
 function createTitleTexture() {
     const c = document.createElement('canvas'); c.width = 1024; c.height = 256;
     const ctx = c.getContext('2d')!; ctx.textAlign = 'center';
@@ -58,31 +57,24 @@ function createCardTexture(card: any, img: HTMLImageElement | null = null) {
 
 export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }) => {
   const mountRef = useRef<HTMLDivElement>(null);
-  
-  // React UI State
   const [isInitialized, setIsInitialized] = useState(false);
   const [activeCard, setActiveCard] = useState<string | null>(null);
   const [audioOn, setAudioOn] = useState(true);
   
-  // Refs for Three.js
   const soundtrackRef = useRef<THREE.Audio | null>(null);
   const activeCardRef = useRef<string | null>(null);
   const isInitializedRef = useRef<boolean>(false);
   const targetRotationRef = useRef<number | null>(null);
 
-  // Sync React state to our Three.js Ref
   const handleSetActiveCard = (cardId: string | null) => {
       setActiveCard(cardId);
       activeCardRef.current = cardId;
-      if (!cardId) {
-          targetRotationRef.current = null; // Clear target when closing card
-      }
+      if (!cardId) targetRotationRef.current = null;
   };
 
   useEffect(() => {
     if (!mountRef.current) return;
 
-    // --- 1. SETUP ---
     const scene = new THREE.Scene();
     scene.background = null; 
     scene.fog = new THREE.FogExp2(THEME.fog, 0.08);
@@ -99,13 +91,10 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     camera.add(listener);
     soundtrackRef.current = new THREE.Audio(listener);
 
-    // --- 2. PARTICLES & LIGHTING ---
     const ashCount = 1000;
     const ashGeo = new THREE.BufferGeometry();
     const ashPos = new Float32Array(ashCount * 3);
-    for(let i=0; i < ashCount * 3; i++) {
-        ashPos[i] = (Math.random() - 0.5) * 30;
-    }
+    for(let i=0; i < ashCount * 3; i++) ashPos[i] = (Math.random() - 0.5) * 30;
     ashGeo.setAttribute('position', new THREE.BufferAttribute(ashPos, 3));
     const ashMaterial = new THREE.PointsMaterial({ size: 0.08, color: THEME.particle, transparent: true, opacity: 0.4 });
     const ashSystem = new THREE.Points(ashGeo, ashMaterial);
@@ -116,7 +105,6 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     spotLight.position.set(0, 5, 8);
     scene.add(spotLight);
 
-    // --- 3. MESHES & TEXTURES ---
     const titleMesh = new THREE.Mesh(
         new THREE.PlaneGeometry(26, 7), 
         new THREE.MeshBasicMaterial({ map: createTitleTexture(), transparent: true, opacity: 0.6, fog: false, depthWrite: false })
@@ -135,27 +123,18 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
 
     CARDS_DATA.forEach((card, i) => {
         const theta = i * ANGLE_STEP;
-        
         const materials = [
-            new THREE.MeshStandardMaterial({color: 0x1a0a05}), 
-            new THREE.MeshStandardMaterial({color: 0x1a0a05}), 
-            new THREE.MeshStandardMaterial({color: 0x1a0a05}), 
-            new THREE.MeshStandardMaterial({color: 0x1a0a05}), 
-            new THREE.MeshBasicMaterial({transparent: true}), // Front glowing face
-            new THREE.MeshStandardMaterial({color: 0x000000}) 
+            new THREE.MeshStandardMaterial({color: 0x1a0a05}), new THREE.MeshStandardMaterial({color: 0x1a0a05}), 
+            new THREE.MeshStandardMaterial({color: 0x1a0a05}), new THREE.MeshStandardMaterial({color: 0x1a0a05}), 
+            new THREE.MeshBasicMaterial({transparent: true}), new THREE.MeshStandardMaterial({color: 0x000000}) 
         ];
         
         const mesh = new THREE.Mesh(new THREE.BoxGeometry(4, 6, 0.2), materials);
         mesh.userData = { index: i, characterName: card.id }; 
-        
         mesh.material[4].map = createCardTexture(card);
         
-        const img = new Image(); 
-        img.crossOrigin = "anonymous";
-        img.onload = () => { 
-            mesh.material[4].map = createCardTexture(card, img); 
-            mesh.material[4].needsUpdate = true; 
-        };
+        const img = new Image(); img.crossOrigin = "anonymous";
+        img.onload = () => { mesh.material[4].map = createCardTexture(card, img); mesh.material[4].needsUpdate = true; };
         img.src = RAW_URL + card.file;
 
         mesh.position.x = Math.sin(theta) * RADIUS; 
@@ -166,17 +145,14 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         cardMeshes.push(mesh);
     });
 
-    // --- 4. INTERACTION ---
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
-    let isDragging = false;
+    let isDragging = false, totalMove = 0;
     let previousMousePosition = { x: 0, y: 0 };
-    let totalMove = 0;
 
     const onMouseDown = (e: MouseEvent) => {
         if (!isInitializedRef.current) return; 
-        isDragging = true;
-        totalMove = 0;
+        isDragging = true; totalMove = 0;
         previousMousePosition = { x: e.clientX, y: e.clientY };
     };
 
@@ -191,22 +167,14 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     const onMouseUp = (e: MouseEvent) => {
         if (!isInitializedRef.current) return;
         isDragging = false;
-        
         if (totalMove < 8) { 
-            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-            
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1; mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
             const intersects = raycaster.intersectObjects(cardMeshes);
-            
             if (intersects.length > 0) {
                 const clickedObj = intersects[0].object;
-                const clickedChar = clickedObj.userData.characterName;
-                const clickedIndex = clickedObj.userData.index;
-                
-                // Calculate the exact opposite angle to snap to front
-                targetRotationRef.current = -(clickedIndex * ANGLE_STEP);
-                handleSetActiveCard(clickedChar); 
+                targetRotationRef.current = -(clickedObj.userData.index * ANGLE_STEP);
+                handleSetActiveCard(clickedObj.userData.characterName); 
             }
         }
     };
@@ -222,30 +190,22 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     };
     window.addEventListener('resize', handleResize);
 
-    // --- 5. ANIMATION LOOP ---
-    let animationFrameId: number;
-    let time = 0;
+    let animationFrameId: number; let time = 0;
 
     const animate = () => {
         animationFrameId = requestAnimationFrame(animate);
         time++;
-        
-        if (!isDragging && !activeCardRef.current) {
-            carouselGroup.rotation.y += 0.002;
-        } else if (activeCardRef.current && targetRotationRef.current !== null) {
-            // Smoothly lerp (slide) to the target rotation
+        if (!isDragging && !activeCardRef.current) carouselGroup.rotation.y += 0.002;
+        else if (activeCardRef.current && targetRotationRef.current !== null) {
             carouselGroup.rotation.y += (targetRotationRef.current - carouselGroup.rotation.y) * 0.1;
         }
-        
         carouselGroup.position.y = Math.sin(time * 0.02) * 0.1;
 
         const pos = ashSystem.geometry.attributes.position.array as Float32Array;
         for(let i = 1; i < pos.length; i += 3) {
-            pos[i] += 0.015;
-            if (pos[i] > 10) pos[i] = -10;
+            pos[i] += 0.015; if (pos[i] > 10) pos[i] = -10;
         }
         ashSystem.geometry.attributes.position.needsUpdate = true;
-        
         titleMesh.material.opacity = 0.4 + Math.abs(Math.sin(time * 0.02)) * 0.2;
 
         renderer.render(scene, camera);
@@ -258,24 +218,23 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         window.removeEventListener('mouseup', onMouseUp);
         window.removeEventListener('resize', handleResize);
         cancelAnimationFrame(animationFrameId);
-        if (mountRef.current && renderer.domElement) {
-            mountRef.current.removeChild(renderer.domElement);
+        
+        // FIXED: Kill the Web Audio track perfectly before unmounting
+        if (soundtrackRef.current && soundtrackRef.current.isPlaying) {
+            soundtrackRef.current.stop();
         }
+
+        if (mountRef.current && renderer.domElement) mountRef.current.removeChild(renderer.domElement);
         renderer.dispose();
     };
   }, []); 
 
-  // --- AUDIO LOGIC ---
   const handleInitialize = () => {
-    setIsInitialized(true);
-    isInitializedRef.current = true;
-    
+    setIsInitialized(true); isInitializedRef.current = true;
     if (soundtrackRef.current) {
         const audioCtx = THREE.AudioContext.getContext();
         if (audioCtx.state === 'suspended') audioCtx.resume();
-
-        const audioLoader = new THREE.AudioLoader();
-        audioLoader.load(BGM_URL, (buffer) => {
+        new THREE.AudioLoader().load(BGM_URL, (buffer) => {
             soundtrackRef.current!.setBuffer(buffer);
             soundtrackRef.current!.setLoop(true);
             soundtrackRef.current!.setVolume(0.5);
@@ -286,97 +245,48 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
 
   const toggleAudio = () => {
     if (soundtrackRef.current) {
-        if (soundtrackRef.current.isPlaying) {
-            soundtrackRef.current.pause();
-            setAudioOn(false);
-        } else {
-            soundtrackRef.current.play();
-            setAudioOn(true);
-        }
+        if (soundtrackRef.current.isPlaying) { soundtrackRef.current.pause(); setAudioOn(false); } 
+        else { soundtrackRef.current.play(); setAudioOn(true); }
     }
-  };
-
-  const handleDeployment = () => {
-    if (activeCard) onSelect(activeCard);
   };
 
   const currentStats = activeCard ? CARDS_DATA.find(c => c.id === activeCard) : null;
 
   return (
     <div className="absolute inset-0 w-full h-full text-white font-mono pointer-events-none select-none z-10">
-      
       <div ref={mountRef} className="absolute inset-0 w-full h-full -z-10 pointer-events-auto cursor-grab active:cursor-grabbing" />
-
       {!isInitialized && (
         <div id="start-overlay" className="absolute inset-0 flex items-center justify-center bg-black/90 z-50 pointer-events-auto backdrop-blur-sm">
           <div className="start-box flex flex-col items-center w-full max-w-3xl animate-in fade-in zoom-in duration-500">
-            <h1 className="font-metal text-white text-6xl md:text-8xl tracking-widest drop-shadow-[4px_4px_0px_#ff3333] mb-4">
-                BOR-MAGEDDON
-            </h1>
-            <h2 className="font-mono-title text-xl md:text-2xl text-gray-400 mb-12">
-                [TERMINAL_01]
-            </h2>
+            <h1 className="font-metal text-white text-6xl md:text-8xl tracking-widest drop-shadow-[4px_4px_0px_#ff3333] mb-4">BOR-MAGEDDON</h1>
+            <h2 className="font-mono-title text-xl md:text-2xl text-gray-400 mb-12">[TERMINAL_01]</h2>
             <hr className="w-full border-t border-red-900 mb-8 opacity-50" />
-            <button 
-                id="initialize-btn" 
-                onClick={handleInitialize}
-                className="bg-[#ff3333] border-none px-10 py-5 cursor-pointer shadow-[8px_8px_0px_#660000] text-xl mt-8 font-mono font-bold text-black uppercase tracking-widest hover:bg-white hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[10px_10px_0px_#999] transition-all"
-            >
-                INITIALIZE PROTOCOL
-            </button>
-            <p className="mt-8 text-green-500 font-mono text-sm tracking-widest animate-pulse">
-                ESTABLISHING SECURE CONNECTION...
-            </p>
+            <button onClick={handleInitialize} className="bg-[#ff3333] border-none px-10 py-5 cursor-pointer shadow-[8px_8px_0px_#660000] text-xl mt-8 font-mono font-bold text-black uppercase tracking-widest hover:bg-white hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[10px_10px_0px_#999] transition-all">INITIALIZE PROTOCOL</button>
+            <p className="mt-8 text-green-500 font-mono text-sm tracking-widest animate-pulse">ESTABLISHING SECURE CONNECTION...</p>
           </div>
         </div>
       )}
-
       {isInitialized && (
         <div id="terminal-header" className="absolute top-0 left-0 w-full p-6 flex justify-between items-center bg-black/80 border-b border-red-900/50 pointer-events-auto backdrop-blur-sm z-20">
-          <div id="hint" className="text-sm font-bold text-red-500 animate-pulse tracking-widest">
-            SYSTEM_STATUS: [DRAG_TO_ROTATE] // [CLICK_CARD_FOR_ARCHIVE]
-          </div>
+          <div id="hint" className="text-sm font-bold text-red-500 animate-pulse tracking-widest">SYSTEM_STATUS: [DRAG_TO_ROTATE] // [CLICK_CARD_FOR_ARCHIVE]</div>
           <div id="audio-controls">
-            <button 
-              onClick={toggleAudio}
-              className="text-xs font-bold border border-red-900 px-4 py-2 bg-black hover:bg-red-600 hover:text-white transition-colors cursor-pointer tracking-widest"
-            >
-              AUDIO: [{audioOn ? 'ON' : 'OFF'}]
-            </button>
+            <button onClick={toggleAudio} className="text-xs font-bold border border-red-900 px-4 py-2 bg-black hover:bg-red-600 hover:text-white transition-colors cursor-pointer tracking-widest">AUDIO: [{audioOn ? 'ON' : 'OFF'}]</button>
           </div>
         </div>
       )}
-
       {isInitialized && activeCard && currentStats && (
         <div id="expanded-card" className="absolute bottom-12 right-12 w-96 bg-[#1a0a05] border-4 border-double border-[#ff3333] p-8 z-30 pointer-events-auto shadow-[20px_20px_0px_#000] transition-all animate-in fade-in slide-in-from-right-10">
-          
-          <button 
-            onClick={() => handleSetActiveCard(null)}
-            className="absolute top-4 right-4 bg-[#ff3333] text-black border-none font-bold px-3 py-1 cursor-pointer hover:bg-white"
-          >
-            X
-          </button>
-          
+          <button onClick={() => handleSetActiveCard(null)} className="absolute top-4 right-4 bg-[#ff3333] text-black border-none font-bold px-3 py-1 cursor-pointer hover:bg-white">X</button>
           <div className="card-header border-b border-red-900/50 pb-4 mb-4 mt-4">
             <span className="text-[10px] text-green-500 block mb-2 tracking-widest font-bold">DE-ENCRYPTION SUCCESSFUL</span>
             <h2 className="font-metal text-5xl text-white drop-shadow-[3px_3px_0px_#ff3333] tracking-wider uppercase">{currentStats.title}</h2>
           </div>
-          
-          <p className="text-sm text-gray-300 mb-6 leading-relaxed h-20">
-            {currentStats.desc}
-          </p>
-          
+          <p className="text-sm text-gray-300 mb-6 leading-relaxed h-20">{currentStats.desc}</p>
           <div className="flex gap-6 mb-8 text-sm font-bold border border-red-900/50 p-4 bg-black/50">
             <div className="stat flex-1 text-gray-500">SPD: <span className="text-red-500 text-lg ml-2">{currentStats.spd}</span></div>
             <div className="stat flex-1 text-gray-500">PWR: <span className="text-red-500 text-lg ml-2">{currentStats.pwr}</span></div>
           </div>
-          
-          <button 
-            onClick={handleDeployment}
-            className="w-full bg-[#ff3333] text-black py-4 text-lg hover:bg-white font-bold border-none cursor-pointer shadow-[6px_6px_0px_#660000] transition-all tracking-widest"
-          >
-            DEPLOY TO BOR
-          </button>
+          <button onClick={() => onSelect(activeCard)} className="w-full bg-[#ff3333] text-black py-4 text-lg hover:bg-white font-bold border-none cursor-pointer shadow-[6px_6px_0px_#660000] transition-all tracking-widest">DEPLOY TO BOR</button>
         </div>
       )}
     </div>
