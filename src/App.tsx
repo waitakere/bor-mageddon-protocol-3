@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CharacterSelector } from './components/CharacterSelector';
 import { GameContainer } from './components/GameContainer';
 import { SettingsMenu, ControlsHUD } from './components/SettingsMenu';
@@ -16,6 +16,21 @@ export default function App() {
   const [crtEnabled, setCrtEnabled] = useState(true);
   const [volume, setVolume] = useState(0.5);
 
+  // --- 1993 Particle State ---
+  const [particles, setParticles] = useState<{ id: number; left: string; delay: string; duration: string; size: string }[]>([]);
+
+  useEffect(() => {
+      // Generate 30 random upward-falling red particles for the menu
+      const newParticles = Array.from({ length: 30 }).map((_, i) => ({
+          id: i,
+          left: `${Math.random() * 100}vw`,
+          delay: `${Math.random() * 5}s`,
+          duration: `${4 + Math.random() * 6}s`,
+          size: `${2 + Math.random() * 4}px`
+      }));
+      setParticles(newParticles);
+  }, []);
+
   const handleCharacterSelect = (character: string) => {
     setSelectedCharacter(character);
     setGameState('PLAYING');
@@ -24,6 +39,21 @@ export default function App() {
   return (
     <div className="w-screen h-screen bg-black overflow-hidden relative">
       
+      {/* --- RED EMBERS (Only show on Menu) --- */}
+      {gameState === 'MENU' && particles.map(p => (
+          <div 
+              key={p.id} 
+              className="particle"
+              style={{
+                  left: p.left,
+                  animationDelay: p.delay,
+                  animationDuration: p.duration,
+                  width: p.size,
+                  height: p.size
+              }}
+          />
+      ))}
+
       {/* Top Right Navigation UI */}
       <div className="absolute top-4 right-4 z-50 flex gap-3">
         {gameState === 'PLAYING' && (
@@ -49,7 +79,9 @@ export default function App() {
       )}
       
       {gameState === 'PLAYING' && selectedCharacter && (
-        <GameContainer selectedCharacter={selectedCharacter} />
+        <div className="absolute inset-0 z-0">
+           <GameContainer selectedCharacter={selectedCharacter} />
+        </div>
       )}
 
       {/* --- HUD & OVERLAYS --- */}
@@ -57,7 +89,7 @@ export default function App() {
       {/* Permanent Controls Reminder */}
       {gameState === 'PLAYING' && <ControlsHUD />}
 
-      {/* Modern React Game HUD (Option B) */}
+      {/* Modern React Game HUD */}
       {gameState === 'PLAYING' && <GameHUD />}
 
       {/* Settings Modal */}
@@ -88,7 +120,3 @@ export default function App() {
     </div>
   );
 }
-
-
-
-
