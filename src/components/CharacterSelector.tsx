@@ -5,7 +5,7 @@ interface CharacterSelectorProps {
   onSelect: (characterName: string) => void;
 }
 
-const THEME = { bg: 0x050404, fog: 0x220f05, particle: 0xff3333, ambient: 0x442211, point: 0xff3333 };
+const THEME = { bg: 0x050404, fog: 0x220f05, particle: 0xff3333, ambient: 0xffffff, point: 0xff5533 };
 const RAW_URL = 'https://raw.githubusercontent.com/ivanatag/bor-mageddon-protocol-2/main/public/assets/images/characters/';
 const BGM_URL = 'https://raw.githubusercontent.com/ivanatag/bor-mageddon-protocol-2/main/public/assets/audio/bgm/bormageddon-character-menu-soundtrack.wav';
 
@@ -50,7 +50,10 @@ function createCardTexture(card: any, img: HTMLImageElement | null = null) {
     ctx.fillStyle = card.accent; ctx.font = 'bold 24px "Space Mono"'; ctx.fillText(card.label, 50, 75);
     ctx.fillStyle = '#fff'; ctx.font = 'bold 75px "Space Mono"'; ctx.fillText(card.title, 50, 610);
     
-    const tex = new THREE.CanvasTexture(c); tex.magFilter = THREE.NearestFilter;
+    const tex = new THREE.CanvasTexture(c); 
+    tex.magFilter = THREE.NearestFilter;
+    // Ensure colors are punchy
+    tex.colorSpace = THREE.SRGBColorSpace; 
     return tex;
 }
 
@@ -61,7 +64,6 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
   const [activeCard, setActiveCard] = useState<string | null>(null);
   const [audioOn, setAudioOn] = useState(true);
   
-  // Store the audio object in a ref so we can toggle it without recreating it
   const soundtrackRef = useRef<THREE.Audio | null>(null);
 
   useEffect(() => {
@@ -96,15 +98,16 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     const ashSystem = new THREE.Points(ashGeo, ashMaterial);
     scene.add(ashSystem);
 
-    scene.add(new THREE.AmbientLight(THEME.ambient, 0.6));
-    const spotLight = new THREE.PointLight(THEME.point, 5, 25);
+    scene.add(new THREE.AmbientLight(THEME.ambient, 0.4)); // Clean white ambient
+    const spotLight = new THREE.PointLight(THEME.point, 10, 25); // Brighter point light
     spotLight.position.set(0, 5, 8);
     scene.add(spotLight);
 
     // --- 3. MESHES & TEXTURES ---
     const titleMesh = new THREE.Mesh(
         new THREE.PlaneGeometry(26, 7), 
-        new THREE.MeshBasicMaterial({ map: createTitleTexture(), transparent: true, opacity: 0.3, fog: false, depthWrite: false })
+        // Switched to Basic Material + higher opacity so it's always visible!
+        new THREE.MeshBasicMaterial({ map: createTitleTexture(), transparent: true, opacity: 0.6, fog: false, depthWrite: false })
     );
     titleMesh.position.set(0, 0, -6); 
     scene.add(titleMesh);
@@ -114,28 +117,30 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
 
     const cardMeshes: THREE.Mesh[] = [];
     const RADIUS = 3.8; 
+    
+    // Push the whole group back so the front card sits exactly at Z=0 (Fixes rotation axis)
+    carouselGroup.position.z = -RADIUS;
+    
     const ANGLE_STEP = (Math.PI * 2) / CARDS_DATA.length;
 
     CARDS_DATA.forEach((card, i) => {
         const theta = i * ANGLE_STEP;
         
-        // Multi-material box to only texture the front face
         const materials = [
             new THREE.MeshStandardMaterial({color: 0x1a0a05}), // Right
             new THREE.MeshStandardMaterial({color: 0x1a0a05}), // Left
             new THREE.MeshStandardMaterial({color: 0x1a0a05}), // Top
             new THREE.MeshStandardMaterial({color: 0x1a0a05}), // Bottom
-            new THREE.MeshStandardMaterial({transparent: true, emissive: 0x111111}), // FRONT
+            // BASIC MATERIAL for the front face guarantees 100% vibrant colors ignoring shadows!
+            new THREE.MeshBasicMaterial({transparent: true}), 
             new THREE.MeshStandardMaterial({color: 0x000000})  // Back
         ];
         
         const mesh = new THREE.Mesh(new THREE.BoxGeometry(4, 6, 0.2), materials);
         mesh.userData = { index: i, characterName: card.id }; 
         
-        // Initial blank texture with just colors
         mesh.material[4].map = createCardTexture(card);
         
-        // Load the actual character sprite image
         const img = new Image(); 
         img.crossOrigin = "anonymous";
         img.onload = () => { 
@@ -144,8 +149,9 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         };
         img.src = RAW_URL + card.file;
 
+        // Math fix: Removes the `- RADIUS` offset so they rotate around the center perfectly
         mesh.position.x = Math.sin(theta) * RADIUS; 
-        mesh.position.z = Math.cos(theta) * RADIUS - RADIUS; 
+        mesh.position.z = Math.cos(theta) * RADIUS; 
         mesh.rotation.y = theta;
 
         carouselGroup.add(mesh);
@@ -175,7 +181,7 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
 
     const onMouseUp = (e: MouseEvent) => {
         isDragging = false;
-        if (totalMove < 8) { // Only click if they didn't drag
+        if (totalMove < 8) { 
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
             
@@ -209,12 +215,11 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         time++;
         
         if (!isDragging && !activeCard) {
-            carouselGroup.rotation.y += 0.002; // Auto-drift
+            carouselGroup.rotation.y += 0.002;
         }
         
-        carouselGroup.position.y = Math.sin(time * 0.02) * 0.1; // Gentle bobbing
+        carouselGroup.position.y = Math.sin(time * 0.02) * 0.1;
 
-        // Animate Ash Particles
         const pos = ashSystem.geometry.attributes.position.array as Float32Array;
         for(let i = 1; i < pos.length; i += 3) {
             pos[i] += 0.015;
@@ -222,8 +227,7 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         }
         ashSystem.geometry.attributes.position.needsUpdate = true;
         
-        // Pulse background title
-        titleMesh.material.opacity = 0.2 + Math.abs(Math.sin(time * 0.02)) * 0.15;
+        titleMesh.material.opacity = 0.4 + Math.abs(Math.sin(time * 0.02)) * 0.2;
 
         renderer.render(scene, camera);
     };
@@ -246,7 +250,6 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
   const handleInitialize = () => {
     setIsInitialized(true);
     
-    // Play the loaded soundtrack
     if (soundtrackRef.current) {
         const audioCtx = THREE.AudioContext.getContext();
         if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -282,10 +285,8 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
   return (
     <div className="absolute inset-0 w-full h-full text-white font-mono pointer-events-none select-none z-10">
       
-      {/* 3D Canvas Container */}
       <div ref={mountRef} className="absolute inset-0 w-full h-full -z-10 pointer-events-auto cursor-grab active:cursor-grabbing" />
 
-      {/* INITIALIZATION OVERLAY */}
       {!isInitialized && (
         <div id="start-overlay" className="absolute inset-0 flex items-center justify-center bg-black/90 z-50 pointer-events-auto backdrop-blur-sm">
           <div className="start-box flex flex-col items-center w-full max-w-3xl animate-in fade-in zoom-in duration-500">
@@ -310,7 +311,6 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         </div>
       )}
 
-      {/* TERMINAL HEADER */}
       {isInitialized && (
         <div id="terminal-header" className="absolute top-0 left-0 w-full p-6 flex justify-between items-center bg-black/80 border-b border-red-900/50 pointer-events-auto backdrop-blur-sm z-20">
           <div id="hint" className="text-sm font-bold text-red-500 animate-pulse tracking-widest">
@@ -327,7 +327,6 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         </div>
       )}
 
-      {/* EXPANDED CHARACTER CARD */}
       {isInitialized && activeCard && currentStats && (
         <div id="expanded-card" className="absolute bottom-12 right-12 w-96 bg-[#1a0a05] border-4 border-double border-[#ff3333] p-8 z-30 pointer-events-auto shadow-[20px_20px_0px_#000] transition-all animate-in fade-in slide-in-from-right-10">
           
