@@ -4,7 +4,7 @@
 			"image": "darko",
 			"format": "RGBA8888",
 			"size": {
-				"w": 2382,
+				"w": 2322,
 				"h": 4096
 			},
 			"scale": 1,
@@ -73,192 +73,24 @@
 					}
 				},
 				{
-					"filename": "darko-kick-2/frame_006.png",
-					"rotated": true,
+					"filename": "darko-dying/frame_013.png",
+					"rotated": false,
 					"trimmed": true,
 					"sourceSize": {
-						"w": 245,
-						"h": 277
+						"w": 362,
+						"h": 285
 					},
 					"spriteSourceSize": {
-						"x": 98,
-						"y": 17,
-						"w": 139,
-						"h": 249
+						"x": 66,
+						"y": 161,
+						"w": 277,
+						"h": 123
 					},
 					"frame": {
 						"x": 161,
 						"y": 338,
-						"w": 139,
-						"h": 249
-					}
-				},
-				{
-					"filename": "darko-finish-move/frame_015.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 379,
-						"h": 299
-					},
-					"spriteSourceSize": {
-						"x": 28,
-						"y": 1,
-						"w": 328,
-						"h": 278
-					},
-					"frame": {
-						"x": 363,
-						"y": 1,
-						"w": 328,
-						"h": 278
-					}
-				},
-				{
-					"filename": "darko-dying/frame_005.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 362,
-						"h": 285
-					},
-					"spriteSourceSize": {
-						"x": 12,
-						"y": 28,
-						"w": 324,
-						"h": 246
-					},
-					"frame": {
-						"x": 1,
-						"y": 956,
-						"w": 324,
-						"h": 246
-					}
-				},
-				{
-					"filename": "darko-finish-move/frame_014.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 379,
-						"h": 299
-					},
-					"spriteSourceSize": {
-						"x": 46,
-						"y": 5,
-						"w": 310,
-						"h": 271
-					},
-					"frame": {
-						"x": 164,
-						"y": 479,
-						"w": 310,
-						"h": 271
-					}
-				},
-				{
-					"filename": "darko-melee/frame_023.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 512,
-						"h": 512
-					},
-					"spriteSourceSize": {
-						"x": 204,
-						"y": 158,
-						"w": 163,
-						"h": 229
-					},
-					"frame": {
-						"x": 164,
-						"y": 791,
-						"w": 163,
-						"h": 229
-					}
-				},
-				{
-					"filename": "darko-walk/frame_008.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 156,
-						"h": 261
-					},
-					"spriteSourceSize": {
-						"x": 11,
-						"y": 3,
-						"w": 145,
-						"h": 256
-					},
-					"frame": {
-						"x": 412,
-						"y": 331,
-						"w": 145,
-						"h": 256
-					}
-				},
-				{
-					"filename": "darko-finish-move/frame_013.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 379,
-						"h": 299
-					},
-					"spriteSourceSize": {
-						"x": 60,
-						"y": 14,
-						"w": 293,
-						"h": 262
-					},
-					"frame": {
-						"x": 643,
-						"y": 1,
-						"w": 293,
-						"h": 262
-					}
-				},
-				{
-					"filename": "darko-finish-move/frame_010.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 379,
-						"h": 299
-					},
-					"spriteSourceSize": {
-						"x": 46,
-						"y": 59,
-						"w": 283,
-						"h": 217
-					},
-					"frame": {
-						"x": 1,
-						"y": 1282,
-						"w": 283,
-						"h": 217
-					}
-				},
-				{
-					"filename": "darko-dying/frame_015.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 362,
-						"h": 285
-					},
-					"spriteSourceSize": {
-						"x": 60,
-						"y": 194,
-						"w": 283,
-						"h": 90
-					},
-					"frame": {
-						"x": 1,
-						"y": 1567,
-						"w": 283,
-						"h": 90
+						"w": 277,
+						"h": 123
 					}
 				},
 				{
@@ -276,10 +108,31 @@
 						"h": 282
 					},
 					"frame": {
-						"x": 1,
-						"y": 1852,
+						"x": 363,
+						"y": 1,
 						"w": 227,
 						"h": 282
+					}
+				},
+				{
+					"filename": "darko-finish-move/frame_015.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 379,
+						"h": 299
+					},
+					"spriteSourceSize": {
+						"x": 28,
+						"y": 1,
+						"w": 328,
+						"h": 278
+					},
+					"frame": {
+						"x": 1,
+						"y": 956,
+						"w": 328,
+						"h": 278
 					}
 				},
 				{
@@ -297,36 +150,78 @@
 						"h": 278
 					},
 					"frame": {
-						"x": 93,
-						"y": 1567,
+						"x": 164,
+						"y": 463,
 						"w": 199,
 						"h": 278
 					}
 				},
 				{
-					"filename": "darko-dying/frame_011.png",
-					"rotated": true,
+					"filename": "darko-knockdown-get-up/frame_002.png",
+					"rotated": false,
 					"trimmed": true,
 					"sourceSize": {
-						"w": 362,
-						"h": 285
+						"w": 353,
+						"h": 264
 					},
 					"spriteSourceSize": {
-						"x": 66,
-						"y": 55,
-						"w": 277,
-						"h": 229
+						"x": 111,
+						"y": 51,
+						"w": 145,
+						"h": 211
 					},
 					"frame": {
-						"x": 220,
-						"y": 1282,
-						"w": 277,
-						"h": 229
+						"x": 164,
+						"y": 743,
+						"w": 145,
+						"h": 211
+					}
+				},
+				{
+					"filename": "darko-punch-2/frame_003.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 363,
+						"h": 260
+					},
+					"spriteSourceSize": {
+						"x": 138,
+						"y": 54,
+						"w": 109,
+						"h": 206
+					},
+					"frame": {
+						"x": 311,
+						"y": 743,
+						"w": 109,
+						"h": 206
+					}
+				},
+				{
+					"filename": "darko-finish-move/frame_014.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 379,
+						"h": 299
+					},
+					"spriteSourceSize": {
+						"x": 46,
+						"y": 5,
+						"w": 310,
+						"h": 271
+					},
+					"frame": {
+						"x": 365,
+						"y": 463,
+						"w": 310,
+						"h": 271
 					}
 				},
 				{
 					"filename": "darko-dying/frame_012.png",
-					"rotated": true,
+					"rotated": false,
 					"trimmed": true,
 					"sourceSize": {
 						"w": 362,
@@ -339,120 +234,15 @@
 						"h": 169
 					},
 					"frame": {
-						"x": 249,
-						"y": 956,
+						"x": 440,
+						"y": 285,
 						"w": 277,
 						"h": 169
 					}
 				},
 				{
-					"filename": "darko-jump/frame_001.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 204,
-						"h": 304
-					},
-					"spriteSourceSize": {
-						"x": 24,
-						"y": 90,
-						"w": 162,
-						"h": 192
-					},
-					"frame": {
-						"x": 395,
-						"y": 791,
-						"w": 162,
-						"h": 192
-					}
-				},
-				{
-					"filename": "darko-dying/frame_013.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 362,
-						"h": 285
-					},
-					"spriteSourceSize": {
-						"x": 66,
-						"y": 161,
-						"w": 277,
-						"h": 123
-					},
-					"frame": {
-						"x": 451,
-						"y": 478,
-						"w": 277,
-						"h": 123
-					}
-				},
-				{
-					"filename": "darko-dying/frame_014.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 362,
-						"h": 285
-					},
-					"spriteSourceSize": {
-						"x": 66,
-						"y": 196,
-						"w": 277,
-						"h": 88
-					},
-					"frame": {
-						"x": 576,
-						"y": 478,
-						"w": 277,
-						"h": 88
-					}
-				},
-				{
-					"filename": "darko-dying/frame_010.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 362,
-						"h": 285
-					},
-					"spriteSourceSize": {
-						"x": 67,
-						"y": 24,
-						"w": 276,
-						"h": 260
-					},
-					"frame": {
-						"x": 420,
-						"y": 955,
-						"w": 276,
-						"h": 260
-					}
-				},
-				{
-					"filename": "darko-knockdown-get-up/frame_007.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 353,
-						"h": 264
-					},
-					"spriteSourceSize": {
-						"x": 57,
-						"y": 68,
-						"w": 182,
-						"h": 195
-					},
-					"frame": {
-						"x": 589,
-						"y": 757,
-						"w": 182,
-						"h": 195
-					}
-				},
-				{
 					"filename": "darko-dying/frame_009.png",
-					"rotated": true,
+					"rotated": false,
 					"trimmed": true,
 					"sourceSize": {
 						"w": 362,
@@ -465,115 +255,31 @@
 						"h": 269
 					},
 					"frame": {
-						"x": 666,
-						"y": 478,
+						"x": 677,
+						"y": 1,
 						"w": 275,
 						"h": 269
 					}
 				},
 				{
-					"filename": "darko-melee/frame_021.png",
-					"rotated": true,
+					"filename": "darko-idle/frame_002.png",
+					"rotated": false,
 					"trimmed": true,
 					"sourceSize": {
-						"w": 512,
-						"h": 512
+						"w": 106,
+						"h": 268
 					},
 					"spriteSourceSize": {
-						"x": 190,
-						"y": 156,
-						"w": 180,
-						"h": 230
+						"x": 6,
+						"y": 5,
+						"w": 83,
+						"h": 261
 					},
 					"frame": {
-						"x": 670,
-						"y": 296,
-						"w": 180,
-						"h": 230
-					}
-				},
-				{
-					"filename": "darko-run/frame_006.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 201,
-						"h": 256
-					},
-					"spriteSourceSize": {
-						"x": 21,
-						"y": 24,
-						"w": 173,
-						"h": 232
-					},
-					"frame": {
-						"x": 902,
-						"y": 296,
-						"w": 173,
-						"h": 232
-					}
-				},
-				{
-					"filename": "darko-finish-move/frame_009.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 379,
-						"h": 299
-					},
-					"spriteSourceSize": {
-						"x": 49,
-						"y": 61,
-						"w": 271,
-						"h": 215
-					},
-					"frame": {
-						"x": 907,
+						"x": 592,
 						"y": 1,
-						"w": 271,
-						"h": 215
-					}
-				},
-				{
-					"filename": "darko-finish-move/frame_012.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 379,
-						"h": 299
-					},
-					"spriteSourceSize": {
-						"x": 75,
-						"y": 27,
-						"w": 270,
-						"h": 249
-					},
-					"frame": {
-						"x": 1124,
-						"y": 1,
-						"w": 270,
-						"h": 249
-					}
-				},
-				{
-					"filename": "darko-dying/frame_006.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 362,
-						"h": 285
-					},
-					"spriteSourceSize": {
-						"x": 0,
-						"y": 41,
-						"w": 268,
-						"h": 233
-					},
-					"frame": {
-						"x": 1,
-						"y": 2136,
-						"w": 268,
-						"h": 233
+						"w": 83,
+						"h": 261
 					}
 				},
 				{
@@ -591,8 +297,8 @@
 						"h": 265
 					},
 					"frame": {
-						"x": 230,
-						"y": 1847,
+						"x": 1,
+						"y": 1236,
 						"w": 158,
 						"h": 265
 					}
@@ -612,8 +318,8 @@
 						"h": 263
 					},
 					"frame": {
-						"x": 294,
-						"y": 1561,
+						"x": 1,
+						"y": 1503,
 						"w": 236,
 						"h": 263
 					}
@@ -633,2740 +339,31 @@
 						"h": 263
 					},
 					"frame": {
-						"x": 451,
-						"y": 1233,
+						"x": 161,
+						"y": 1236,
 						"w": 171,
 						"h": 263
 					}
 				},
 				{
-					"filename": "darko-throw/frame_008.png",
+					"filename": "darko-finish-move/frame_013.png",
 					"rotated": false,
 					"trimmed": true,
 					"sourceSize": {
-						"w": 288,
-						"h": 265
+						"w": 379,
+						"h": 299
 					},
 					"spriteSourceSize": {
-						"x": 95,
-						"y": 1,
-						"w": 103,
+						"x": 60,
+						"y": 14,
+						"w": 293,
 						"h": 262
 					},
 					"frame": {
-						"x": 1,
-						"y": 2406,
-						"w": 103,
+						"x": 331,
+						"y": 951,
+						"w": 293,
 						"h": 262
-					}
-				},
-				{
-					"filename": "darko-dying/frame_007.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 362,
-						"h": 285
-					},
-					"spriteSourceSize": {
-						"x": 122,
-						"y": 24,
-						"w": 210,
-						"h": 261
-					},
-					"frame": {
-						"x": 1,
-						"y": 2670,
-						"w": 210,
-						"h": 261
-					}
-				},
-				{
-					"filename": "darko-idle/frame_002.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 106,
-						"h": 268
-					},
-					"spriteSourceSize": {
-						"x": 6,
-						"y": 5,
-						"w": 83,
-						"h": 261
-					},
-					"frame": {
-						"x": 106,
-						"y": 2406,
-						"w": 83,
-						"h": 261
-					}
-				},
-				{
-					"filename": "darko-melee/frame_000.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 512,
-						"h": 512
-					},
-					"spriteSourceSize": {
-						"x": 200,
-						"y": 126,
-						"w": 102,
-						"h": 260
-					},
-					"frame": {
-						"x": 191,
-						"y": 2406,
-						"w": 102,
-						"h": 260
-					}
-				},
-				{
-					"filename": "darko-melee/frame_035.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 512,
-						"h": 512
-					},
-					"spriteSourceSize": {
-						"x": 204,
-						"y": 126,
-						"w": 98,
-						"h": 260
-					},
-					"frame": {
-						"x": 236,
-						"y": 2114,
-						"w": 98,
-						"h": 260
-					}
-				},
-				{
-					"filename": "darko-punch-2/frame_015.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 363,
-						"h": 260
-					},
-					"spriteSourceSize": {
-						"x": 134,
-						"y": 0,
-						"w": 92,
-						"h": 260
-					},
-					"frame": {
-						"x": 1,
-						"y": 2933,
-						"w": 92,
-						"h": 260
-					}
-				},
-				{
-					"filename": "darko-damage/frame_000.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 211,
-						"h": 263
-					},
-					"spriteSourceSize": {
-						"x": 59,
-						"y": 1,
-						"w": 90,
-						"h": 260
-					},
-					"frame": {
-						"x": 1,
-						"y": 3195,
-						"w": 90,
-						"h": 260
-					}
-				},
-				{
-					"filename": "darko-idle/frame_004.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 106,
-						"h": 268
-					},
-					"spriteSourceSize": {
-						"x": 4,
-						"y": 5,
-						"w": 90,
-						"h": 260
-					},
-					"frame": {
-						"x": 1,
-						"y": 3457,
-						"w": 90,
-						"h": 260
-					}
-				},
-				{
-					"filename": "darko-jump/frame_000.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 204,
-						"h": 304
-					},
-					"spriteSourceSize": {
-						"x": 57,
-						"y": 22,
-						"w": 90,
-						"h": 260
-					},
-					"frame": {
-						"x": 1,
-						"y": 3719,
-						"w": 90,
-						"h": 260
-					}
-				},
-				{
-					"filename": "darko-melee/frame_001.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 512,
-						"h": 512
-					},
-					"spriteSourceSize": {
-						"x": 188,
-						"y": 127,
-						"w": 114,
-						"h": 259
-					},
-					"frame": {
-						"x": 1,
-						"y": 3981,
-						"w": 114,
-						"h": 259
-					}
-				},
-				{
-					"filename": "darko-punch-2/frame_002.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 363,
-						"h": 260
-					},
-					"spriteSourceSize": {
-						"x": 134,
-						"y": 42,
-						"w": 114,
-						"h": 218
-					},
-					"frame": {
-						"x": 262,
-						"y": 3981,
-						"w": 114,
-						"h": 218
-					}
-				},
-				{
-					"filename": "darko-idle/frame_003.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 106,
-						"h": 268
-					},
-					"spriteSourceSize": {
-						"x": 2,
-						"y": 6,
-						"w": 89,
-						"h": 260
-					},
-					"frame": {
-						"x": 93,
-						"y": 3195,
-						"w": 89,
-						"h": 260
-					}
-				},
-				{
-					"filename": "darko-walk/frame_003.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 156,
-						"h": 261
-					},
-					"spriteSourceSize": {
-						"x": 30,
-						"y": 1,
-						"w": 86,
-						"h": 260
-					},
-					"frame": {
-						"x": 95,
-						"y": 2933,
-						"w": 86,
-						"h": 260
-					}
-				},
-				{
-					"filename": "darko-idle/frame_001.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 106,
-						"h": 268
-					},
-					"spriteSourceSize": {
-						"x": 6,
-						"y": 5,
-						"w": 85,
-						"h": 260
-					},
-					"frame": {
-						"x": 183,
-						"y": 2933,
-						"w": 85,
-						"h": 260
-					}
-				},
-				{
-					"filename": "darko-melee/frame_003.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 512,
-						"h": 512
-					},
-					"spriteSourceSize": {
-						"x": 182,
-						"y": 126,
-						"w": 119,
-						"h": 259
-					},
-					"frame": {
-						"x": 213,
-						"y": 2668,
-						"w": 119,
-						"h": 259
-					}
-				},
-				{
-					"filename": "darko-walk/frame_005.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 156,
-						"h": 261
-					},
-					"spriteSourceSize": {
-						"x": 4,
-						"y": 0,
-						"w": 108,
-						"h": 259
-					},
-					"frame": {
-						"x": 295,
-						"y": 2376,
-						"w": 108,
-						"h": 259
-					}
-				},
-				{
-					"filename": "darko-special-attack/frame_006.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 208,
-						"h": 296
-					},
-					"spriteSourceSize": {
-						"x": 56,
-						"y": 18,
-						"w": 92,
-						"h": 259
-					},
-					"frame": {
-						"x": 336,
-						"y": 2114,
-						"w": 92,
-						"h": 259
-					}
-				},
-				{
-					"filename": "darko-punch-2/frame_014.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 363,
-						"h": 260
-					},
-					"spriteSourceSize": {
-						"x": 135,
-						"y": 1,
-						"w": 91,
-						"h": 259
-					},
-					"frame": {
-						"x": 405,
-						"y": 1826,
-						"w": 91,
-						"h": 259
-					}
-				},
-				{
-					"filename": "darko-kick-1/frame_000.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 309,
-						"h": 259
-					},
-					"spriteSourceSize": {
-						"x": 110,
-						"y": 0,
-						"w": 89,
-						"h": 259
-					},
-					"frame": {
-						"x": 93,
-						"y": 3457,
-						"w": 89,
-						"h": 259
-					}
-				},
-				{
-					"filename": "darko-kick-1/frame_008.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 309,
-						"h": 259
-					},
-					"spriteSourceSize": {
-						"x": 110,
-						"y": 0,
-						"w": 89,
-						"h": 259
-					},
-					"frame": {
-						"x": 93,
-						"y": 3718,
-						"w": 89,
-						"h": 259
-					}
-				},
-				{
-					"filename": "darko-punch-1/frame_000.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 295,
-						"h": 259
-					},
-					"spriteSourceSize": {
-						"x": 103,
-						"y": 0,
-						"w": 89,
-						"h": 259
-					},
-					"frame": {
-						"x": 184,
-						"y": 3195,
-						"w": 89,
-						"h": 259
-					}
-				},
-				{
-					"filename": "darko-punch-2/frame_000.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 363,
-						"h": 260
-					},
-					"spriteSourceSize": {
-						"x": 137,
-						"y": 1,
-						"w": 89,
-						"h": 259
-					},
-					"frame": {
-						"x": 270,
-						"y": 2929,
-						"w": 89,
-						"h": 259
-					}
-				},
-				{
-					"filename": "darko-punch-1/frame_001.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 295,
-						"h": 259
-					},
-					"spriteSourceSize": {
-						"x": 104,
-						"y": 0,
-						"w": 88,
-						"h": 259
-					},
-					"frame": {
-						"x": 334,
-						"y": 2637,
-						"w": 88,
-						"h": 259
-					}
-				},
-				{
-					"filename": "darko-idle/frame_005.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 106,
-						"h": 268
-					},
-					"spriteSourceSize": {
-						"x": 7,
-						"y": 5,
-						"w": 87,
-						"h": 259
-					},
-					"frame": {
-						"x": 405,
-						"y": 2375,
-						"w": 87,
-						"h": 259
-					}
-				},
-				{
-					"filename": "darko-finish-move/frame_000.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 379,
-						"h": 299
-					},
-					"spriteSourceSize": {
-						"x": 148,
-						"y": 20,
-						"w": 86,
-						"h": 259
-					},
-					"frame": {
-						"x": 482,
-						"y": 2087,
-						"w": 86,
-						"h": 259
-					}
-				},
-				{
-					"filename": "darko-finish-move/frame_008.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 379,
-						"h": 299
-					},
-					"spriteSourceSize": {
-						"x": 58,
-						"y": 53,
-						"w": 258,
-						"h": 222
-					},
-					"frame": {
-						"x": 498,
-						"y": 1826,
-						"w": 258,
-						"h": 222
-					}
-				},
-				{
-					"filename": "darko-melee/frame_002.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 512,
-						"h": 512
-					},
-					"spriteSourceSize": {
-						"x": 187,
-						"y": 127,
-						"w": 115,
-						"h": 258
-					},
-					"frame": {
-						"x": 532,
-						"y": 1498,
-						"w": 115,
-						"h": 258
-					}
-				},
-				{
-					"filename": "darko-melee/frame_034.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 512,
-						"h": 512
-					},
-					"spriteSourceSize": {
-						"x": 200,
-						"y": 128,
-						"w": 104,
-						"h": 258
-					},
-					"frame": {
-						"x": 624,
-						"y": 1233,
-						"w": 104,
-						"h": 258
-					}
-				},
-				{
-					"filename": "darko-throw/frame_000.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 288,
-						"h": 265
-					},
-					"spriteSourceSize": {
-						"x": 95,
-						"y": 3,
-						"w": 93,
-						"h": 258
-					},
-					"frame": {
-						"x": 722,
-						"y": 954,
-						"w": 93,
-						"h": 258
-					}
-				},
-				{
-					"filename": "darko-jump-punch/frame_000.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 256,
-						"h": 256
-					},
-					"spriteSourceSize": {
-						"x": 17,
-						"y": 25,
-						"w": 229,
-						"h": 197
-					},
-					"frame": {
-						"x": 773,
-						"y": 755,
-						"w": 229,
-						"h": 197
-					}
-				},
-				{
-					"filename": "darko-special-attack/frame_007.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 208,
-						"h": 296
-					},
-					"spriteSourceSize": {
-						"x": 59,
-						"y": 19,
-						"w": 90,
-						"h": 258
-					},
-					"frame": {
-						"x": 937,
-						"y": 471,
-						"w": 90,
-						"h": 258
-					}
-				},
-				{
-					"filename": "darko-special-attack/frame_008.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 208,
-						"h": 296
-					},
-					"spriteSourceSize": {
-						"x": 59,
-						"y": 19,
-						"w": 90,
-						"h": 258
-					},
-					"frame": {
-						"x": 649,
-						"y": 1493,
-						"w": 90,
-						"h": 258
-					}
-				},
-				{
-					"filename": "darko-idle/frame_008.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 106,
-						"h": 268
-					},
-					"spriteSourceSize": {
-						"x": 5,
-						"y": 5,
-						"w": 89,
-						"h": 258
-					},
-					"frame": {
-						"x": 730,
-						"y": 1214,
-						"w": 89,
-						"h": 258
-					}
-				},
-				{
-					"filename": "darko-special-attack/frame_000.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 208,
-						"h": 296
-					},
-					"spriteSourceSize": {
-						"x": 61,
-						"y": 19,
-						"w": 88,
-						"h": 258
-					},
-					"frame": {
-						"x": 817,
-						"y": 954,
-						"w": 88,
-						"h": 258
-					}
-				},
-				{
-					"filename": "darko-dying/frame_001.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 362,
-						"h": 285
-					},
-					"spriteSourceSize": {
-						"x": 137,
-						"y": 12,
-						"w": 87,
-						"h": 258
-					},
-					"frame": {
-						"x": 907,
-						"y": 954,
-						"w": 87,
-						"h": 258
-					}
-				},
-				{
-					"filename": "darko-idle/frame_007.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 106,
-						"h": 268
-					},
-					"spriteSourceSize": {
-						"x": 7,
-						"y": 5,
-						"w": 87,
-						"h": 258
-					},
-					"frame": {
-						"x": 184,
-						"y": 3456,
-						"w": 87,
-						"h": 258
-					}
-				},
-				{
-					"filename": "darko-idle/frame_000.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 106,
-						"h": 268
-					},
-					"spriteSourceSize": {
-						"x": 6,
-						"y": 5,
-						"w": 86,
-						"h": 258
-					},
-					"frame": {
-						"x": 184,
-						"y": 3716,
-						"w": 86,
-						"h": 258
-					}
-				},
-				{
-					"filename": "darko-idle/frame_006.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 106,
-						"h": 268
-					},
-					"spriteSourceSize": {
-						"x": 9,
-						"y": 5,
-						"w": 85,
-						"h": 258
-					},
-					"frame": {
-						"x": 272,
-						"y": 3716,
-						"w": 85,
-						"h": 258
-					}
-				},
-				{
-					"filename": "darko-walk/frame_006.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 156,
-						"h": 261
-					},
-					"spriteSourceSize": {
-						"x": 11,
-						"y": 4,
-						"w": 137,
-						"h": 257
-					},
-					"frame": {
-						"x": 273,
-						"y": 3456,
-						"w": 137,
-						"h": 257
-					}
-				},
-				{
-					"filename": "darko-walk/frame_007.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 156,
-						"h": 261
-					},
-					"spriteSourceSize": {
-						"x": 23,
-						"y": 4,
-						"w": 108,
-						"h": 257
-					},
-					"frame": {
-						"x": 359,
-						"y": 3715,
-						"w": 108,
-						"h": 257
-					}
-				},
-				{
-					"filename": "darko-melee/frame_033.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 512,
-						"h": 512
-					},
-					"spriteSourceSize": {
-						"x": 205,
-						"y": 129,
-						"w": 103,
-						"h": 257
-					},
-					"frame": {
-						"x": 275,
-						"y": 3190,
-						"w": 103,
-						"h": 257
-					}
-				},
-				{
-					"filename": "darko-dying/frame_004.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 362,
-						"h": 285
-					},
-					"spriteSourceSize": {
-						"x": 136,
-						"y": 15,
-						"w": 100,
-						"h": 257
-					},
-					"frame": {
-						"x": 380,
-						"y": 3190,
-						"w": 100,
-						"h": 257
-					}
-				},
-				{
-					"filename": "darko-kick-1/frame_001.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 309,
-						"h": 259
-					},
-					"spriteSourceSize": {
-						"x": 114,
-						"y": 2,
-						"w": 97,
-						"h": 257
-					},
-					"frame": {
-						"x": 412,
-						"y": 3449,
-						"w": 97,
-						"h": 257
-					}
-				},
-				{
-					"filename": "darko-walk/frame_001.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 156,
-						"h": 261
-					},
-					"spriteSourceSize": {
-						"x": 25,
-						"y": 1,
-						"w": 97,
-						"h": 257
-					},
-					"frame": {
-						"x": 469,
-						"y": 3708,
-						"w": 97,
-						"h": 257
-					}
-				},
-				{
-					"filename": "darko-damage/frame_001.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 211,
-						"h": 263
-					},
-					"spriteSourceSize": {
-						"x": 40,
-						"y": 8,
-						"w": 127,
-						"h": 253
-					},
-					"frame": {
-						"x": 482,
-						"y": 3967,
-						"w": 127,
-						"h": 253
-					}
-				},
-				{
-					"filename": "darko-finish-move/frame_003.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 379,
-						"h": 299
-					},
-					"spriteSourceSize": {
-						"x": 108,
-						"y": 20,
-						"w": 205,
-						"h": 256
-					},
-					"frame": {
-						"x": 361,
-						"y": 2898,
-						"w": 205,
-						"h": 256
-					}
-				},
-				{
-					"filename": "darko-kick-1/frame_007.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 309,
-						"h": 259
-					},
-					"spriteSourceSize": {
-						"x": 107,
-						"y": 3,
-						"w": 103,
-						"h": 256
-					},
-					"frame": {
-						"x": 424,
-						"y": 2636,
-						"w": 103,
-						"h": 256
-					}
-				},
-				{
-					"filename": "darko-dying/frame_000.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 362,
-						"h": 285
-					},
-					"spriteSourceSize": {
-						"x": 138,
-						"y": 14,
-						"w": 86,
-						"h": 256
-					},
-					"frame": {
-						"x": 494,
-						"y": 2348,
-						"w": 86,
-						"h": 256
-					}
-				},
-				{
-					"filename": "darko-dying/frame_002.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 362,
-						"h": 285
-					},
-					"spriteSourceSize": {
-						"x": 140,
-						"y": 14,
-						"w": 84,
-						"h": 256
-					},
-					"frame": {
-						"x": 570,
-						"y": 2086,
-						"w": 84,
-						"h": 256
-					}
-				},
-				{
-					"filename": "darko-finish-move/frame_011.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 379,
-						"h": 299
-					},
-					"spriteSourceSize": {
-						"x": 80,
-						"y": 31,
-						"w": 255,
-						"h": 245
-					},
-					"frame": {
-						"x": 529,
-						"y": 2606,
-						"w": 255,
-						"h": 245
-					}
-				},
-				{
-					"filename": "darko-finish-move/frame_004.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 379,
-						"h": 299
-					},
-					"spriteSourceSize": {
-						"x": 90,
-						"y": 21,
-						"w": 230,
-						"h": 255
-					},
-					"frame": {
-						"x": 582,
-						"y": 2344,
-						"w": 230,
-						"h": 255
-					}
-				},
-				{
-					"filename": "darko-walk/frame_002.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 156,
-						"h": 261
-					},
-					"spriteSourceSize": {
-						"x": 16,
-						"y": 6,
-						"w": 131,
-						"h": 255
-					},
-					"frame": {
-						"x": 656,
-						"y": 2086,
-						"w": 131,
-						"h": 255
-					}
-				},
-				{
-					"filename": "darko-melee/frame_004.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 512,
-						"h": 512
-					},
-					"spriteSourceSize": {
-						"x": 172,
-						"y": 129,
-						"w": 129,
-						"h": 255
-					},
-					"frame": {
-						"x": 482,
-						"y": 3156,
-						"w": 129,
-						"h": 255
-					}
-				},
-				{
-					"filename": "darko-throw/frame_001.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 288,
-						"h": 265
-					},
-					"spriteSourceSize": {
-						"x": 82,
-						"y": 8,
-						"w": 108,
-						"h": 255
-					},
-					"frame": {
-						"x": 568,
-						"y": 2863,
-						"w": 108,
-						"h": 255
-					}
-				},
-				{
-					"filename": "darko-dying/frame_003.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 362,
-						"h": 285
-					},
-					"spriteSourceSize": {
-						"x": 140,
-						"y": 15,
-						"w": 84,
-						"h": 255
-					},
-					"frame": {
-						"x": 511,
-						"y": 3413,
-						"w": 84,
-						"h": 255
-					}
-				},
-				{
-					"filename": "darko-walk/frame_004.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 156,
-						"h": 261
-					},
-					"spriteSourceSize": {
-						"x": 1,
-						"y": 5,
-						"w": 154,
-						"h": 254
-					},
-					"frame": {
-						"x": 568,
-						"y": 3670,
-						"w": 154,
-						"h": 254
-					}
-				},
-				{
-					"filename": "darko-walk/frame_000.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 156,
-						"h": 261
-					},
-					"spriteSourceSize": {
-						"x": 12,
-						"y": 5,
-						"w": 142,
-						"h": 254
-					},
-					"frame": {
-						"x": 597,
-						"y": 3413,
-						"w": 142,
-						"h": 254
-					}
-				},
-				{
-					"filename": "darko-punch-1/frame_002.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 295,
-						"h": 259
-					},
-					"spriteSourceSize": {
-						"x": 107,
-						"y": 5,
-						"w": 105,
-						"h": 254
-					},
-					"frame": {
-						"x": 613,
-						"y": 3120,
-						"w": 105,
-						"h": 254
-					}
-				},
-				{
-					"filename": "darko-finish-move/frame_002.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 379,
-						"h": 299
-					},
-					"spriteSourceSize": {
-						"x": 133,
-						"y": 23,
-						"w": 220,
-						"h": 253
-					},
-					"frame": {
-						"x": 678,
-						"y": 2863,
-						"w": 220,
-						"h": 253
-					}
-				},
-				{
-					"filename": "darko-melee/frame_005.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 512,
-						"h": 512
-					},
-					"spriteSourceSize": {
-						"x": 165,
-						"y": 131,
-						"w": 136,
-						"h": 253
-					},
-					"frame": {
-						"x": 776,
-						"y": 2601,
-						"w": 136,
-						"h": 253
-					}
-				},
-				{
-					"filename": "darko-finish-move/frame_001.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 379,
-						"h": 299
-					},
-					"spriteSourceSize": {
-						"x": 145,
-						"y": 25,
-						"w": 234,
-						"h": 252
-					},
-					"frame": {
-						"x": 720,
-						"y": 3118,
-						"w": 234,
-						"h": 252
-					}
-				},
-				{
-					"filename": "darko-punch-2/frame_013.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 363,
-						"h": 260
-					},
-					"spriteSourceSize": {
-						"x": 134,
-						"y": 8,
-						"w": 113,
-						"h": 252
-					},
-					"frame": {
-						"x": 900,
-						"y": 2856,
-						"w": 113,
-						"h": 252
-					}
-				},
-				{
-					"filename": "darko-finish-move/frame_005.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 379,
-						"h": 299
-					},
-					"spriteSourceSize": {
-						"x": 76,
-						"y": 29,
-						"w": 251,
-						"h": 247
-					},
-					"frame": {
-						"x": 724,
-						"y": 3669,
-						"w": 251,
-						"h": 247
-					}
-				},
-				{
-					"filename": "darko-run/frame_001.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 201,
-						"h": 256
-					},
-					"spriteSourceSize": {
-						"x": 22,
-						"y": 19,
-						"w": 172,
-						"h": 235
-					},
-					"frame": {
-						"x": 737,
-						"y": 3922,
-						"w": 172,
-						"h": 235
-					}
-				},
-				{
-					"filename": "darko-damage/frame_003.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 211,
-						"h": 263
-					},
-					"spriteSourceSize": {
-						"x": 1,
-						"y": 22,
-						"w": 171,
-						"h": 241
-					},
-					"frame": {
-						"x": 974,
-						"y": 3922,
-						"w": 171,
-						"h": 241
-					}
-				},
-				{
-					"filename": "darko-melee/frame_022.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 512,
-						"h": 512
-					},
-					"spriteSourceSize": {
-						"x": 200,
-						"y": 159,
-						"w": 170,
-						"h": 227
-					},
-					"frame": {
-						"x": 1217,
-						"y": 3922,
-						"w": 170,
-						"h": 227
-					}
-				},
-				{
-					"filename": "darko-run/frame_003.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 201,
-						"h": 256
-					},
-					"spriteSourceSize": {
-						"x": 24,
-						"y": 21,
-						"w": 168,
-						"h": 234
-					},
-					"frame": {
-						"x": 1446,
-						"y": 3922,
-						"w": 168,
-						"h": 234
-					}
-				},
-				{
-					"filename": "darko-run/frame_005.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 201,
-						"h": 256
-					},
-					"spriteSourceSize": {
-						"x": 35,
-						"y": 17,
-						"w": 166,
-						"h": 237
-					},
-					"frame": {
-						"x": 1682,
-						"y": 3922,
-						"w": 166,
-						"h": 237
-					}
-				},
-				{
-					"filename": "darko-run/frame_008.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 201,
-						"h": 256
-					},
-					"spriteSourceSize": {
-						"x": 20,
-						"y": 26,
-						"w": 165,
-						"h": 229
-					},
-					"frame": {
-						"x": 1921,
-						"y": 3922,
-						"w": 165,
-						"h": 229
-					}
-				},
-				{
-					"filename": "darko-throw/frame_005.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 288,
-						"h": 265
-					},
-					"spriteSourceSize": {
-						"x": 98,
-						"y": 34,
-						"w": 165,
-						"h": 229
-					},
-					"frame": {
-						"x": 2152,
-						"y": 3922,
-						"w": 165,
-						"h": 229
-					}
-				},
-				{
-					"filename": "darko-special-attack/frame_005.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 208,
-						"h": 296
-					},
-					"spriteSourceSize": {
-						"x": 37,
-						"y": 28,
-						"w": 147,
-						"h": 251
-					},
-					"frame": {
-						"x": 741,
-						"y": 3372,
-						"w": 147,
-						"h": 251
-					}
-				},
-				{
-					"filename": "darko-special-attack/frame_002.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 208,
-						"h": 296
-					},
-					"spriteSourceSize": {
-						"x": 45,
-						"y": 24,
-						"w": 134,
-						"h": 251
-					},
-					"frame": {
-						"x": 890,
-						"y": 3372,
-						"w": 134,
-						"h": 251
-					}
-				},
-				{
-					"filename": "darko-kick-2/frame_008.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 245,
-						"h": 277
-					},
-					"spriteSourceSize": {
-						"x": 77,
-						"y": 18,
-						"w": 129,
-						"h": 251
-					},
-					"frame": {
-						"x": 956,
-						"y": 3110,
-						"w": 129,
-						"h": 251
-					}
-				},
-				{
-					"filename": "darko-throw/frame_003.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 288,
-						"h": 265
-					},
-					"spriteSourceSize": {
-						"x": 77,
-						"y": 12,
-						"w": 126,
-						"h": 251
-					},
-					"frame": {
-						"x": 973,
-						"y": 3625,
-						"w": 126,
-						"h": 251
-					}
-				},
-				{
-					"filename": "darko-throw/frame_002.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 288,
-						"h": 265
-					},
-					"spriteSourceSize": {
-						"x": 74,
-						"y": 12,
-						"w": 123,
-						"h": 251
-					},
-					"frame": {
-						"x": 1026,
-						"y": 3363,
-						"w": 123,
-						"h": 251
-					}
-				},
-				{
-					"filename": "darko-melee/frame_032.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 512,
-						"h": 512
-					},
-					"spriteSourceSize": {
-						"x": 207,
-						"y": 135,
-						"w": 110,
-						"h": 251
-					},
-					"frame": {
-						"x": 1101,
-						"y": 3616,
-						"w": 110,
-						"h": 251
-					}
-				},
-				{
-					"filename": "darko-finish-move/frame_007.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 379,
-						"h": 299
-					},
-					"spriteSourceSize": {
-						"x": 66,
-						"y": 48,
-						"w": 250,
-						"h": 227
-					},
-					"frame": {
-						"x": 722,
-						"y": 1753,
-						"w": 250,
-						"h": 227
-					}
-				},
-				{
-					"filename": "darko-shoot-up/frame_000.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 256,
-						"h": 256
-					},
-					"spriteSourceSize": {
-						"x": 98,
-						"y": 3,
-						"w": 72,
-						"h": 248
-					},
-					"frame": {
-						"x": 722,
-						"y": 2005,
-						"w": 72,
-						"h": 248
-					}
-				},
-				{
-					"filename": "darko-melee/frame_006.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 512,
-						"h": 512
-					},
-					"spriteSourceSize": {
-						"x": 160,
-						"y": 134,
-						"w": 140,
-						"h": 250
-					},
-					"frame": {
-						"x": 789,
-						"y": 2079,
-						"w": 140,
-						"h": 250
-					}
-				},
-				{
-					"filename": "darko-special-attack/frame_001.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 208,
-						"h": 296
-					},
-					"spriteSourceSize": {
-						"x": 52,
-						"y": 24,
-						"w": 104,
-						"h": 250
-					},
-					"frame": {
-						"x": 814,
-						"y": 2331,
-						"w": 104,
-						"h": 250
-					}
-				},
-				{
-					"filename": "darko-kick-1/frame_002.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 309,
-						"h": 259
-					},
-					"spriteSourceSize": {
-						"x": 114,
-						"y": 6,
-						"w": 194,
-						"h": 249
-					},
-					"frame": {
-						"x": 914,
-						"y": 2583,
-						"w": 194,
-						"h": 249
-					}
-				},
-				{
-					"filename": "darko-special-attack/frame_003.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 208,
-						"h": 296
-					},
-					"spriteSourceSize": {
-						"x": 29,
-						"y": 25,
-						"w": 134,
-						"h": 249
-					},
-					"frame": {
-						"x": 920,
-						"y": 2331,
-						"w": 134,
-						"h": 249
-					}
-				},
-				{
-					"filename": "darko-melee/frame_031.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 512,
-						"h": 512
-					},
-					"spriteSourceSize": {
-						"x": 207,
-						"y": 137,
-						"w": 112,
-						"h": 249
-					},
-					"frame": {
-						"x": 931,
-						"y": 2079,
-						"w": 112,
-						"h": 249
-					}
-				},
-				{
-					"filename": "darko-melee/frame_007.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 512,
-						"h": 512
-					},
-					"spriteSourceSize": {
-						"x": 156,
-						"y": 136,
-						"w": 144,
-						"h": 248
-					},
-					"frame": {
-						"x": 1015,
-						"y": 2834,
-						"w": 144,
-						"h": 248
-					}
-				},
-				{
-					"filename": "darko-kick-1/frame_004.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 309,
-						"h": 259
-					},
-					"spriteSourceSize": {
-						"x": 114,
-						"y": 11,
-						"w": 117,
-						"h": 248
-					},
-					"frame": {
-						"x": 1087,
-						"y": 3084,
-						"w": 117,
-						"h": 248
-					}
-				},
-				{
-					"filename": "darko-kick-2/frame_000.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 245,
-						"h": 277
-					},
-					"spriteSourceSize": {
-						"x": 83,
-						"y": 19,
-						"w": 86,
-						"h": 248
-					},
-					"frame": {
-						"x": 741,
-						"y": 1474,
-						"w": 86,
-						"h": 248
-					}
-				},
-				{
-					"filename": "darko-finish-move/frame_006.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 379,
-						"h": 299
-					},
-					"spriteSourceSize": {
-						"x": 79,
-						"y": 36,
-						"w": 247,
-						"h": 240
-					},
-					"frame": {
-						"x": 821,
-						"y": 1214,
-						"w": 247,
-						"h": 240
-					}
-				},
-				{
-					"filename": "darko-kick-1/frame_003.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 309,
-						"h": 259
-					},
-					"spriteSourceSize": {
-						"x": 128,
-						"y": 8,
-						"w": 158,
-						"h": 247
-					},
-					"frame": {
-						"x": 996,
-						"y": 954,
-						"w": 158,
-						"h": 247
-					}
-				},
-				{
-					"filename": "darko-punch-2/frame_012.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 363,
-						"h": 260
-					},
-					"spriteSourceSize": {
-						"x": 145,
-						"y": 19,
-						"w": 218,
-						"h": 241
-					},
-					"frame": {
-						"x": 1004,
-						"y": 731,
-						"w": 218,
-						"h": 241
-					}
-				},
-				{
-					"filename": "darko-melee/frame_009.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 512,
-						"h": 512
-					},
-					"spriteSourceSize": {
-						"x": 147,
-						"y": 138,
-						"w": 153,
-						"h": 246
-					},
-					"frame": {
-						"x": 1029,
-						"y": 471,
-						"w": 153,
-						"h": 246
-					}
-				},
-				{
-					"filename": "darko-jump-kick/frame_000.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 256,
-						"h": 256
-					},
-					"spriteSourceSize": {
-						"x": 10,
-						"y": 23,
-						"w": 237,
-						"h": 194
-					},
-					"frame": {
-						"x": 1136,
-						"y": 273,
-						"w": 237,
-						"h": 194
-					}
-				},
-				{
-					"filename": "darko-melee/frame_008.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 512,
-						"h": 512
-					},
-					"spriteSourceSize": {
-						"x": 148,
-						"y": 138,
-						"w": 152,
-						"h": 246
-					},
-					"frame": {
-						"x": 1184,
-						"y": 469,
-						"w": 152,
-						"h": 246
-					}
-				},
-				{
-					"filename": "darko-kick-2/frame_007.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 245,
-						"h": 277
-					},
-					"spriteSourceSize": {
-						"x": 102,
-						"y": 23,
-						"w": 117,
-						"h": 246
-					},
-					"frame": {
-						"x": 1151,
-						"y": 3334,
-						"w": 117,
-						"h": 246
-					}
-				},
-				{
-					"filename": "darko-kick-1/frame_006.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 309,
-						"h": 259
-					},
-					"spriteSourceSize": {
-						"x": 98,
-						"y": 13,
-						"w": 112,
-						"h": 246
-					},
-					"frame": {
-						"x": 829,
-						"y": 1463,
-						"w": 112,
-						"h": 246
-					}
-				},
-				{
-					"filename": "darko-run/frame_000.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 201,
-						"h": 256
-					},
-					"spriteSourceSize": {
-						"x": 53,
-						"y": 9,
-						"w": 105,
-						"h": 245
-					},
-					"frame": {
-						"x": 943,
-						"y": 1463,
-						"w": 105,
-						"h": 245
-					}
-				},
-				{
-					"filename": "darko-damage/frame_002.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 211,
-						"h": 263
-					},
-					"spriteSourceSize": {
-						"x": 29,
-						"y": 20,
-						"w": 142,
-						"h": 243
-					},
-					"frame": {
-						"x": 951,
-						"y": 1710,
-						"w": 142,
-						"h": 243
-					}
-				},
-				{
-					"filename": "darko-knockdown-get-up/frame_003.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 353,
-						"h": 264
-					},
-					"spriteSourceSize": {
-						"x": 42,
-						"y": 140,
-						"w": 201,
-						"h": 121
-					},
-					"frame": {
-						"x": 972,
-						"y": 1955,
-						"w": 201,
-						"h": 121
-					}
-				},
-				{
-					"filename": "darko-shoot-recoil/frame_000.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 256,
-						"h": 256
-					},
-					"spriteSourceSize": {
-						"x": 23,
-						"y": 9,
-						"w": 210,
-						"h": 242
-					},
-					"frame": {
-						"x": 1050,
-						"y": 1463,
-						"w": 210,
-						"h": 242
-					}
-				},
-				{
-					"filename": "darko-shoot/frame_000.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 256,
-						"h": 256
-					},
-					"spriteSourceSize": {
-						"x": 89,
-						"y": 10,
-						"w": 133,
-						"h": 242
-					},
-					"frame": {
-						"x": 1161,
-						"y": 1707,
-						"w": 133,
-						"h": 242
-					}
-				},
-				{
-					"filename": "darko-throw/frame_007.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 288,
-						"h": 265
-					},
-					"spriteSourceSize": {
-						"x": 104,
-						"y": 22,
-						"w": 120,
-						"h": 241
-					},
-					"frame": {
-						"x": 1045,
-						"y": 2078,
-						"w": 120,
-						"h": 241
-					}
-				},
-				{
-					"filename": "darko-melee/frame_019.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 512,
-						"h": 512
-					},
-					"spriteSourceSize": {
-						"x": 120,
-						"y": 145,
-						"w": 189,
-						"h": 239
-					},
-					"frame": {
-						"x": 1063,
-						"y": 1203,
-						"w": 189,
-						"h": 239
-					}
-				},
-				{
-					"filename": "darko-run/frame_007.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 201,
-						"h": 256
-					},
-					"spriteSourceSize": {
-						"x": 29,
-						"y": 16,
-						"w": 156,
-						"h": 239
-					},
-					"frame": {
-						"x": 1156,
-						"y": 951,
-						"w": 156,
-						"h": 239
-					}
-				},
-				{
-					"filename": "darko-melee/frame_028.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 512,
-						"h": 512
-					},
-					"spriteSourceSize": {
-						"x": 208,
-						"y": 154,
-						"w": 145,
-						"h": 232
-					},
-					"frame": {
-						"x": 1296,
-						"y": 717,
-						"w": 145,
-						"h": 232
-					}
-				},
-				{
-					"filename": "darko-punch-2/frame_011.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 363,
-						"h": 260
-					},
-					"spriteSourceSize": {
-						"x": 145,
-						"y": 29,
-						"w": 218,
-						"h": 231
-					},
-					"frame": {
-						"x": 1443,
-						"y": 717,
-						"w": 218,
-						"h": 231
-					}
-				},
-				{
-					"filename": "darko-kick-2/frame_001.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 245,
-						"h": 277
-					},
-					"spriteSourceSize": {
-						"x": 86,
-						"y": 29,
-						"w": 85,
-						"h": 238
-					},
-					"frame": {
-						"x": 1338,
-						"y": 469,
-						"w": 85,
-						"h": 238
-					}
-				},
-				{
-					"filename": "darko-knockdown-get-up/frame_001.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 353,
-						"h": 264
-					},
-					"spriteSourceSize": {
-						"x": 115,
-						"y": 69,
-						"w": 237,
-						"h": 194
-					},
-					"frame": {
-						"x": 1425,
-						"y": 469,
-						"w": 237,
-						"h": 194
-					}
-				},
-				{
-					"filename": "darko-jump/frame_002.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 204,
-						"h": 304
-					},
-					"spriteSourceSize": {
-						"x": 0,
-						"y": 0,
-						"w": 191,
-						"h": 237
-					},
-					"frame": {
-						"x": 1621,
-						"y": 469,
-						"w": 191,
-						"h": 237
-					}
-				},
-				{
-					"filename": "darko-punch-1/frame_003.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 295,
-						"h": 259
-					},
-					"spriteSourceSize": {
-						"x": 106,
-						"y": 22,
-						"w": 154,
-						"h": 237
-					},
-					"frame": {
-						"x": 1814,
-						"y": 469,
-						"w": 154,
-						"h": 237
-					}
-				},
-				{
-					"filename": "darko-kick-1/frame_005.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 309,
-						"h": 259
-					},
-					"spriteSourceSize": {
-						"x": 92,
-						"y": 22,
-						"w": 132,
-						"h": 237
-					},
-					"frame": {
-						"x": 1056,
-						"y": 2321,
-						"w": 132,
-						"h": 237
-					}
-				},
-				{
-					"filename": "darko-punch-2/frame_001.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 363,
-						"h": 260
-					},
-					"spriteSourceSize": {
-						"x": 132,
-						"y": 23,
-						"w": 106,
-						"h": 237
-					},
-					"frame": {
-						"x": 1167,
-						"y": 2078,
-						"w": 106,
-						"h": 237
-					}
-				},
-				{
-					"filename": "darko-punch-2/frame_003.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 363,
-						"h": 260
-					},
-					"spriteSourceSize": {
-						"x": 138,
-						"y": 54,
-						"w": 109,
-						"h": 206
-					},
-					"frame": {
-						"x": 1175,
-						"y": 1951,
-						"w": 109,
-						"h": 206
-					}
-				},
-				{
-					"filename": "darko-throw/frame_004.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 288,
-						"h": 265
-					},
-					"spriteSourceSize": {
-						"x": 86,
-						"y": 27,
-						"w": 201,
-						"h": 236
-					},
-					"frame": {
-						"x": 1254,
-						"y": 1192,
-						"w": 201,
-						"h": 236
-					}
-				},
-				{
-					"filename": "darko-melee/frame_020.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 512,
-						"h": 512
-					},
-					"spriteSourceSize": {
-						"x": 129,
-						"y": 148,
-						"w": 193,
-						"h": 236
-					},
-					"frame": {
-						"x": 1383,
-						"y": 951,
-						"w": 193,
-						"h": 236
-					}
-				},
-				{
-					"filename": "darko-melee/frame_030.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 512,
-						"h": 512
-					},
-					"spriteSourceSize": {
-						"x": 208,
-						"y": 150,
-						"w": 133,
-						"h": 236
-					},
-					"frame": {
-						"x": 1578,
-						"y": 951,
-						"w": 133,
-						"h": 236
-					}
-				},
-				{
-					"filename": "darko-kick-2/frame_003.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 245,
-						"h": 277
-					},
-					"spriteSourceSize": {
-						"x": 87,
-						"y": 32,
-						"w": 108,
-						"h": 236
-					},
-					"frame": {
-						"x": 1663,
-						"y": 708,
-						"w": 108,
-						"h": 236
-					}
-				},
-				{
-					"filename": "darko-punch-1/frame_004.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 295,
-						"h": 259
-					},
-					"spriteSourceSize": {
-						"x": 109,
-						"y": 24,
-						"w": 185,
-						"h": 235
-					},
-					"frame": {
-						"x": 1110,
-						"y": 2560,
-						"w": 185,
-						"h": 235
-					}
-				},
-				{
-					"filename": "darko-run/frame_002.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 201,
-						"h": 256
-					},
-					"spriteSourceSize": {
-						"x": 26,
-						"y": 21,
-						"w": 158,
-						"h": 235
-					},
-					"frame": {
-						"x": 1206,
-						"y": 2317,
-						"w": 158,
-						"h": 235
-					}
-				},
-				{
-					"filename": "darko-melee/frame_029.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 512,
-						"h": 512
-					},
-					"spriteSourceSize": {
-						"x": 208,
-						"y": 152,
-						"w": 141,
-						"h": 234
-					},
-					"frame": {
-						"x": 1297,
-						"y": 2062,
-						"w": 141,
-						"h": 234
-					}
-				},
-				{
-					"filename": "darko-punch-1/frame_005.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 295,
-						"h": 259
-					},
-					"spriteSourceSize": {
-						"x": 75,
-						"y": 26,
-						"w": 183,
-						"h": 233
-					},
-					"frame": {
-						"x": 1440,
-						"y": 2062,
-						"w": 183,
-						"h": 233
-					}
-				},
-				{
-					"filename": "darko-kick-2/frame_002.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 245,
-						"h": 277
-					},
-					"spriteSourceSize": {
-						"x": 85,
-						"y": 36,
-						"w": 93,
-						"h": 233
-					},
-					"frame": {
-						"x": 1262,
-						"y": 1430,
-						"w": 93,
-						"h": 233
-					}
-				},
-				{
-					"filename": "darko-jump/frame_003.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 204,
-						"h": 304
-					},
-					"spriteSourceSize": {
-						"x": 39,
-						"y": 51,
-						"w": 151,
-						"h": 231
-					},
-					"frame": {
-						"x": 1296,
-						"y": 1665,
-						"w": 151,
-						"h": 231
-					}
-				},
-				{
-					"filename": "darko-run/frame_004.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 201,
-						"h": 256
-					},
-					"spriteSourceSize": {
-						"x": 30,
-						"y": 26,
-						"w": 155,
-						"h": 230
-					},
-					"frame": {
-						"x": 1357,
-						"y": 1430,
-						"w": 155,
-						"h": 230
-					}
-				},
-				{
-					"filename": "darko-knockdown-get-up/frame_006.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 353,
-						"h": 264
-					},
-					"spriteSourceSize": {
-						"x": 57,
-						"y": 110,
-						"w": 185,
-						"h": 154
-					},
-					"frame": {
-						"x": 1383,
-						"y": 1898,
-						"w": 185,
-						"h": 154
-					}
-				},
-				{
-					"filename": "darko-knockdown-get-up/frame_000.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 353,
-						"h": 264
-					},
-					"spriteSourceSize": {
-						"x": 120,
-						"y": 33,
-						"w": 192,
-						"h": 229
-					},
-					"frame": {
-						"x": 1449,
-						"y": 1662,
-						"w": 192,
-						"h": 229
-					}
-				},
-				{
-					"filename": "darko-throw/frame_006.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 288,
-						"h": 265
-					},
-					"spriteSourceSize": {
-						"x": 103,
-						"y": 34,
-						"w": 133,
-						"h": 229
-					},
-					"frame": {
-						"x": 1457,
-						"y": 1189,
-						"w": 133,
-						"h": 229
-					}
-				},
-				{
-					"filename": "darko-punch-2/frame_010.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 363,
-						"h": 260
-					},
-					"spriteSourceSize": {
-						"x": 145,
-						"y": 37,
-						"w": 218,
-						"h": 223
-					},
-					"frame": {
-						"x": 1514,
-						"y": 1420,
-						"w": 218,
-						"h": 223
-					}
-				},
-				{
-					"filename": "darko-knockdown-get-up/frame_008.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 353,
-						"h": 264
-					},
-					"spriteSourceSize": {
-						"x": 56,
-						"y": 39,
-						"w": 187,
-						"h": 223
-					},
-					"frame": {
-						"x": 1592,
-						"y": 1189,
-						"w": 187,
-						"h": 223
-					}
-				},
-				{
-					"filename": "darko-knockdown-get-up/frame_002.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 353,
-						"h": 264
-					},
-					"spriteSourceSize": {
-						"x": 111,
-						"y": 51,
-						"w": 145,
-						"h": 211
-					},
-					"frame": {
-						"x": 1570,
-						"y": 1893,
-						"w": 145,
-						"h": 211
-					}
-				},
-				{
-					"filename": "darko-punch-2/frame_009.png",
-					"rotated": false,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 363,
-						"h": 260
-					},
-					"spriteSourceSize": {
-						"x": 146,
-						"y": 44,
-						"w": 194,
-						"h": 216
-					},
-					"frame": {
-						"x": 1713,
-						"y": 946,
-						"w": 194,
-						"h": 216
-					}
-				},
-				{
-					"filename": "darko-knockdown-get-up/frame_004.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 353,
-						"h": 264
-					},
-					"spriteSourceSize": {
-						"x": 41,
-						"y": 162,
-						"w": 209,
-						"h": 98
-					},
-					"frame": {
-						"x": 1783,
-						"y": 708,
-						"w": 209,
-						"h": 98
 					}
 				},
 				{
@@ -3384,31 +381,10 @@
 						"h": 205
 					},
 					"frame": {
-						"x": 1883,
-						"y": 708,
+						"x": 422,
+						"y": 736,
 						"w": 99,
 						"h": 205
-					}
-				},
-				{
-					"filename": "darko-knockdown-get-up/frame_005.png",
-					"rotated": true,
-					"trimmed": true,
-					"sourceSize": {
-						"w": 353,
-						"h": 264
-					},
-					"spriteSourceSize": {
-						"x": 54,
-						"y": 159,
-						"w": 202,
-						"h": 98
-					},
-					"frame": {
-						"x": 1643,
-						"y": 1645,
-						"w": 202,
-						"h": 98
 					}
 				},
 				{
@@ -3426,8 +402,8 @@
 						"h": 202
 					},
 					"frame": {
-						"x": 1734,
-						"y": 1414,
+						"x": 523,
+						"y": 736,
 						"w": 98,
 						"h": 202
 					}
@@ -3447,10 +423,2929 @@
 						"h": 201
 					},
 					"frame": {
-						"x": 1783,
-						"y": 1164,
+						"x": 623,
+						"y": 736,
 						"w": 103,
 						"h": 201
+					}
+				},
+				{
+					"filename": "darko-throw/frame_008.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 288,
+						"h": 265
+					},
+					"spriteSourceSize": {
+						"x": 95,
+						"y": 1,
+						"w": 103,
+						"h": 262
+					},
+					"frame": {
+						"x": 677,
+						"y": 456,
+						"w": 103,
+						"h": 262
+					}
+				},
+				{
+					"filename": "darko-knockdown-get-up/frame_006.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 353,
+						"h": 264
+					},
+					"spriteSourceSize": {
+						"x": 57,
+						"y": 110,
+						"w": 185,
+						"h": 154
+					},
+					"frame": {
+						"x": 728,
+						"y": 272,
+						"w": 185,
+						"h": 154
+					}
+				},
+				{
+					"filename": "darko-dying/frame_007.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 362,
+						"h": 285
+					},
+					"spriteSourceSize": {
+						"x": 122,
+						"y": 24,
+						"w": 210,
+						"h": 261
+					},
+					"frame": {
+						"x": 1,
+						"y": 1768,
+						"w": 210,
+						"h": 261
+					}
+				},
+				{
+					"filename": "darko-dying/frame_010.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 362,
+						"h": 285
+					},
+					"spriteSourceSize": {
+						"x": 67,
+						"y": 24,
+						"w": 276,
+						"h": 260
+					},
+					"frame": {
+						"x": 1,
+						"y": 2031,
+						"w": 276,
+						"h": 260
+					}
+				},
+				{
+					"filename": "darko-melee/frame_000.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 200,
+						"y": 126,
+						"w": 102,
+						"h": 260
+					},
+					"frame": {
+						"x": 213,
+						"y": 1768,
+						"w": 102,
+						"h": 260
+					}
+				},
+				{
+					"filename": "darko-melee/frame_035.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 204,
+						"y": 126,
+						"w": 98,
+						"h": 260
+					},
+					"frame": {
+						"x": 239,
+						"y": 1501,
+						"w": 98,
+						"h": 260
+					}
+				},
+				{
+					"filename": "darko-punch-2/frame_015.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 363,
+						"h": 260
+					},
+					"spriteSourceSize": {
+						"x": 134,
+						"y": 0,
+						"w": 92,
+						"h": 260
+					},
+					"frame": {
+						"x": 317,
+						"y": 1763,
+						"w": 92,
+						"h": 260
+					}
+				},
+				{
+					"filename": "darko-damage/frame_000.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 211,
+						"h": 263
+					},
+					"spriteSourceSize": {
+						"x": 59,
+						"y": 1,
+						"w": 90,
+						"h": 260
+					},
+					"frame": {
+						"x": 334,
+						"y": 1215,
+						"w": 90,
+						"h": 260
+					}
+				},
+				{
+					"filename": "darko-idle/frame_004.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 106,
+						"h": 268
+					},
+					"spriteSourceSize": {
+						"x": 4,
+						"y": 5,
+						"w": 90,
+						"h": 260
+					},
+					"frame": {
+						"x": 339,
+						"y": 1477,
+						"w": 90,
+						"h": 260
+					}
+				},
+				{
+					"filename": "darko-jump/frame_000.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 204,
+						"h": 304
+					},
+					"spriteSourceSize": {
+						"x": 57,
+						"y": 22,
+						"w": 90,
+						"h": 260
+					},
+					"frame": {
+						"x": 426,
+						"y": 1215,
+						"w": 90,
+						"h": 260
+					}
+				},
+				{
+					"filename": "darko-idle/frame_003.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 106,
+						"h": 268
+					},
+					"spriteSourceSize": {
+						"x": 2,
+						"y": 6,
+						"w": 89,
+						"h": 260
+					},
+					"frame": {
+						"x": 1,
+						"y": 2293,
+						"w": 89,
+						"h": 260
+					}
+				},
+				{
+					"filename": "darko-walk/frame_003.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 156,
+						"h": 261
+					},
+					"spriteSourceSize": {
+						"x": 30,
+						"y": 1,
+						"w": 86,
+						"h": 260
+					},
+					"frame": {
+						"x": 1,
+						"y": 2555,
+						"w": 86,
+						"h": 260
+					}
+				},
+				{
+					"filename": "darko-idle/frame_001.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 106,
+						"h": 268
+					},
+					"spriteSourceSize": {
+						"x": 6,
+						"y": 5,
+						"w": 85,
+						"h": 260
+					},
+					"frame": {
+						"x": 1,
+						"y": 2817,
+						"w": 85,
+						"h": 260
+					}
+				},
+				{
+					"filename": "darko-melee/frame_003.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 182,
+						"y": 126,
+						"w": 119,
+						"h": 259
+					},
+					"frame": {
+						"x": 1,
+						"y": 3079,
+						"w": 119,
+						"h": 259
+					}
+				},
+				{
+					"filename": "darko-melee/frame_001.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 188,
+						"y": 127,
+						"w": 114,
+						"h": 259
+					},
+					"frame": {
+						"x": 88,
+						"y": 2817,
+						"w": 114,
+						"h": 259
+					}
+				},
+				{
+					"filename": "darko-walk/frame_005.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 156,
+						"h": 261
+					},
+					"spriteSourceSize": {
+						"x": 4,
+						"y": 0,
+						"w": 108,
+						"h": 259
+					},
+					"frame": {
+						"x": 89,
+						"y": 2555,
+						"w": 108,
+						"h": 259
+					}
+				},
+				{
+					"filename": "darko-special-attack/frame_006.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 208,
+						"h": 296
+					},
+					"spriteSourceSize": {
+						"x": 56,
+						"y": 18,
+						"w": 92,
+						"h": 259
+					},
+					"frame": {
+						"x": 199,
+						"y": 2555,
+						"w": 92,
+						"h": 259
+					}
+				},
+				{
+					"filename": "darko-punch-2/frame_014.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 363,
+						"h": 260
+					},
+					"spriteSourceSize": {
+						"x": 135,
+						"y": 1,
+						"w": 91,
+						"h": 259
+					},
+					"frame": {
+						"x": 293,
+						"y": 2555,
+						"w": 91,
+						"h": 259
+					}
+				},
+				{
+					"filename": "darko-kick-1/frame_000.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 309,
+						"h": 259
+					},
+					"spriteSourceSize": {
+						"x": 110,
+						"y": 0,
+						"w": 89,
+						"h": 259
+					},
+					"frame": {
+						"x": 92,
+						"y": 2293,
+						"w": 89,
+						"h": 259
+					}
+				},
+				{
+					"filename": "darko-kick-1/frame_008.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 309,
+						"h": 259
+					},
+					"spriteSourceSize": {
+						"x": 110,
+						"y": 0,
+						"w": 89,
+						"h": 259
+					},
+					"frame": {
+						"x": 183,
+						"y": 2293,
+						"w": 89,
+						"h": 259
+					}
+				},
+				{
+					"filename": "darko-punch-1/frame_000.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 295,
+						"h": 259
+					},
+					"spriteSourceSize": {
+						"x": 103,
+						"y": 0,
+						"w": 89,
+						"h": 259
+					},
+					"frame": {
+						"x": 274,
+						"y": 2293,
+						"w": 89,
+						"h": 259
+					}
+				},
+				{
+					"filename": "darko-punch-2/frame_000.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 363,
+						"h": 260
+					},
+					"spriteSourceSize": {
+						"x": 137,
+						"y": 1,
+						"w": 89,
+						"h": 259
+					},
+					"frame": {
+						"x": 279,
+						"y": 2030,
+						"w": 89,
+						"h": 259
+					}
+				},
+				{
+					"filename": "darko-punch-1/frame_001.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 295,
+						"h": 259
+					},
+					"spriteSourceSize": {
+						"x": 104,
+						"y": 0,
+						"w": 88,
+						"h": 259
+					},
+					"frame": {
+						"x": 365,
+						"y": 2291,
+						"w": 88,
+						"h": 259
+					}
+				},
+				{
+					"filename": "darko-idle/frame_005.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 106,
+						"h": 268
+					},
+					"spriteSourceSize": {
+						"x": 7,
+						"y": 5,
+						"w": 87,
+						"h": 259
+					},
+					"frame": {
+						"x": 370,
+						"y": 2025,
+						"w": 87,
+						"h": 259
+					}
+				},
+				{
+					"filename": "darko-finish-move/frame_000.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 379,
+						"h": 299
+					},
+					"spriteSourceSize": {
+						"x": 148,
+						"y": 20,
+						"w": 86,
+						"h": 259
+					},
+					"frame": {
+						"x": 411,
+						"y": 1739,
+						"w": 86,
+						"h": 259
+					}
+				},
+				{
+					"filename": "darko-melee/frame_002.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 187,
+						"y": 127,
+						"w": 115,
+						"h": 258
+					},
+					"frame": {
+						"x": 459,
+						"y": 1477,
+						"w": 115,
+						"h": 258
+					}
+				},
+				{
+					"filename": "darko-melee/frame_034.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 200,
+						"y": 128,
+						"w": 104,
+						"h": 258
+					},
+					"frame": {
+						"x": 576,
+						"y": 1477,
+						"w": 104,
+						"h": 258
+					}
+				},
+				{
+					"filename": "darko-throw/frame_000.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 288,
+						"h": 265
+					},
+					"spriteSourceSize": {
+						"x": 95,
+						"y": 3,
+						"w": 93,
+						"h": 258
+					},
+					"frame": {
+						"x": 682,
+						"y": 1477,
+						"w": 93,
+						"h": 258
+					}
+				},
+				{
+					"filename": "darko-special-attack/frame_007.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 208,
+						"h": 296
+					},
+					"spriteSourceSize": {
+						"x": 59,
+						"y": 19,
+						"w": 90,
+						"h": 258
+					},
+					"frame": {
+						"x": 777,
+						"y": 1477,
+						"w": 90,
+						"h": 258
+					}
+				},
+				{
+					"filename": "darko-special-attack/frame_008.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 208,
+						"h": 296
+					},
+					"spriteSourceSize": {
+						"x": 59,
+						"y": 19,
+						"w": 90,
+						"h": 258
+					},
+					"frame": {
+						"x": 869,
+						"y": 1477,
+						"w": 90,
+						"h": 258
+					}
+				},
+				{
+					"filename": "darko-idle/frame_008.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 106,
+						"h": 268
+					},
+					"spriteSourceSize": {
+						"x": 5,
+						"y": 5,
+						"w": 89,
+						"h": 258
+					},
+					"frame": {
+						"x": 518,
+						"y": 1215,
+						"w": 89,
+						"h": 258
+					}
+				},
+				{
+					"filename": "darko-special-attack/frame_000.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 208,
+						"h": 296
+					},
+					"spriteSourceSize": {
+						"x": 61,
+						"y": 19,
+						"w": 88,
+						"h": 258
+					},
+					"frame": {
+						"x": 609,
+						"y": 1215,
+						"w": 88,
+						"h": 258
+					}
+				},
+				{
+					"filename": "darko-dying/frame_001.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 362,
+						"h": 285
+					},
+					"spriteSourceSize": {
+						"x": 137,
+						"y": 12,
+						"w": 87,
+						"h": 258
+					},
+					"frame": {
+						"x": 626,
+						"y": 939,
+						"w": 87,
+						"h": 258
+					}
+				},
+				{
+					"filename": "darko-idle/frame_007.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 106,
+						"h": 268
+					},
+					"spriteSourceSize": {
+						"x": 7,
+						"y": 5,
+						"w": 87,
+						"h": 258
+					},
+					"frame": {
+						"x": 699,
+						"y": 1199,
+						"w": 87,
+						"h": 258
+					}
+				},
+				{
+					"filename": "darko-idle/frame_000.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 106,
+						"h": 268
+					},
+					"spriteSourceSize": {
+						"x": 6,
+						"y": 5,
+						"w": 86,
+						"h": 258
+					},
+					"frame": {
+						"x": 715,
+						"y": 939,
+						"w": 86,
+						"h": 258
+					}
+				},
+				{
+					"filename": "darko-finish-move/frame_010.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 379,
+						"h": 299
+					},
+					"spriteSourceSize": {
+						"x": 46,
+						"y": 59,
+						"w": 283,
+						"h": 217
+					},
+					"frame": {
+						"x": 728,
+						"y": 720,
+						"w": 283,
+						"h": 217
+					}
+				},
+				{
+					"filename": "darko-punch-2/frame_009.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 363,
+						"h": 260
+					},
+					"spriteSourceSize": {
+						"x": 146,
+						"y": 44,
+						"w": 194,
+						"h": 216
+					},
+					"frame": {
+						"x": 1013,
+						"y": 720,
+						"w": 194,
+						"h": 216
+					}
+				},
+				{
+					"filename": "darko-idle/frame_006.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 106,
+						"h": 268
+					},
+					"spriteSourceSize": {
+						"x": 9,
+						"y": 5,
+						"w": 85,
+						"h": 258
+					},
+					"frame": {
+						"x": 788,
+						"y": 1199,
+						"w": 85,
+						"h": 258
+					}
+				},
+				{
+					"filename": "darko-walk/frame_006.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 156,
+						"h": 261
+					},
+					"spriteSourceSize": {
+						"x": 11,
+						"y": 4,
+						"w": 137,
+						"h": 257
+					},
+					"frame": {
+						"x": 803,
+						"y": 939,
+						"w": 137,
+						"h": 257
+					}
+				},
+				{
+					"filename": "darko-walk/frame_007.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 156,
+						"h": 261
+					},
+					"spriteSourceSize": {
+						"x": 23,
+						"y": 4,
+						"w": 108,
+						"h": 257
+					},
+					"frame": {
+						"x": 875,
+						"y": 1198,
+						"w": 108,
+						"h": 257
+					}
+				},
+				{
+					"filename": "darko-melee/frame_033.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 205,
+						"y": 129,
+						"w": 103,
+						"h": 257
+					},
+					"frame": {
+						"x": 942,
+						"y": 939,
+						"w": 103,
+						"h": 257
+					}
+				},
+				{
+					"filename": "darko-dying/frame_004.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 362,
+						"h": 285
+					},
+					"spriteSourceSize": {
+						"x": 136,
+						"y": 15,
+						"w": 100,
+						"h": 257
+					},
+					"frame": {
+						"x": 782,
+						"y": 428,
+						"w": 100,
+						"h": 257
+					}
+				},
+				{
+					"filename": "darko-kick-1/frame_001.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 309,
+						"h": 259
+					},
+					"spriteSourceSize": {
+						"x": 114,
+						"y": 2,
+						"w": 97,
+						"h": 257
+					},
+					"frame": {
+						"x": 884,
+						"y": 428,
+						"w": 97,
+						"h": 257
+					}
+				},
+				{
+					"filename": "darko-knockdown-get-up/frame_003.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 353,
+						"h": 264
+					},
+					"spriteSourceSize": {
+						"x": 42,
+						"y": 140,
+						"w": 201,
+						"h": 121
+					},
+					"frame": {
+						"x": 915,
+						"y": 272,
+						"w": 201,
+						"h": 121
+					}
+				},
+				{
+					"filename": "darko-walk/frame_001.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 156,
+						"h": 261
+					},
+					"spriteSourceSize": {
+						"x": 25,
+						"y": 1,
+						"w": 97,
+						"h": 257
+					},
+					"frame": {
+						"x": 983,
+						"y": 1,
+						"w": 97,
+						"h": 257
+					}
+				},
+				{
+					"filename": "darko-finish-move/frame_003.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 379,
+						"h": 299
+					},
+					"spriteSourceSize": {
+						"x": 108,
+						"y": 20,
+						"w": 205,
+						"h": 256
+					},
+					"frame": {
+						"x": 1082,
+						"y": 1,
+						"w": 205,
+						"h": 256
+					}
+				},
+				{
+					"filename": "darko-walk/frame_008.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 156,
+						"h": 261
+					},
+					"spriteSourceSize": {
+						"x": 11,
+						"y": 3,
+						"w": 145,
+						"h": 256
+					},
+					"frame": {
+						"x": 983,
+						"y": 395,
+						"w": 145,
+						"h": 256
+					}
+				},
+				{
+					"filename": "darko-knockdown-get-up/frame_004.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 353,
+						"h": 264
+					},
+					"spriteSourceSize": {
+						"x": 41,
+						"y": 162,
+						"w": 209,
+						"h": 98
+					},
+					"frame": {
+						"x": 1118,
+						"y": 259,
+						"w": 209,
+						"h": 98
+					}
+				},
+				{
+					"filename": "darko-kick-1/frame_007.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 309,
+						"h": 259
+					},
+					"spriteSourceSize": {
+						"x": 107,
+						"y": 3,
+						"w": 103,
+						"h": 256
+					},
+					"frame": {
+						"x": 1289,
+						"y": 1,
+						"w": 103,
+						"h": 256
+					}
+				},
+				{
+					"filename": "darko-dying/frame_000.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 362,
+						"h": 285
+					},
+					"spriteSourceSize": {
+						"x": 138,
+						"y": 14,
+						"w": 86,
+						"h": 256
+					},
+					"frame": {
+						"x": 1130,
+						"y": 359,
+						"w": 86,
+						"h": 256
+					}
+				},
+				{
+					"filename": "darko-knockdown-get-up/frame_005.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 353,
+						"h": 264
+					},
+					"spriteSourceSize": {
+						"x": 54,
+						"y": 159,
+						"w": 202,
+						"h": 98
+					},
+					"frame": {
+						"x": 1130,
+						"y": 617,
+						"w": 202,
+						"h": 98
+					}
+				},
+				{
+					"filename": "darko-dying/frame_002.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 362,
+						"h": 285
+					},
+					"spriteSourceSize": {
+						"x": 140,
+						"y": 14,
+						"w": 84,
+						"h": 256
+					},
+					"frame": {
+						"x": 1218,
+						"y": 359,
+						"w": 84,
+						"h": 256
+					}
+				},
+				{
+					"filename": "darko-finish-move/frame_004.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 379,
+						"h": 299
+					},
+					"spriteSourceSize": {
+						"x": 90,
+						"y": 21,
+						"w": 230,
+						"h": 255
+					},
+					"frame": {
+						"x": 1304,
+						"y": 359,
+						"w": 230,
+						"h": 255
+					}
+				},
+				{
+					"filename": "darko-dying/frame_015.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 362,
+						"h": 285
+					},
+					"spriteSourceSize": {
+						"x": 60,
+						"y": 194,
+						"w": 283,
+						"h": 90
+					},
+					"frame": {
+						"x": 1329,
+						"y": 259,
+						"w": 283,
+						"h": 90
+					}
+				},
+				{
+					"filename": "darko-walk/frame_002.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 156,
+						"h": 261
+					},
+					"spriteSourceSize": {
+						"x": 16,
+						"y": 6,
+						"w": 131,
+						"h": 255
+					},
+					"frame": {
+						"x": 1394,
+						"y": 1,
+						"w": 131,
+						"h": 255
+					}
+				},
+				{
+					"filename": "darko-melee/frame_004.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 172,
+						"y": 129,
+						"w": 129,
+						"h": 255
+					},
+					"frame": {
+						"x": 1527,
+						"y": 1,
+						"w": 129,
+						"h": 255
+					}
+				},
+				{
+					"filename": "darko-throw/frame_001.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 288,
+						"h": 265
+					},
+					"spriteSourceSize": {
+						"x": 82,
+						"y": 8,
+						"w": 108,
+						"h": 255
+					},
+					"frame": {
+						"x": 1,
+						"y": 3340,
+						"w": 108,
+						"h": 255
+					}
+				},
+				{
+					"filename": "darko-dying/frame_003.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 362,
+						"h": 285
+					},
+					"spriteSourceSize": {
+						"x": 140,
+						"y": 15,
+						"w": 84,
+						"h": 255
+					},
+					"frame": {
+						"x": 1,
+						"y": 3597,
+						"w": 84,
+						"h": 255
+					}
+				},
+				{
+					"filename": "darko-punch-2/frame_012.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 363,
+						"h": 260
+					},
+					"spriteSourceSize": {
+						"x": 145,
+						"y": 19,
+						"w": 218,
+						"h": 241
+					},
+					"frame": {
+						"x": 1,
+						"y": 3854,
+						"w": 218,
+						"h": 241
+					}
+				},
+				{
+					"filename": "darko-damage/frame_003.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 211,
+						"h": 263
+					},
+					"spriteSourceSize": {
+						"x": 1,
+						"y": 22,
+						"w": 171,
+						"h": 241
+					},
+					"frame": {
+						"x": 221,
+						"y": 3854,
+						"w": 171,
+						"h": 241
+					}
+				},
+				{
+					"filename": "darko-throw/frame_007.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 288,
+						"h": 265
+					},
+					"spriteSourceSize": {
+						"x": 104,
+						"y": 22,
+						"w": 120,
+						"h": 241
+					},
+					"frame": {
+						"x": 394,
+						"y": 3854,
+						"w": 120,
+						"h": 241
+					}
+				},
+				{
+					"filename": "darko-finish-move/frame_006.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 379,
+						"h": 299
+					},
+					"spriteSourceSize": {
+						"x": 79,
+						"y": 36,
+						"w": 247,
+						"h": 240
+					},
+					"frame": {
+						"x": 516,
+						"y": 3854,
+						"w": 247,
+						"h": 240
+					}
+				},
+				{
+					"filename": "darko-walk/frame_004.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 156,
+						"h": 261
+					},
+					"spriteSourceSize": {
+						"x": 1,
+						"y": 5,
+						"w": 154,
+						"h": 254
+					},
+					"frame": {
+						"x": 87,
+						"y": 3597,
+						"w": 154,
+						"h": 254
+					}
+				},
+				{
+					"filename": "darko-walk/frame_000.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 156,
+						"h": 261
+					},
+					"spriteSourceSize": {
+						"x": 12,
+						"y": 5,
+						"w": 142,
+						"h": 254
+					},
+					"frame": {
+						"x": 111,
+						"y": 3340,
+						"w": 142,
+						"h": 254
+					}
+				},
+				{
+					"filename": "darko-punch-1/frame_002.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 295,
+						"h": 259
+					},
+					"spriteSourceSize": {
+						"x": 107,
+						"y": 5,
+						"w": 105,
+						"h": 254
+					},
+					"frame": {
+						"x": 243,
+						"y": 3596,
+						"w": 105,
+						"h": 254
+					}
+				},
+				{
+					"filename": "darko-finish-move/frame_002.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 379,
+						"h": 299
+					},
+					"spriteSourceSize": {
+						"x": 133,
+						"y": 23,
+						"w": 220,
+						"h": 253
+					},
+					"frame": {
+						"x": 122,
+						"y": 3078,
+						"w": 220,
+						"h": 253
+					}
+				},
+				{
+					"filename": "darko-melee/frame_005.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 165,
+						"y": 131,
+						"w": 136,
+						"h": 253
+					},
+					"frame": {
+						"x": 255,
+						"y": 2816,
+						"w": 136,
+						"h": 253
+					}
+				},
+				{
+					"filename": "darko-damage/frame_001.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 211,
+						"h": 263
+					},
+					"spriteSourceSize": {
+						"x": 40,
+						"y": 8,
+						"w": 127,
+						"h": 253
+					},
+					"frame": {
+						"x": 255,
+						"y": 3333,
+						"w": 127,
+						"h": 253
+					}
+				},
+				{
+					"filename": "darko-finish-move/frame_001.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 379,
+						"h": 299
+					},
+					"spriteSourceSize": {
+						"x": 145,
+						"y": 25,
+						"w": 234,
+						"h": 252
+					},
+					"frame": {
+						"x": 350,
+						"y": 3071,
+						"w": 234,
+						"h": 252
+					}
+				},
+				{
+					"filename": "darko-punch-2/frame_013.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 363,
+						"h": 260
+					},
+					"spriteSourceSize": {
+						"x": 134,
+						"y": 8,
+						"w": 113,
+						"h": 252
+					},
+					"frame": {
+						"x": 386,
+						"y": 2552,
+						"w": 113,
+						"h": 252
+					}
+				},
+				{
+					"filename": "darko-special-attack/frame_005.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 208,
+						"h": 296
+					},
+					"spriteSourceSize": {
+						"x": 37,
+						"y": 28,
+						"w": 147,
+						"h": 251
+					},
+					"frame": {
+						"x": 393,
+						"y": 2806,
+						"w": 147,
+						"h": 251
+					}
+				},
+				{
+					"filename": "darko-special-attack/frame_002.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 208,
+						"h": 296
+					},
+					"spriteSourceSize": {
+						"x": 45,
+						"y": 24,
+						"w": 134,
+						"h": 251
+					},
+					"frame": {
+						"x": 542,
+						"y": 2806,
+						"w": 134,
+						"h": 251
+					}
+				},
+				{
+					"filename": "darko-kick-2/frame_008.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 245,
+						"h": 277
+					},
+					"spriteSourceSize": {
+						"x": 77,
+						"y": 18,
+						"w": 129,
+						"h": 251
+					},
+					"frame": {
+						"x": 678,
+						"y": 2806,
+						"w": 129,
+						"h": 251
+					}
+				},
+				{
+					"filename": "darko-throw/frame_003.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 288,
+						"h": 265
+					},
+					"spriteSourceSize": {
+						"x": 77,
+						"y": 12,
+						"w": 126,
+						"h": 251
+					},
+					"frame": {
+						"x": 809,
+						"y": 2806,
+						"w": 126,
+						"h": 251
+					}
+				},
+				{
+					"filename": "darko-throw/frame_002.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 288,
+						"h": 265
+					},
+					"spriteSourceSize": {
+						"x": 74,
+						"y": 12,
+						"w": 123,
+						"h": 251
+					},
+					"frame": {
+						"x": 455,
+						"y": 2286,
+						"w": 123,
+						"h": 251
+					}
+				},
+				{
+					"filename": "darko-melee/frame_032.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 207,
+						"y": 135,
+						"w": 110,
+						"h": 251
+					},
+					"frame": {
+						"x": 350,
+						"y": 3588,
+						"w": 110,
+						"h": 251
+					}
+				},
+				{
+					"filename": "darko-melee/frame_006.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 160,
+						"y": 134,
+						"w": 140,
+						"h": 250
+					},
+					"frame": {
+						"x": 384,
+						"y": 3325,
+						"w": 140,
+						"h": 250
+					}
+				},
+				{
+					"filename": "darko-special-attack/frame_001.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 208,
+						"h": 296
+					},
+					"spriteSourceSize": {
+						"x": 52,
+						"y": 24,
+						"w": 104,
+						"h": 250
+					},
+					"frame": {
+						"x": 501,
+						"y": 2539,
+						"w": 104,
+						"h": 250
+					}
+				},
+				{
+					"filename": "darko-finish-move/frame_012.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 379,
+						"h": 299
+					},
+					"spriteSourceSize": {
+						"x": 75,
+						"y": 27,
+						"w": 270,
+						"h": 249
+					},
+					"frame": {
+						"x": 462,
+						"y": 3577,
+						"w": 270,
+						"h": 249
+					}
+				},
+				{
+					"filename": "darko-kick-1/frame_002.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 309,
+						"h": 259
+					},
+					"spriteSourceSize": {
+						"x": 114,
+						"y": 6,
+						"w": 194,
+						"h": 249
+					},
+					"frame": {
+						"x": 526,
+						"y": 3325,
+						"w": 194,
+						"h": 249
+					}
+				},
+				{
+					"filename": "darko-kick-2/frame_006.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 245,
+						"h": 277
+					},
+					"spriteSourceSize": {
+						"x": 98,
+						"y": 17,
+						"w": 139,
+						"h": 249
+					},
+					"frame": {
+						"x": 722,
+						"y": 3325,
+						"w": 139,
+						"h": 249
+					}
+				},
+				{
+					"filename": "darko-special-attack/frame_003.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 208,
+						"h": 296
+					},
+					"spriteSourceSize": {
+						"x": 29,
+						"y": 25,
+						"w": 134,
+						"h": 249
+					},
+					"frame": {
+						"x": 586,
+						"y": 3059,
+						"w": 134,
+						"h": 249
+					}
+				},
+				{
+					"filename": "darko-melee/frame_031.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 207,
+						"y": 137,
+						"w": 112,
+						"h": 249
+					},
+					"frame": {
+						"x": 722,
+						"y": 3059,
+						"w": 112,
+						"h": 249
+					}
+				},
+				{
+					"filename": "darko-melee/frame_007.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 156,
+						"y": 136,
+						"w": 144,
+						"h": 248
+					},
+					"frame": {
+						"x": 836,
+						"y": 3059,
+						"w": 144,
+						"h": 248
+					}
+				},
+				{
+					"filename": "darko-kick-1/frame_004.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 309,
+						"h": 259
+					},
+					"spriteSourceSize": {
+						"x": 114,
+						"y": 11,
+						"w": 117,
+						"h": 248
+					},
+					"frame": {
+						"x": 734,
+						"y": 3576,
+						"w": 117,
+						"h": 248
+					}
+				},
+				{
+					"filename": "darko-kick-2/frame_000.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 245,
+						"h": 277
+					},
+					"spriteSourceSize": {
+						"x": 83,
+						"y": 19,
+						"w": 86,
+						"h": 248
+					},
+					"frame": {
+						"x": 765,
+						"y": 3826,
+						"w": 86,
+						"h": 248
+					}
+				},
+				{
+					"filename": "darko-shoot-up/frame_000.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 256,
+						"h": 256
+					},
+					"spriteSourceSize": {
+						"x": 98,
+						"y": 3,
+						"w": 72,
+						"h": 248
+					},
+					"frame": {
+						"x": 459,
+						"y": 2000,
+						"w": 72,
+						"h": 248
+					}
+				},
+				{
+					"filename": "darko-finish-move/frame_005.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 379,
+						"h": 299
+					},
+					"spriteSourceSize": {
+						"x": 76,
+						"y": 29,
+						"w": 251,
+						"h": 247
+					},
+					"frame": {
+						"x": 499,
+						"y": 1737,
+						"w": 251,
+						"h": 247
+					}
+				},
+				{
+					"filename": "darko-kick-1/frame_003.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 309,
+						"h": 259
+					},
+					"spriteSourceSize": {
+						"x": 128,
+						"y": 8,
+						"w": 158,
+						"h": 247
+					},
+					"frame": {
+						"x": 533,
+						"y": 1986,
+						"w": 158,
+						"h": 247
+					}
+				},
+				{
+					"filename": "darko-dying/frame_005.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 362,
+						"h": 285
+					},
+					"spriteSourceSize": {
+						"x": 12,
+						"y": 28,
+						"w": 324,
+						"h": 246
+					},
+					"frame": {
+						"x": 580,
+						"y": 2235,
+						"w": 324,
+						"h": 246
+					}
+				},
+				{
+					"filename": "darko-melee/frame_009.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 147,
+						"y": 138,
+						"w": 153,
+						"h": 246
+					},
+					"frame": {
+						"x": 693,
+						"y": 1986,
+						"w": 153,
+						"h": 246
+					}
+				},
+				{
+					"filename": "darko-melee/frame_008.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 148,
+						"y": 138,
+						"w": 152,
+						"h": 246
+					},
+					"frame": {
+						"x": 848,
+						"y": 1986,
+						"w": 152,
+						"h": 246
+					}
+				},
+				{
+					"filename": "darko-kick-2/frame_007.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 245,
+						"h": 277
+					},
+					"spriteSourceSize": {
+						"x": 102,
+						"y": 23,
+						"w": 117,
+						"h": 246
+					},
+					"frame": {
+						"x": 752,
+						"y": 1737,
+						"w": 117,
+						"h": 246
+					}
+				},
+				{
+					"filename": "darko-kick-1/frame_006.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 309,
+						"h": 259
+					},
+					"spriteSourceSize": {
+						"x": 98,
+						"y": 13,
+						"w": 112,
+						"h": 246
+					},
+					"frame": {
+						"x": 871,
+						"y": 1737,
+						"w": 112,
+						"h": 246
+					}
+				},
+				{
+					"filename": "darko-finish-move/frame_011.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 379,
+						"h": 299
+					},
+					"spriteSourceSize": {
+						"x": 80,
+						"y": 31,
+						"w": 255,
+						"h": 245
+					},
+					"frame": {
+						"x": 961,
+						"y": 1457,
+						"w": 255,
+						"h": 245
+					}
+				},
+				{
+					"filename": "darko-run/frame_000.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 201,
+						"h": 256
+					},
+					"spriteSourceSize": {
+						"x": 53,
+						"y": 9,
+						"w": 105,
+						"h": 245
+					},
+					"frame": {
+						"x": 985,
+						"y": 1198,
+						"w": 105,
+						"h": 245
+					}
+				},
+				{
+					"filename": "darko-damage/frame_002.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 211,
+						"h": 263
+					},
+					"spriteSourceSize": {
+						"x": 29,
+						"y": 20,
+						"w": 142,
+						"h": 243
+					},
+					"frame": {
+						"x": 1092,
+						"y": 1198,
+						"w": 142,
+						"h": 243
+					}
+				},
+				{
+					"filename": "darko-shoot-recoil/frame_000.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 256,
+						"h": 256
+					},
+					"spriteSourceSize": {
+						"x": 23,
+						"y": 9,
+						"w": 210,
+						"h": 242
+					},
+					"frame": {
+						"x": 1047,
+						"y": 938,
+						"w": 210,
+						"h": 242
+					}
+				},
+				{
+					"filename": "darko-punch-2/frame_002.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 363,
+						"h": 260
+					},
+					"spriteSourceSize": {
+						"x": 134,
+						"y": 42,
+						"w": 114,
+						"h": 218
+					},
+					"frame": {
+						"x": 1236,
+						"y": 717,
+						"w": 114,
+						"h": 218
+					}
+				},
+				{
+					"filename": "darko-finish-move/frame_009.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 379,
+						"h": 299
+					},
+					"spriteSourceSize": {
+						"x": 49,
+						"y": 61,
+						"w": 271,
+						"h": 215
+					},
+					"frame": {
+						"x": 1352,
+						"y": 717,
+						"w": 271,
+						"h": 215
+					}
+				},
+				{
+					"filename": "darko-dying/frame_014.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 362,
+						"h": 285
+					},
+					"spriteSourceSize": {
+						"x": 66,
+						"y": 196,
+						"w": 277,
+						"h": 88
+					},
+					"frame": {
+						"x": 1334,
+						"y": 616,
+						"w": 277,
+						"h": 88
+					}
+				},
+				{
+					"filename": "darko-shoot/frame_000.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 256,
+						"h": 256
+					},
+					"spriteSourceSize": {
+						"x": 89,
+						"y": 10,
+						"w": 133,
+						"h": 242
+					},
+					"frame": {
+						"x": 1536,
+						"y": 351,
+						"w": 133,
+						"h": 242
+					}
+				},
+				{
+					"filename": "darko-melee/frame_019.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 120,
+						"y": 145,
+						"w": 189,
+						"h": 239
+					},
+					"frame": {
+						"x": 985,
+						"y": 1704,
+						"w": 189,
+						"h": 239
+					}
+				},
+				{
+					"filename": "darko-run/frame_007.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 201,
+						"h": 256
+					},
+					"spriteSourceSize": {
+						"x": 29,
+						"y": 16,
+						"w": 156,
+						"h": 239
+					},
+					"frame": {
+						"x": 607,
+						"y": 2483,
+						"w": 156,
+						"h": 239
+					}
+				},
+				{
+					"filename": "darko-kick-2/frame_001.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 245,
+						"h": 277
+					},
+					"spriteSourceSize": {
+						"x": 86,
+						"y": 29,
+						"w": 85,
+						"h": 238
+					},
+					"frame": {
+						"x": 765,
+						"y": 2483,
+						"w": 85,
+						"h": 238
+					}
+				},
+				{
+					"filename": "darko-jump/frame_002.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 204,
+						"h": 304
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 191,
+						"h": 237
+					},
+					"frame": {
+						"x": 852,
+						"y": 2483,
+						"w": 191,
+						"h": 237
+					}
+				},
+				{
+					"filename": "darko-run/frame_005.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 201,
+						"h": 256
+					},
+					"spriteSourceSize": {
+						"x": 35,
+						"y": 17,
+						"w": 166,
+						"h": 237
+					},
+					"frame": {
+						"x": 937,
+						"y": 2234,
+						"w": 166,
+						"h": 237
+					}
+				},
+				{
+					"filename": "darko-punch-1/frame_003.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 295,
+						"h": 259
+					},
+					"spriteSourceSize": {
+						"x": 106,
+						"y": 22,
+						"w": 154,
+						"h": 237
+					},
+					"frame": {
+						"x": 1045,
+						"y": 1945,
+						"w": 154,
+						"h": 237
+					}
+				},
+				{
+					"filename": "darko-kick-1/frame_005.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 309,
+						"h": 259
+					},
+					"spriteSourceSize": {
+						"x": 92,
+						"y": 22,
+						"w": 132,
+						"h": 237
+					},
+					"frame": {
+						"x": 1176,
+						"y": 1704,
+						"w": 132,
+						"h": 237
+					}
+				},
+				{
+					"filename": "darko-punch-2/frame_001.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 363,
+						"h": 260
+					},
+					"spriteSourceSize": {
+						"x": 132,
+						"y": 23,
+						"w": 106,
+						"h": 237
+					},
+					"frame": {
+						"x": 1218,
+						"y": 1443,
+						"w": 106,
+						"h": 237
+					}
+				},
+				{
+					"filename": "darko-throw/frame_004.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 288,
+						"h": 265
+					},
+					"spriteSourceSize": {
+						"x": 86,
+						"y": 27,
+						"w": 201,
+						"h": 236
+					},
+					"frame": {
+						"x": 1236,
+						"y": 1182,
+						"w": 201,
+						"h": 236
+					}
+				},
+				{
+					"filename": "darko-melee/frame_020.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 129,
+						"y": 148,
+						"w": 193,
+						"h": 236
+					},
+					"frame": {
+						"x": 1326,
+						"y": 937,
+						"w": 193,
+						"h": 236
+					}
+				},
+				{
+					"filename": "darko-melee/frame_030.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 208,
+						"y": 150,
+						"w": 133,
+						"h": 236
+					},
+					"frame": {
+						"x": 1521,
+						"y": 937,
+						"w": 133,
+						"h": 236
+					}
+				},
+				{
+					"filename": "darko-kick-2/frame_003.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 245,
+						"h": 277
+					},
+					"spriteSourceSize": {
+						"x": 87,
+						"y": 32,
+						"w": 108,
+						"h": 236
+					},
+					"frame": {
+						"x": 937,
+						"y": 2722,
+						"w": 108,
+						"h": 236
+					}
+				},
+				{
+					"filename": "darko-punch-1/frame_004.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 295,
+						"h": 259
+					},
+					"spriteSourceSize": {
+						"x": 109,
+						"y": 24,
+						"w": 185,
+						"h": 235
+					},
+					"frame": {
+						"x": 1045,
+						"y": 2473,
+						"w": 185,
+						"h": 235
+					}
+				},
+				{
+					"filename": "darko-run/frame_001.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 201,
+						"h": 256
+					},
+					"spriteSourceSize": {
+						"x": 22,
+						"y": 19,
+						"w": 172,
+						"h": 235
+					},
+					"frame": {
+						"x": 1105,
+						"y": 2184,
+						"w": 172,
+						"h": 235
+					}
+				},
+				{
+					"filename": "darko-run/frame_002.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 201,
+						"h": 256
+					},
+					"spriteSourceSize": {
+						"x": 26,
+						"y": 21,
+						"w": 158,
+						"h": 235
+					},
+					"frame": {
+						"x": 1232,
+						"y": 1943,
+						"w": 158,
+						"h": 235
+					}
+				},
+				{
+					"filename": "darko-run/frame_003.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 201,
+						"h": 256
+					},
+					"spriteSourceSize": {
+						"x": 24,
+						"y": 21,
+						"w": 168,
+						"h": 234
+					},
+					"frame": {
+						"x": 1310,
+						"y": 1682,
+						"w": 168,
+						"h": 234
+					}
+				},
+				{
+					"filename": "darko-melee/frame_029.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 208,
+						"y": 152,
+						"w": 141,
+						"h": 234
+					},
+					"frame": {
+						"x": 1392,
+						"y": 1420,
+						"w": 141,
+						"h": 234
+					}
+				},
+				{
+					"filename": "darko-dying/frame_006.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 362,
+						"h": 285
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 41,
+						"w": 268,
+						"h": 233
+					},
+					"frame": {
+						"x": 1480,
+						"y": 1175,
+						"w": 268,
+						"h": 233
+					}
+				},
+				{
+					"filename": "darko-punch-1/frame_005.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 295,
+						"h": 259
+					},
+					"spriteSourceSize": {
+						"x": 75,
+						"y": 26,
+						"w": 183,
+						"h": 233
+					},
+					"frame": {
+						"x": 1535,
+						"y": 1410,
+						"w": 183,
+						"h": 233
+					}
+				},
+				{
+					"filename": "darko-kick-2/frame_002.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 245,
+						"h": 277
+					},
+					"spriteSourceSize": {
+						"x": 85,
+						"y": 36,
+						"w": 93,
+						"h": 233
+					},
+					"frame": {
+						"x": 1625,
+						"y": 595,
+						"w": 93,
+						"h": 233
+					}
+				},
+				{
+					"filename": "darko-run/frame_006.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 201,
+						"h": 256
+					},
+					"spriteSourceSize": {
+						"x": 21,
+						"y": 24,
+						"w": 173,
+						"h": 232
+					},
+					"frame": {
+						"x": 1656,
+						"y": 830,
+						"w": 173,
+						"h": 232
+					}
+				},
+				{
+					"filename": "darko-melee/frame_028.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 208,
+						"y": 154,
+						"w": 145,
+						"h": 232
+					},
+					"frame": {
+						"x": 1658,
+						"y": 1,
+						"w": 145,
+						"h": 232
+					}
+				},
+				{
+					"filename": "darko-punch-2/frame_011.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 363,
+						"h": 260
+					},
+					"spriteSourceSize": {
+						"x": 145,
+						"y": 29,
+						"w": 218,
+						"h": 231
+					},
+					"frame": {
+						"x": 1671,
+						"y": 235,
+						"w": 218,
+						"h": 231
+					}
+				},
+				{
+					"filename": "darko-jump/frame_003.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 204,
+						"h": 304
+					},
+					"spriteSourceSize": {
+						"x": 39,
+						"y": 51,
+						"w": 151,
+						"h": 231
+					},
+					"frame": {
+						"x": 1831,
+						"y": 1,
+						"w": 151,
+						"h": 231
+					}
+				},
+				{
+					"filename": "darko-melee/frame_021.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 190,
+						"y": 156,
+						"w": 180,
+						"h": 230
+					},
+					"frame": {
+						"x": 1984,
+						"y": 1,
+						"w": 180,
+						"h": 230
+					}
+				},
+				{
+					"filename": "darko-run/frame_004.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 201,
+						"h": 256
+					},
+					"spriteSourceSize": {
+						"x": 30,
+						"y": 26,
+						"w": 155,
+						"h": 230
+					},
+					"frame": {
+						"x": 2166,
+						"y": 1,
+						"w": 155,
+						"h": 230
+					}
+				},
+				{
+					"filename": "darko-dying/frame_011.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 362,
+						"h": 285
+					},
+					"spriteSourceSize": {
+						"x": 66,
+						"y": 55,
+						"w": 277,
+						"h": 229
+					},
+					"frame": {
+						"x": 1720,
+						"y": 468,
+						"w": 277,
+						"h": 229
+					}
+				},
+				{
+					"filename": "darko-knockdown-get-up/frame_000.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 353,
+						"h": 264
+					},
+					"spriteSourceSize": {
+						"x": 120,
+						"y": 33,
+						"w": 192,
+						"h": 229
+					},
+					"frame": {
+						"x": 1891,
+						"y": 234,
+						"w": 192,
+						"h": 229
+					}
+				},
+				{
+					"filename": "darko-run/frame_008.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 201,
+						"h": 256
+					},
+					"spriteSourceSize": {
+						"x": 20,
+						"y": 26,
+						"w": 165,
+						"h": 229
+					},
+					"frame": {
+						"x": 853,
+						"y": 3576,
+						"w": 165,
+						"h": 229
+					}
+				},
+				{
+					"filename": "darko-throw/frame_005.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 288,
+						"h": 265
+					},
+					"spriteSourceSize": {
+						"x": 98,
+						"y": 34,
+						"w": 165,
+						"h": 229
+					},
+					"frame": {
+						"x": 863,
+						"y": 3309,
+						"w": 165,
+						"h": 229
+					}
+				},
+				{
+					"filename": "darko-melee/frame_023.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 204,
+						"y": 158,
+						"w": 163,
+						"h": 229
+					},
+					"frame": {
+						"x": 853,
+						"y": 3807,
+						"w": 163,
+						"h": 229
+					}
+				},
+				{
+					"filename": "darko-throw/frame_006.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 288,
+						"h": 265
+					},
+					"spriteSourceSize": {
+						"x": 103,
+						"y": 34,
+						"w": 133,
+						"h": 229
+					},
+					"frame": {
+						"x": 1018,
+						"y": 3807,
+						"w": 133,
+						"h": 229
+					}
+				},
+				{
+					"filename": "darko-finish-move/frame_007.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 379,
+						"h": 299
+					},
+					"spriteSourceSize": {
+						"x": 66,
+						"y": 48,
+						"w": 250,
+						"h": 227
+					},
+					"frame": {
+						"x": 1020,
+						"y": 3540,
+						"w": 250,
+						"h": 227
+					}
+				},
+				{
+					"filename": "darko-melee/frame_022.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 512,
+						"h": 512
+					},
+					"spriteSourceSize": {
+						"x": 200,
+						"y": 159,
+						"w": 170,
+						"h": 227
+					},
+					"frame": {
+						"x": 1153,
+						"y": 3769,
+						"w": 170,
+						"h": 227
+					}
+				},
+				{
+					"filename": "darko-punch-2/frame_010.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 363,
+						"h": 260
+					},
+					"spriteSourceSize": {
+						"x": 145,
+						"y": 37,
+						"w": 218,
+						"h": 223
+					},
+					"frame": {
+						"x": 982,
+						"y": 2960,
+						"w": 218,
+						"h": 223
+					}
+				},
+				{
+					"filename": "darko-knockdown-get-up/frame_008.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 353,
+						"h": 264
+					},
+					"spriteSourceSize": {
+						"x": 56,
+						"y": 39,
+						"w": 187,
+						"h": 223
+					},
+					"frame": {
+						"x": 1047,
+						"y": 2710,
+						"w": 187,
+						"h": 223
+					}
+				},
+				{
+					"filename": "darko-finish-move/frame_008.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 379,
+						"h": 299
+					},
+					"spriteSourceSize": {
+						"x": 58,
+						"y": 53,
+						"w": 258,
+						"h": 222
+					},
+					"frame": {
+						"x": 1232,
+						"y": 2421,
+						"w": 258,
+						"h": 222
 					}
 				},
 				{
@@ -3468,8 +3363,8 @@
 						"h": 201
 					},
 					"frame": {
-						"x": 1743,
-						"y": 1618,
+						"x": 1279,
+						"y": 2180,
 						"w": 99,
 						"h": 201
 					}
@@ -3489,10 +3384,115 @@
 						"h": 200
 					},
 					"frame": {
-						"x": 1834,
-						"y": 1367,
+						"x": 1380,
+						"y": 2180,
 						"w": 101,
 						"h": 200
+					}
+				},
+				{
+					"filename": "darko-jump-punch/frame_000.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 256,
+						"h": 256
+					},
+					"spriteSourceSize": {
+						"x": 17,
+						"y": 25,
+						"w": 229,
+						"h": 197
+					},
+					"frame": {
+						"x": 1392,
+						"y": 1918,
+						"w": 229,
+						"h": 197
+					}
+				},
+				{
+					"filename": "darko-knockdown-get-up/frame_007.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 353,
+						"h": 264
+					},
+					"spriteSourceSize": {
+						"x": 57,
+						"y": 68,
+						"w": 182,
+						"h": 195
+					},
+					"frame": {
+						"x": 1483,
+						"y": 1656,
+						"w": 182,
+						"h": 195
+					}
+				},
+				{
+					"filename": "darko-jump-kick/frame_000.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 256,
+						"h": 256
+					},
+					"spriteSourceSize": {
+						"x": 10,
+						"y": 23,
+						"w": 237,
+						"h": 194
+					},
+					"frame": {
+						"x": 1667,
+						"y": 1645,
+						"w": 237,
+						"h": 194
+					}
+				},
+				{
+					"filename": "darko-knockdown-get-up/frame_001.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 353,
+						"h": 264
+					},
+					"spriteSourceSize": {
+						"x": 115,
+						"y": 69,
+						"w": 237,
+						"h": 194
+					},
+					"frame": {
+						"x": 1720,
+						"y": 1410,
+						"w": 237,
+						"h": 194
+					}
+				},
+				{
+					"filename": "darko-jump/frame_001.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 204,
+						"h": 304
+					},
+					"spriteSourceSize": {
+						"x": 24,
+						"y": 90,
+						"w": 162,
+						"h": 192
+					},
+					"frame": {
+						"x": 1483,
+						"y": 2117,
+						"w": 162,
+						"h": 192
 					}
 				},
 				{
@@ -3510,8 +3510,8 @@
 						"h": 254
 					},
 					"frame": {
-						"x": 613,
-						"y": 3120,
+						"x": 243,
+						"y": 3596,
 						"w": 105,
 						"h": 254
 					}
