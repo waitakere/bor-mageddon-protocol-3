@@ -13,51 +13,58 @@ export class MainLevel extends Phaser.Scene {
 
     create() {
         // ==========================================
-        // 1. WORLD SETUP & ENVIRONMENT
+        // 1. WORLD SETUP & WALKING BOUNDARIES
         // ==========================================
-        this.physics.world.setBounds(0, 0, 4000, 1080); 
+        // Restrict the Y-axis so characters can only walk on the pavement!
+        this.physics.world.setBounds(0, 650, 4000, 430); 
         
-        // Add the parallax layers from back to front
-        this.add.image(0, 0, 'part1_sky').setOrigin(0, 0).setScrollFactor(0.2);
-        this.add.image(0, 0, 'part1_mid').setOrigin(0, 0).setScrollFactor(0.5);
-        this.add.image(0, 0, 'part1_floor').setOrigin(0, 0).setScrollFactor(1);
+        // ==========================================
+        // 2. ALIGN BACKGROUNDS TO THE BOTTOM
+        // ==========================================
+        // setOrigin(0, 1) means "anchor this image by its bottom-left corner"
+        this.add.image(0, 0, 'part1_sky').setOrigin(0, 0).setScrollFactor(0.1); 
+        this.add.image(0, 1080, 'part1_mid').setOrigin(0, 1).setScrollFactor(0.4); 
+        this.add.image(0, 1080, 'part1_floor').setOrigin(0, 1).setScrollFactor(1); 
 
         // ==========================================
-        // 2. SPAWN PLAYER
+        // 3. SPAWN PLAYER
         // ==========================================
-        this.player = new Marko(this, 200, 750);
+        // Spawn Marko on the pavement
+        this.player = new Marko(this, 200, 850);
 
         // ==========================================
-        // 3. CAMERA SETUP
+        // 4. CAMERA SETUP
         // ==========================================
+        // The camera can see the whole height, but physics keeps players low
         this.cameras.main.setBounds(0, 0, 4000, 1080);
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
         // ==========================================
-        // 4. SPAWN ENEMIES
+        // 5. SPAWN ENEMIES
         // ==========================================
         this.enemies = this.physics.add.group();
         
-        const mup1 = new MUP(this, 800, 750);
-        const boss = new SlobodanCEO(this, 3500, 750); // Moved to the end of the level
+        const mup1 = new MUP(this, 800, 850);
+        const boss = new SlobodanCEO(this, 3500, 850); // Pushed way out to the right!
         
         this.enemies.addMultiple([mup1, boss]);
 
         // ==========================================
-        // 5. HUD INITIALIZATION
+        // 6. HUD INITIALIZATION
         // ==========================================
         this.events.emit('update-health', this.player.health);
         this.events.emit('update-smf', this.player.smfMeter);
     }
 
-    update() {
+    update(time: number, delta: number) {
         if (this.player && this.player.update) {
             // Provide basic keyboard inputs required by the Marko class
             const cursors = this.input.keyboard!.createCursorKeys();
             const punchKey = this.input.keyboard!.addKey('A');
             const kickKey = this.input.keyboard!.addKey('S');
             
-            this.player.update({
+            // Cast to 'any' to bypass Phaser's strict default update() signature
+            (this.player as any).update({
                 up: cursors.up.isDown,
                 down: cursors.down.isDown,
                 left: cursors.left.isDown,
@@ -73,7 +80,7 @@ export class MainLevel extends Phaser.Scene {
             }
         });
 
-        // 2.5D Depth Sorting
+        // 2.5D Depth Sorting (Characters lower on the screen overlap characters higher up)
         this.children.each((child: any) => {
             if (child.y && child.type !== 'Image') { 
                 child.setDepth(child.y);
