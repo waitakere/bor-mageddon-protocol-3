@@ -8,41 +8,24 @@ export class BootScene extends Phaser.Scene {
     preload() {
         console.log("REAL BOOT INITIATED: Loading actual assets...");
 
-        // ==========================================
-        // 1. LOAD ENVIRONMENT ASSETS 
-        // ==========================================
         this.load.image('part1_sky', 'assets/images/environments/part1_sky.png');
         this.load.image('part1_mid', 'assets/images/environments/part1_mid.png');
         this.load.image('part1_floor', 'assets/images/environments/part1_floor.png');
-
-        // Breakable Objects
         this.load.image('barrel', 'assets/images/environments/barrel.png');
         this.load.image('crate', 'assets/images/environments/crate.png');
         this.load.image('kontejner', 'assets/images/environments/kontejner.png');
 
-        // ==========================================
-        // 2. LOAD REAL TEXTURE ATLASES 
-        // ==========================================
         this.load.atlas('marko', 'assets/sprites/marko.png', 'assets/sprites/marko.json');
         this.load.atlas('maja', 'assets/sprites/maja.png', 'assets/sprites/maja.json');
         this.load.atlas('darko', 'assets/sprites/darko.png', 'assets/sprites/darko.json');
         
-        // This mega-atlas now holds MUP, Dizel, Miner, AND Slobodan!
         this.load.atlas('enemies_1993', 'assets/sprites/enemies_1993.png', 'assets/sprites/enemies_1993.json');
 
-        // ==========================================
-        // 3. LOAD REAL AUDIO SPRITE
-        // ==========================================
         this.load.audioSprite('sfx_atlas', 'assets/audio/sfx_atlas.json', [
             'assets/audio/sfx_atlas.mp3'
         ]);
 
-        // ==========================================
-        // 4. GENERATE PLACEHOLDERS FOR MISSING ITEMS
-        // ==========================================
         const graphics = this.add.graphics();
-        
-        // Placeholder items in case they drop from barrels
         graphics.fillStyle(0x00ff00, 1); 
         graphics.fillRect(0, 0, 32, 32); 
         graphics.generateTexture('item_dinar', 32, 32); 
@@ -50,7 +33,6 @@ export class BootScene extends Phaser.Scene {
         graphics.generateTexture('item_pickaxe', 32, 32); 
         graphics.clear();
 
-        // Safety override so missing animations don't crash the engine
         const originalPlay = Phaser.GameObjects.Sprite.prototype.play;
         Phaser.GameObjects.Sprite.prototype.play = function(key: string | Phaser.Types.Animations.PlayAnimationConfig, ignoreIfPlaying?: boolean) {
             try {
@@ -62,16 +44,41 @@ export class BootScene extends Phaser.Scene {
     }
 
     create() {
-        // Generate ALL 1993 character animations from the Mega-Atlas (including Slobodan)
         this.createEnemy1993Animations();
+        
+        // NEW: Load player animations!
+        this.createPlayerAnimations();
 
         console.log("BOOT COMPLETE. Launching MainLevel...");
         this.scene.start('MainLevel');
     }
 
-    /**
-     * Reads the folder names from your JSON atlas and turns them into animations.
-     */
+    private createPlayerAnimations() {
+        // Build animations for all three characters
+        const characters = ['marko', 'maja', 'darko'];
+        
+        characters.forEach(char => {
+            const playerAnimations = [`${char}_idle`, `${char}_walk`, `${char}_punch`, `${char}_shoot_idle`];
+            
+            playerAnimations.forEach(animName => {
+                const isLooping = animName.includes('walk') || animName.includes('idle');
+                try {
+                    this.anims.create({
+                        key: animName, 
+                        frames: this.anims.generateFrameNames(char, {
+                            prefix: `${animName}/`, 
+                            suffix: '.png',
+                            start: 1, end: 8, zeroPad: 3 
+                        }),
+                        frameRate: 10, repeat: isLooping ? -1 : 0
+                    });
+                } catch (error) {
+                    console.warn(`Player animation missing: ${animName}`);
+                }
+            });
+        });
+    }
+
     private createEnemy1993Animations() {
         const enemyRoster = [
             {
@@ -90,7 +97,6 @@ export class BootScene extends Phaser.Scene {
                 character: 'Miner',
                 animations: ['miner-walk', 'miner-melee', 'miner-damage', 'miner-dying', 'miner-knockdown-get-up']
             },
-            // SLOBODAN IS NOW PARSED DIRECTLY FROM THE ENEMIES_1993 ATLAS!
             {
                 character: 'SlobodanCEO',
                 animations: [
@@ -104,19 +110,15 @@ export class BootScene extends Phaser.Scene {
         enemyRoster.forEach(enemy => {
             enemy.animations.forEach(animName => {
                 const isLooping = animName.includes('walk') || animName.includes('run') || animName.includes('idle');
-                
                 try {
                     this.anims.create({
                         key: animName, 
                         frames: this.anims.generateFrameNames('enemies_1993', {
                             prefix: `${animName}/`, 
                             suffix: '.png',
-                            start: 1,
-                            end: 8, 
-                            zeroPad: 3 
+                            start: 1, end: 8, zeroPad: 3 
                         }),
-                        frameRate: 10, 
-                        repeat: isLooping ? -1 : 0
+                        frameRate: 10, repeat: isLooping ? -1 : 0
                     });
                 } catch (error) {
                     console.warn(`Animation missing in JSON: ${animName}`);
