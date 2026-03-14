@@ -3,9 +3,11 @@ import Phaser from 'phaser';
 export class Maja extends Phaser.Physics.Arcade.Sprite {
     public health: number = 150;
     public smfMeter: number = 0;
+    public characterName: string = 'maja';
     public damageMultiplier: number = 1.5;
     public isAttacking: boolean = false;
     public isDead: boolean = false;
+
     private walkSpeed: number = 110;
     private runSpeed: number = 220;
     private lastKey: string = '';
@@ -19,7 +21,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.setOrigin(0.5, 1);
         if (this.body) {
             this.body.setSize(90, 30);
-            this.body.setOffset(this.width/2-45, this.height-30);
+            this.body.setOffset(this.width/2 - 45, this.height - 30);
             (this.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
         }
     }
@@ -27,9 +29,6 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     public update(input: any) {
         if (this.isDead) return;
         this.setAngle(0);
-
-        if (input.special && this.smfMeter >= 30 && !this.isAttacking) this.executeGrab();
-        if (input.finisher && this.smfMeter >= 100 && !this.isAttacking) this.executeDrill();
 
         const now = this.scene.time.now;
         if (input.left || input.right) {
@@ -42,11 +41,11 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
         if ((input.punch || input.kicking) && !this.isAttacking) {
             this.isAttacking = true;
-            this.play(input.punch ? 'maja_punch' : 'maja_kick', true);
+            this.setVelocity(0, 0);
+            this.play(`${this.characterName}-${input.punch ? 'punch' : 'kick'}`, true);
             this.once('animationcomplete', () => { 
-                this.isAttacking = false; 
+                this.isAttacking = false;
                 this.smfMeter = Math.min(this.smfMeter + 8, 100);
-                (this.scene as any).updateReactHUD();
             });
             return;
         }
@@ -57,42 +56,22 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             let vy = input.up ? -speed * 0.6 : (input.down ? speed * 0.6 : 0);
             this.setVelocity(vx, vy);
             if (vx !== 0) this.setFlipX(vx < 0);
-            if (vx !== 0 || vy !== 0) this.play(this.isRunning ? 'maja_run' : 'maja_walk', true);
-            else this.play('maja_idle', true);
+            if (vx !== 0 || vy !== 0) {
+                const anim = this.isRunning ? `${this.characterName}-run` : `${this.characterName}-walk`;
+                this.play(this.scene.anims.exists(anim) ? anim : `${this.characterName}-walk`, true);
+            } else { this.play(`${this.characterName}-idle`, true); }
         }
-    }
-
-    private executeGrab() {
-        this.isAttacking = true;
-        this.smfMeter -= 30;
-        this.play('maja_punch', true); // Suplex animation
-        this.scene.cameras.main.shake(200, 0.01);
-        this.checkAreaHit(100, 70 * this.damageMultiplier);
-        this.once('animationcomplete', () => { this.isAttacking = false; (this.scene as any).updateReactHUD(); });
-    }
-
-    private executeDrill() {
-        this.isAttacking = true;
-        this.smfMeter = 0;
-        this.play('maja_punch', true);
-        this.setVelocityX(this.flipX ? -600 : 600);
-        this.checkAreaHit(200, 200 * this.damageMultiplier);
-        this.once('animationcomplete', () => { this.isAttacking = false; (this.scene as any).updateReactHUD(); });
-    }
-
-    private checkAreaHit(range: number, damage: number) {
-        const enemies = (this.scene as any).enemies;
-        enemies.getChildren().forEach((e: any) => {
-            if (Phaser.Math.Distance.Between(this.x, this.y, e.x, e.y) < range) e.takeDamage(damage);
-        });
     }
 
     public takeDamage(amount: number) {
         this.health -= amount;
-        this.play('maja_damage', true);
+        this.play(`${this.characterName}-damage`, true);
         if (this.health <= 0) this.die();
-        (this.scene as any).updateReactHUD();
     }
 
-    private die() { this.isDead = true; this.setVelocity(0, 0); this.play('maja_die', true); }
+    private die() {
+        this.isDead = true;
+        this.setVelocity(0, 0);
+        this.play(`${this.characterName}-die`, true);
+    }
 }
