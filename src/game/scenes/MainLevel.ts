@@ -9,6 +9,7 @@ export class MainLevel extends Phaser.Scene {
     public breakables!: Phaser.Physics.Arcade.Group;
     public items!: Phaser.Physics.Arcade.Group;
     public projectiles!: Phaser.Physics.Arcade.Group;
+    private shadows!: Phaser.GameObjects.Graphics;
     
     private sectors: number[] = [800, 1600, 2400, 3200];
     private isLocked: boolean = false;
@@ -21,55 +22,56 @@ export class MainLevel extends Phaser.Scene {
     }
 
     create() {
-        // 1. PHYSICS BOUNDS (The Walkable Pavement)
-        this.physics.world.setBounds(0, 720, 4000, 360); 
+        // 1. PHYSICS BOUNDS (Walking Area)
+        this.physics.world.setBounds(0, 750, 4000, 330); 
 
-        // 2. BACKGROUNDS (Scaling & Positioning)
-        // Sky
+        // 2. BACKGROUNDS (Scaling to fill screen height)
         this.add.image(0, 0, 'part1_sky').setOrigin(0, 0).setDisplaySize(4000, 1080).setScrollFactor(0.1);
-        // Midground (Factories) - Scaled to fit height
-        this.add.image(0, 1080, 'part1_mid').setOrigin(0, 1).setDisplaySize(4000, 600).setScrollFactor(0.4);
-        // Floor (Road)
-        this.add.image(0, 1080, 'part1_floor').setOrigin(0, 1).setDisplaySize(4000, 400).setScrollFactor(1);
+        this.add.image(0, 1080, 'part1_mid').setOrigin(0, 1).setDisplaySize(4000, 650).setScrollFactor(0.4);
+        this.add.image(0, 1080, 'part1_floor').setOrigin(0, 1).setDisplaySize(4000, 450).setScrollFactor(1);
 
-        // 3. GROUPS
+        // 3. SHADOW SYSTEM
+        this.shadows = this.add.graphics();
+        this.shadows.setAlpha(0.4);
+
+        // 4. GROUPS
         this.breakables = this.physics.add.group({ immovable: true });
         this.items = this.physics.add.group();
         this.enemies = this.physics.add.group();
         this.projectiles = this.physics.add.group();
 
-        // 4. PROPS (Fixed Proportions)
+        // 5. PROPS (Fixed Proportions and Grounding)
         const propLocations = [
-            { x: 600, y: 950, type: 'barrel', scale: 1.5 },
-            { x: 1400, y: 920, type: 'crate', scale: 1.2 },
-            { x: 2200, y: 980, type: 'kontejner', scale: 1.8 }
+            { x: 600, y: 980, type: 'barrel', scale: 0.8 },
+            { x: 1400, y: 950, type: 'crate', scale: 0.7 },
+            { x: 2200, y: 1020, type: 'kontejner', scale: 1.2 }
         ];
 
         propLocations.forEach(loc => {
             const prop = this.physics.add.sprite(loc.x, loc.y, loc.type).setOrigin(0.5, 1);
-            prop.setScale(loc.scale); // Scale them down to look natural
+            prop.setScale(loc.scale);
             prop.setData('health', 2);
             this.breakables.add(prop);
         });
 
-        // 5. PLAYER
+        // 6. PLAYER
         this.player = new Marko(this, 200, 950);
-        this.player.setScale(1.8); // Ensure Marko is sized appropriately
+        this.player.setScale(1.5);
+        this.player.setOrigin(0.5, 1);
 
-        // 6. ENEMIES (Fixed Rotation & Scale)
+        // 7. ENEMIES
         const mup1 = new MUP(this, 1000, 950);
-        mup1.setScale(1.8);
-        // CRITICAL: Stop the MUP from rotating when walking
-        if (mup1.body) {
-            (mup1.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
-        }
+        mup1.setScale(1.5);
+        mup1.setOrigin(0.5, 1);
+        // Lock rotation immediately
+        if (mup1.body) (mup1.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
         this.enemies.add(mup1);
 
-        // 7. CAMERA
+        // 8. CAMERA
         this.cameras.main.setBounds(0, 0, 4000, 1080);
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
-        // 8. COLLISIONS
+        // 9. INTERACTIONS
         this.physics.add.collider(this.player, this.breakables);
         this.physics.add.collider(this.enemies, this.breakables);
         this.physics.add.overlap(this.player, this.items, (p, item) => this.handleItemPickup(item as Phaser.GameObjects.Sprite));
@@ -98,7 +100,6 @@ export class MainLevel extends Phaser.Scene {
                 let hp = prop.getData('health') - 1;
                 prop.setData('health', hp);
                 if (hp <= 0) { this.spawnLoot(prop.x, prop.y); this.applyDeathEffect(prop); }
-                if (this.equippedWeapon) this.weaponDurability--;
             }
         });
         this.updateReactHUD();
@@ -107,7 +108,7 @@ export class MainLevel extends Phaser.Scene {
     private spawnLoot(x: number, y: number) {
         const lootTable = ['item-sandwich', 'item-beer', 'axe', 'bat-2'];
         const type = lootTable[Math.floor(Math.random() * lootTable.length)];
-        const item = this.items.create(x, y - 50, type).setScale(1.5);
+        const item = this.items.create(x, y - 50, type).setScale(1.2).setOrigin(0.5, 1);
         this.tweens.add({ targets: item, y: y - 100, duration: 300, yoyo: true, ease: 'Back.easeOut' });
     }
 
@@ -124,7 +125,7 @@ export class MainLevel extends Phaser.Scene {
     }
 
     private throwWeapon() {
-        const weapon = this.projectiles.create(this.player.x, this.player.y - 60, this.equippedWeapon!).setScale(1.5);
+        const weapon = this.projectiles.create(this.player.x, this.player.y - 60, this.equippedWeapon!).setScale(1.2);
         weapon.body.setVelocity(this.player.flipX ? -700 : 700, -300);
         weapon.body.setAngularVelocity(600);
         weapon.body.setGravityY(600);
@@ -151,7 +152,27 @@ export class MainLevel extends Phaser.Scene {
     update() {
         if (!this.player) return;
         this.handleCameraLock();
+
+        // --- DRAW SHADOWS ---
+        this.shadows.clear();
+        this.shadows.fillStyle(0x000000, 0.5);
         
+        // Shadow for Player
+        this.shadows.fillEllipse(this.player.x, this.player.y, 60, 20);
+
+        // Shadows for Enemies
+        this.enemies.getChildren().forEach((enemy: any) => {
+            if (!enemy.isDead) {
+                this.shadows.fillEllipse(enemy.x, enemy.y, 60, 20);
+                enemy.setRotation(0); // Force upright
+            }
+        });
+
+        // Shadows for Items
+        this.items.getChildren().forEach((item: any) => {
+            this.shadows.fillEllipse(item.x, item.y, 30, 10);
+        });
+
         const cursors = this.input.keyboard!.createCursorKeys();
         (this.player as any).update({
             up: cursors.up.isDown, down: cursors.down.isDown,
@@ -162,12 +183,13 @@ export class MainLevel extends Phaser.Scene {
 
         this.enemies.getChildren().forEach((enemy: any) => {
             if (enemy.updateAI && !enemy.isDead) enemy.updateAI(this.player);
-            // Ensure enemy rotation stays at 0
-            enemy.setRotation(0); 
         });
 
+        // Depth Sorting
         this.children.each((child: any) => {
-            if (child.y && child.type !== 'Image') child.setDepth(child.y);
+            if (child.y && child.type !== 'Image' && child.type !== 'Graphics') { 
+                child.setDepth(child.y);
+            }
         });
     }
 
@@ -180,14 +202,14 @@ export class MainLevel extends Phaser.Scene {
                     this.isLocked = true;
                     this.currentLockX = lockPoint;
                     cam.stopFollow();
-                    this.physics.world.setBounds(lockPoint - (cam.width / 2), 720, cam.width, 360);
+                    this.physics.world.setBounds(lockPoint - (cam.width / 2), 750, cam.width, 330);
                 }
             }
         }
         if (this.isLocked && this.enemies.getChildren().filter((e: any) => !e.isDead && Math.abs(e.x - this.currentLockX) < 600).length === 0) {
             this.isLocked = false;
             cam.startFollow(this.player, true, 0.08, 0.08);
-            this.physics.world.setBounds(0, 720, 4000, 360);
+            this.physics.world.setBounds(0, 750, 4000, 330);
         }
     }
 }
