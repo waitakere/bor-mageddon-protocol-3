@@ -2,252 +2,107 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap');
+/* =========================================
+   1. FONT IMPORTS & PRELOADING
+========================================= */
+@import url('https://fonts.googleapis.com/css2?family=Metal+Mania&family=Space+Mono:wght@400;700&display=swap');
 
-/* Bor-Mageddon Protocol-2 Design System - 16-bit Retro Aesthetic */
-
-@layer base {
-  :root {
-    /* Core palette - Yugoslav brutalist red/black */
-    --background: 0 0% 4%;
-    --foreground: 0 0% 95%;
-
-    --card: 0 0% 8%;
-    --card-foreground: 0 0% 95%;
-
-    --popover: 0 0% 6%;
-    --popover-foreground: 0 0% 95%;
-
-    /* Blood red primary */
-    --primary: 0 84% 40%;
-    --primary-foreground: 0 0% 100%;
-
-    /* Golden secondary for scores/highlights */
-    --secondary: 45 93% 47%;
-    --secondary-foreground: 0 0% 5%;
-
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 60%;
-
-    /* Red star accent */
-    --accent: 0 90% 50%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 0 0% 20%;
-    --input: 0 0% 15%;
-    --ring: 0 84% 40%;
-
-    --radius: 0.25rem;
-
-    /* Game-specific tokens */
-    --game-bg: 220 30% 8%;
-    --game-overlay: 0 0% 0%;
-    --hud-bg: 0 0% 5% / 0.9;
-    --score-gold: 45 93% 55%;
-    --health-red: 0 84% 50%;
-    --dinar-green: 120 40% 35%;
-    --star-red: 0 90% 55%;
-
-    /* Scanline effect */
-    --scanline-opacity: 0.08;
-    --crt-curvature: 3px;
-
-    --sidebar-background: 0 0% 6%;
-    --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 0 84% 40%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 12%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 0 0% 18%;
-    --sidebar-ring: 0 84% 40%;
-  }
-
-  .dark {
-    --background: 0 0% 4%;
-    --foreground: 0 0% 95%;
-    --card: 0 0% 8%;
-    --card-foreground: 0 0% 95%;
-    --popover: 0 0% 6%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 0 84% 40%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 45 93% 47%;
-    --secondary-foreground: 0 0% 5%;
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 60%;
-    --accent: 0 90% 50%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 20%;
-    --input: 0 0% 15%;
-    --ring: 0 84% 40%;
-    --sidebar-background: 0 0% 6%;
-    --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 0 84% 40%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 12%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 0 0% 18%;
-    --sidebar-ring: 0 84% 40%;
-  }
+body, html {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #050404;
+    font-family: 'Space Mono', monospace;
+    color: #cccccc;
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-    font-family: 'VT323', monospace;
-    image-rendering: pixelated;
-    -webkit-font-smoothing: none;
-  }
-
-  /* Retro pixel font for headings */
-  h1, h2, h3, .font-pixel {
-    font-family: 'Press Start 2P', cursive;
-    letter-spacing: 0.05em;
-  }
+/* =========================================
+   2. GLOBAL GAME TYPOGRAPHY
+========================================= */
+.font-metal {
+    font-family: 'Metal Mania', cursive;
+    font-weight: 900;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 4px 4px 0px #ff3333;
+    margin: 0;
 }
 
-@layer components {
-  /* CRT Scanline overlay */
-  .crt-overlay {
-    pointer-events: none;
-    position: fixed;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 1px,
-      hsl(var(--game-overlay) / var(--scanline-opacity)) 1px,
-      hsl(var(--game-overlay) / var(--scanline-opacity)) 2px
-    );
-    z-index: 9999;
-  }
+.font-mono-title {
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    color: #ff3333;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
 
-  .crt-overlay::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(
-      ellipse at center,
-      transparent 0%,
-      hsl(var(--game-overlay) / 0.2) 90%,
-      hsl(var(--game-overlay) / 0.4) 100%
-    );
-  }
-
-  /* Retro button style */
-  .btn-retro {
-    @apply px-6 py-3 font-pixel text-sm uppercase tracking-wider;
-    @apply bg-primary text-primary-foreground;
-    @apply border-4 border-b-8 border-r-8;
-    border-color: hsl(0 84% 30%) hsl(0 84% 25%) hsl(0 84% 25%) hsl(0 84% 50%);
-    box-shadow: 
-      inset 2px 2px 0 hsl(0 84% 55%),
-      inset -2px -2px 0 hsl(0 84% 25%);
-    transition: all 0.1s;
-  }
-
-  .btn-retro:hover {
-    @apply bg-accent;
-  }
-
-  .btn-retro:active {
-    border-width: 4px 4px 4px 8px;
-    transform: translate(2px, 2px);
-  }
-
-  /* Game HUD panel */
-  .hud-panel {
-    @apply bg-card/90 backdrop-blur-sm;
-    @apply border-2 border-primary/50;
-    @apply p-3;
-    box-shadow: 
-      0 0 0 2px hsl(var(--background)),
-      0 0 20px hsl(var(--primary) / 0.3);
-  }
-
-  /* Score display */
-  .score-display {
-    @apply font-pixel text-2xl;
-    color: hsl(var(--score-gold));
-    text-shadow: 
-      2px 2px 0 hsl(0 0% 0%),
-      0 0 10px hsl(var(--score-gold) / 0.5);
-  }
-
-  /* Red star flicker animation */
-  @keyframes star-flicker {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    25% { opacity: 0.7; transform: scale(1.1); }
-    50% { opacity: 1; transform: scale(0.95); }
-    75% { opacity: 0.5; transform: scale(1.05); }
-  }
-
-  .star-flicker {
-    animation: star-flicker 0.3s ease-in-out infinite;
-  }
-
-  @keyframes star-fade {
-    0% { opacity: 1; transform: scale(1) rotate(0deg); }
-    100% { opacity: 0; transform: scale(0) rotate(180deg); }
-  }
-
-  .star-fade {
-    animation: star-fade 2s ease-out forwards;
-  }
-
-  /* Parallax layers */
-  .parallax-layer {
-    position: absolute;
-    inset: 0;
-    background-size: cover;
-    background-repeat: repeat-x;
-  }
-
-  /* Chromatic aberration text effect */
-  .chromatic-text {
+/* =========================================
+   3. VISUAL OVERLAYS & UI BOXES
+========================================= */
+.start-box { 
+    text-align: center; 
+    border: 4px double #ff3333; 
+    padding: 60px; 
+    background: #1a0a05; 
+    box-shadow: 0 0 50px rgba(255, 51, 51, 0.2);
     position: relative;
-  }
+    z-index: 10;
+}
 
-  .chromatic-text::before,
-  .chromatic-text::after {
-    content: attr(data-text);
+#initialize-btn {
+    background: #ff3333; 
+    border: none; 
+    padding: 20px 40px;
+    cursor: pointer; 
+    box-shadow: 8px 8px 0px #660000; 
+    font-size: 20px;
+    margin-top: 30px;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    color: #000000 !important; 
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.1s ease-in-out;
+}
+
+#initialize-btn:hover { 
+    background: #ffffff; 
+    transform: translate(-2px, -2px); 
+    box-shadow: 10px 10px 0px #999; 
+}
+
+.scanlines {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    background-size: 100% 4px, 3px 100%;
+    pointer-events: none; z-index: 1500;
+}
+
+.crt-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: radial-gradient(circle, transparent 60%, rgba(0,0,0,0.8) 150%);
+    pointer-events: none; z-index: 1501;
+}
+
+/* =========================================
+   4. UPWARD FALLING RED PARTICLES (EMBERS)
+========================================= */
+@keyframes floatUp {
+    0% { transform: translateY(100vh) scale(0.5); opacity: 0; }
+    10% { opacity: 0.8; }
+    90% { opacity: 0.8; }
+    100% { transform: translateY(-10vh) scale(1.2); opacity: 0; }
+}
+
+.particle {
     position: absolute;
-    top: 0;
-    left: 0;
-    opacity: 0.8;
-  }
-
-  .chromatic-text::before {
-    color: hsl(0 100% 50%);
-    transform: translate(-1px, 0);
-    clip-path: polygon(0 0, 100% 0, 100% 50%, 0 50%);
-  }
-
-  .chromatic-text::after {
-    color: hsl(200 100% 50%);
-    transform: translate(1px, 0);
-    clip-path: polygon(0 50%, 100% 50%, 100% 100%, 0 100%);
-  }
-
-  /* Glitch effect */
-  @keyframes glitch {
-    0%, 90%, 100% { transform: translate(0); }
-    91% { transform: translate(-2px, 1px); }
-    93% { transform: translate(2px, -1px); }
-    95% { transform: translate(-1px, 2px); }
-    97% { transform: translate(1px, -2px); }
-  }
-
-  .glitch-text {
-    animation: glitch 3s infinite;
-  }
+    bottom: -10px;
+    background-color: #ff3333;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #ff0000;
+    pointer-events: none;
+    animation: floatUp linear infinite;
+    z-index: 1;
 }
