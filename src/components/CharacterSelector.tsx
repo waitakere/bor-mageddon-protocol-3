@@ -52,7 +52,6 @@ function createCardTexture(card: any, img: HTMLImageElement | null = null) {
     
     const tex = new THREE.CanvasTexture(c); 
     tex.magFilter = THREE.NearestFilter;
-    // Ensure colors are punchy
     tex.colorSpace = THREE.SRGBColorSpace; 
     return tex;
 }
@@ -60,11 +59,21 @@ function createCardTexture(card: any, img: HTMLImageElement | null = null) {
 export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   
+  // React UI State
   const [isInitialized, setIsInitialized] = useState(false);
   const [activeCard, setActiveCard] = useState<string | null>(null);
   const [audioOn, setAudioOn] = useState(true);
   
+  // Refs for Three.js to read without triggering re-renders
   const soundtrackRef = useRef<THREE.Audio | null>(null);
+  const activeCardRef = useRef<string | null>(null);
+  const isInitializedRef = useRef<boolean>(false);
+
+  // Sync React state to our Three.js Ref
+  const handleSetActiveCard = (cardId: string | null) => {
+      setActiveCard(cardId);
+      activeCardRef.current = cardId;
+  };
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -98,15 +107,14 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     const ashSystem = new THREE.Points(ashGeo, ashMaterial);
     scene.add(ashSystem);
 
-    scene.add(new THREE.AmbientLight(THEME.ambient, 0.4)); // Clean white ambient
-    const spotLight = new THREE.PointLight(THEME.point, 10, 25); // Brighter point light
+    scene.add(new THREE.AmbientLight(THEME.ambient, 0.4));
+    const spotLight = new THREE.PointLight(THEME.point, 10, 25);
     spotLight.position.set(0, 5, 8);
     scene.add(spotLight);
 
     // --- 3. MESHES & TEXTURES ---
     const titleMesh = new THREE.Mesh(
         new THREE.PlaneGeometry(26, 7), 
-        // Switched to Basic Material + higher opacity so it's always visible!
         new THREE.MeshBasicMaterial({ map: createTitleTexture(), transparent: true, opacity: 0.6, fog: false, depthWrite: false })
     );
     titleMesh.position.set(0, 0, -6); 
@@ -118,7 +126,7 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     const cardMeshes: THREE.Mesh[] = [];
     const RADIUS = 3.8; 
     
-    // Push the whole group back so the front card sits exactly at Z=0 (Fixes rotation axis)
+    // Push group back so cards orbit the center perfectly
     carouselGroup.position.z = -RADIUS;
     
     const ANGLE_STEP = (Math.PI * 2) / CARDS_DATA.length;
@@ -127,13 +135,12 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         const theta = i * ANGLE_STEP;
         
         const materials = [
-            new THREE.MeshStandardMaterial({color: 0x1a0a05}), // Right
-            new THREE.MeshStandardMaterial({color: 0x1a0a05}), // Left
-            new THREE.MeshStandardMaterial({color: 0x1a0a05}), // Top
-            new THREE.MeshStandardMaterial({color: 0x1a0a05}), // Bottom
-            // BASIC MATERIAL for the front face guarantees 100% vibrant colors ignoring shadows!
-            new THREE.MeshBasicMaterial({transparent: true}), 
-            new THREE.MeshStandardMaterial({color: 0x000000})  // Back
+            new THREE.MeshStandardMaterial({color: 0x1a0a05}), 
+            new THREE.MeshStandardMaterial({color: 0x1a0a05}), 
+            new THREE.MeshStandardMaterial({color: 0x1a0a05}), 
+            new THREE.MeshStandardMaterial({color: 0x1a0a05}), 
+            new THREE.MeshBasicMaterial({transparent: true}), // Front glowing face
+            new THREE.MeshStandardMaterial({color: 0x000000}) 
         ];
         
         const mesh = new THREE.Mesh(new THREE.BoxGeometry(4, 6, 0.2), materials);
@@ -149,7 +156,6 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         };
         img.src = RAW_URL + card.file;
 
-        // Math fix: Removes the `- RADIUS` offset so they rotate around the center perfectly
         mesh.position.x = Math.sin(theta) * RADIUS; 
         mesh.position.z = Math.cos(theta) * RADIUS; 
         mesh.rotation.y = theta;
@@ -166,6 +172,7 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     let totalMove = 0;
 
     const onMouseDown = (e: MouseEvent) => {
+        if (!isInitializedRef.current) return; // Prevent interaction before boot
         isDragging = true;
         totalMove = 0;
         previousMousePosition = { x: e.clientX, y: e.clientY };
@@ -180,7 +187,9 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     };
 
     const onMouseUp = (e: MouseEvent) => {
+        if (!isInitializedRef.current) return;
         isDragging = false;
+        
         if (totalMove < 8) { 
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
@@ -190,7 +199,7 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
             
             if (intersects.length > 0) {
                 const clickedChar = intersects[0].object.userData.characterName;
-                setActiveCard(clickedChar);
+                handleSetActiveCard(clickedChar); // Safely sets UI and Ref!
             }
         }
     };
@@ -214,7 +223,8 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         animationFrameId = requestAnimationFrame(animate);
         time++;
         
-        if (!isDragging && !activeCard) {
+        // Use the Ref here! This way it doesn't need to be in the useEffect dependencies
+        if (!isDragging && !activeCardRef.current) {
             carouselGroup.rotation.y += 0.002;
         }
         
@@ -244,11 +254,12 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         }
         renderer.dispose();
     };
-  }, [activeCard]);
+  }, []); // <--- THE MAGIC FIX: EMPTY DEPENDENCY ARRAY!
 
   // --- AUDIO LOGIC ---
   const handleInitialize = () => {
     setIsInitialized(true);
+    isInitializedRef.current = true; // Unlock 3D interactions
     
     if (soundtrackRef.current) {
         const audioCtx = THREE.AudioContext.getContext();
@@ -331,7 +342,7 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         <div id="expanded-card" className="absolute bottom-12 right-12 w-96 bg-[#1a0a05] border-4 border-double border-[#ff3333] p-8 z-30 pointer-events-auto shadow-[20px_20px_0px_#000] transition-all animate-in fade-in slide-in-from-right-10">
           
           <button 
-            onClick={() => setActiveCard(null)}
+            onClick={() => handleSetActiveCard(null)}
             className="absolute top-4 right-4 bg-[#ff3333] text-black border-none font-bold px-3 py-1 cursor-pointer hover:bg-white"
           >
             X
