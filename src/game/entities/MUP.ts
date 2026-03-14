@@ -1,35 +1,43 @@
 import Phaser from 'phaser';
-import { Player } from '../Player';
 
 /**
  * MUP (Ministarstvo Unutrašnjih Poslova) - 1993 Riot Police
  * Heavy, armored melee unit.
  */
 export class MUP extends Phaser.Physics.Arcade.Sprite {
-    public health: number = 60; // Armored, takes a few hits
+    public health: number = 120; // Tankier than standard enemies
+    public maxHealth: number = 120;
     public isDead: boolean = false;
     public isHurt: boolean = false;
     public isAttacking: boolean = false;
     
-    private speed: number = 80;
-    private attackRange: number = 70;
+    private speed: number = 90;
+    private attackRange: number = 110; // Nightstick reach
     private attackCooldown: number = 0;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
-        // Grab the starting frame from the Mega-Atlas
-        super(scene, x, y, 'enemies_1993', 'mup-idle/001.png');
+        // Start with the default frame from the mega-atlas
+        super(scene, x, y, 'enemies_1993', 'mup-idle/frame_001.png');
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
         const body = this.body as Phaser.Physics.Arcade.Body;
-        // Belt-scroller hitbox: wide at the feet, short on the Y axis
-        body.setSize(60, 30);
-        body.setOffset(20, 150); 
+
+        // 1. FIX: ANCHORING & ORIENTATION
+        this.setOrigin(0.5, 1); // Anchor at feet
+        this.setRotation(0);     // Force upright
         
-        this.setOrigin(0.5, 1);
+        // 2. BELT-SCROLLER HITBOX
+        // Wide at feet, thin height for 2.5D lane movement
+        body.setSize(70, 30);
+        body.setOffset(this.width / 2 - 35, this.height - 30); 
+        
         body.setCollideWorldBounds(true);
-        body.setAllowGravity(false); // Fake 3D depth, no real gravity
+        body.setAllowGravity(false); 
+        
+        // 3. FIX: PREVENT PHYSICS ROTATION
+        body.setAllowRotation(false);
 
         this.play('mup-idle');
     }
@@ -37,11 +45,14 @@ export class MUP extends Phaser.Physics.Arcade.Sprite {
     /**
      * AI Logic: Called every frame by MainLevel.ts
      */
-    public updateAI(player: Player) {
+    public updateAI(player: any) {
         if (this.isDead || this.isHurt || this.isAttacking) {
             this.setVelocity(0, 0);
             return;
         }
+
+        // Safeguard to ensure he never tilts
+        this.setRotation(0);
 
         const distanceX = Math.abs(this.x - player.x);
         const distanceY = Math.abs(this.y - player.y);
@@ -49,69 +60,67 @@ export class MUP extends Phaser.Physics.Arcade.Sprite {
         // Turn to face the player
         this.setFlipX(player.x < this.x);
 
-        // Check if in attack range (both X distance and Z-depth/Y distance)
-        if (distanceX < this.attackRange && distanceY < 20) {
+        // 1. Check if in attack range (X reach and Y 'lane' alignment)
+        if (distanceX < this.attackRange && distanceY < 30) {
             this.setVelocity(0, 0);
             
-            // Respect the cooldown before swinging again
             if (this.scene.time.now > this.attackCooldown) {
                 this.executeAttack(player);
             } else if (this.anims.currentAnim?.key !== 'mup-idle') {
                 this.play('mup-idle', true);
             }
         } else {
-            // Move towards the player
+            // 2. Move towards the player
             const dirX = player.x > this.x ? 1 : -1;
             const dirY = player.y > this.y ? 1 : -1;
 
-            // Move strictly on X if far away, but align Y to get into the same "lane"
-            let vx = dirX * this.speed;
-            let vy = distanceY > 10 ? dirY * (this.speed * 0.6) : 0;
+            // Lane Alignment: Move vertically to get into the same 'lane' as player
+            let vx = distanceX > (this.attackRange - 20) ? dirX * this.speed : 0;
+            let vy = distanceY > 10 ? dirY * (this.speed * 0.7) : 0;
 
             this.setVelocity(vx, vy);
             
-            if (this.anims.currentAnim?.key !== 'mup-walk') {
+            if (vx !== 0 || vy !== 0) {
                 this.play('mup-walk', true);
+            } else {
+                this.play('mup-idle', true);
             }
         }
     }
 
-    private executeAttack(player: Player) {
+    private executeAttack(player: any) {
         this.isAttacking = true;
         
-        // Randomly choose between punch 1 and punch 2 from the CSV
+        // Randomly choose between nightstick swing 1 or 2
         const attackAnim = Phaser.Math.Between(0, 1) === 0 ? 'mup-punch-1' : 'mup-punch-2';
         this.play(attackAnim, true);
 
-        // Play swing sound
-        this.scene.events.emit('play-generic-sfx', 'woosh_heavy');
+        // Heavy swing sound
+        this.scene.sound.playAudioSprite('sfx_atlas', 'woosh_heavy', { volume: 0.6 });
 
-        // Apply damage at the apex of the animation (approx 300ms in)
+        // Apply damage at the apex of the swing
         this.scene.time.delayedCall(300, () => {
-            if (this.isDead || this.isHurt) return; // Cancel if he was hit mid-swing
+            if (this.isDead || this.isHurt || !this.scene) return;
 
             const distanceX = Math.abs(this.x - player.x);
             const distanceY = Math.abs(this.y - player.y);
 
-            // Re-check range to make sure the player didn't dodge
-            if (distanceX < this.attackRange + 10 && distanceY < 30) {
+            // Re-check range (did player dodge?)
+            if (distanceX < this.attackRange + 10 && distanceY < 40) {
                 player.takeDamage(15);
+                this.scene.cameras.main.shake(100, 0.002);
             }
         });
 
-        // Reset state when animation finishes
-        this.on('animationcomplete', (anim: any) => {
-            if (anim.key === 'mup-punch-1' || anim.key === 'mup-punch-2') {
+        this.on('animationcomplete', (anim: Phaser.Animations.Animation) => {
+            if (anim.key.includes('mup-punch')) {
                 this.isAttacking = false;
-                this.attackCooldown = this.scene.time.now + 1200; // 1.2 second pause between attacks
+                this.attackCooldown = this.scene.time.now + 1500; 
                 this.play('mup-idle', true);
             }
-        });
+        }, this);
     }
 
-    /**
-     * Called by CollisionManager or Player melee hitbox
-     */
     public takeDamage(amount: number) {
         if (this.isDead) return;
 
@@ -119,25 +128,24 @@ export class MUP extends Phaser.Physics.Arcade.Sprite {
         this.isHurt = true;
         this.isAttacking = false;
 
-        // Kinetic Feedback: Flash white
-        this.setTintFill(0xffffff);
-        this.scene.time.delayedCall(50, () => this.clearTint());
+        // Visual feedback: Flash Red
+        this.setTint(0xff0000);
+        this.scene.time.delayedCall(150, () => {
+            if (!this.isDead) this.clearTint();
+        });
 
-        // Spawn Industrial Sparks (hitting armor)
-        this.scene.events.emit('spawn-gore', { x: this.x, y: this.y - 100, type: 'INDUSTRIAL' });
-        
-        // Play Hurt Sound
-        this.scene.events.emit('play-sfx', { character: 'mup', action: 'damage' });
+        // Pushback
+        const pushDir = this.flipX ? 20 : -20;
+        this.scene.tweens.add({
+            targets: this,
+            x: this.x + pushDir,
+            duration: 100
+        });
 
         if (this.health <= 0) {
             this.die();
         } else {
             this.play('mup-damage', true);
-            
-            // Pushback effect
-            const pushback = this.flipX ? 15 : -15;
-            this.x += pushback;
-
             this.scene.time.delayedCall(400, () => {
                 if (!this.isDead) {
                     this.isHurt = false;
@@ -151,28 +159,27 @@ export class MUP extends Phaser.Physics.Arcade.Sprite {
         this.isDead = true;
         this.setVelocity(0, 0);
         
-        // Disable physics body so players/bullets walk through the corpse
-        (this.body as Phaser.Physics.Arcade.Body).enable = false;
+        if (this.body) (this.body as Phaser.Physics.Arcade.Body).enable = false;
 
-        this.scene.events.emit('play-sfx', { character: 'mup', action: 'dying' });
         this.play('mup-dying', true);
 
-        // Optional: Drop Dinar loot when defeated
-        if (Phaser.Math.Between(1, 100) <= 30) {
-            const mainLevel = this.scene as any;
-            if (mainLevel.groundItems) {
-                const item = this.scene.physics.add.sprite(this.x, this.y - 20, 'item_dinar') as any;
-                item.lootData = { key: 'item_dinar', type: 'score', value: 100 };
-                mainLevel.groundItems.add(item);
-                
+        // Red Flash Death Flicker (Final Fight Style)
+        this.setTint(0xff0000);
+        this.scene.tweens.add({
+            targets: this,
+            alpha: { from: 0.7, to: 0 },
+            duration: 100,
+            repeat: 5,
+            onComplete: () => {
+                // Sink into floor effect
                 this.scene.tweens.add({
-                    targets: item,
-                    y: this.y - 60,
-                    duration: 300,
-                    yoyo: true,
-                    ease: 'Quad.easeOut'
+                    targets: this,
+                    y: this.y + 30,
+                    alpha: 0,
+                    duration: 1000,
+                    onComplete: () => this.destroy()
                 });
             }
-        }
+        });
     }
 }
