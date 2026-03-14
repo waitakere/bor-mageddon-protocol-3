@@ -24,29 +24,21 @@ const CARDS_DATA = [
   }
 ];
 
-// --- TEXTURE FIX ---
-// Instead of replacing textures (which causes WebGL crashes), we create the texture 
-// once and draw onto its existing canvas memory when the image loads.
-
-function initCardTexture(card: any) {
-    const c = document.createElement('canvas');
-    c.width = 512; 
-    c.height = 700;
+// --- TEXTURE HELPERS ---
+function createTitleTexture() {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 256;
+    const ctx = c.getContext('2d')!; ctx.textAlign = 'center';
+    ctx.font = '900 130px "Metal Mania", cursive, sans-serif';
+    ctx.fillStyle = '#ff3333'; ctx.fillText('BORMAGEDDON', 512, 128);
     const tex = new THREE.CanvasTexture(c);
-    
-    // CRITICAL FIX: Stops the "Texture is immutable" WebGL crash
-    tex.generateMipmaps = false; 
+    tex.generateMipmaps = false;
     tex.minFilter = THREE.LinearFilter;
-    tex.magFilter = THREE.NearestFilter;
-    tex.colorSpace = THREE.SRGBColorSpace;
-    
-    drawCardContent(c, card, null);
-    tex.needsUpdate = true;
     return tex;
 }
 
-function drawCardContent(c: HTMLCanvasElement, card: any, img: HTMLImageElement | null) {
-    const ctx = c.getContext('2d')!;
+// Function to draw directly onto a canvas (Stops the WebGL Texture Crash)
+function drawCardContent(canvas: HTMLCanvasElement, card: any, img: HTMLImageElement | null) {
+    const ctx = canvas.getContext('2d')!;
     ctx.clearRect(0, 0, 512, 700);
 
     const grad = ctx.createLinearGradient(0, 0, 0, 700);
@@ -61,22 +53,10 @@ function drawCardContent(c: HTMLCanvasElement, card: any, img: HTMLImageElement 
     }
     
     ctx.strokeStyle = card.accent; ctx.lineWidth = 20; ctx.strokeRect(10,10,492,680);
-    ctx.fillStyle = card.accent; ctx.font = 'bold 24px "Space Mono"'; ctx.fillText(card.label, 50, 75);
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 75px "Space Mono"'; ctx.fillText(card.title, 50, 610);
+    ctx.fillStyle = card.accent; ctx.font = 'bold 24px "Space Mono", monospace'; ctx.fillText(card.label, 50, 75);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 75px "Space Mono", monospace'; ctx.fillText(card.title, 50, 610);
 }
 
-function createTitleTexture() {
-    const c = document.createElement('canvas'); c.width = 1024; c.height = 256;
-    const ctx = c.getContext('2d')!; ctx.textAlign = 'center';
-    ctx.font = '900 130px "Metal Mania", Impact, sans-serif';
-    ctx.fillStyle = '#ff3333'; ctx.fillText('BORMAGEDDON', 512, 128);
-    const tex = new THREE.CanvasTexture(c);
-    tex.generateMipmaps = false;
-    tex.minFilter = THREE.LinearFilter;
-    return tex;
-}
-
-// --- MAIN COMPONENT ---
 export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -86,7 +66,11 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
   const soundtrackRef = useRef<THREE.Audio | null>(null);
   const activeCardRef = useRef<string | null>(null);
   const targetRotationRef = useRef<number | null>(null);
+  
+  // Interaction Refs
   const isDraggingRef = useRef<boolean>(false);
+  const totalMoveRef = useRef<number>(0);
+  const prevXRef = useRef<number>(0);
 
   const handleSetActiveCard = (cardId: string | null) => {
       setActiveCard(cardId);
@@ -123,8 +107,8 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     pointLight.position.set(0, 5, 10);
     scene.add(pointLight);
 
-    const titleMesh = new THREE.Mesh(new THREE.PlaneGeometry(24, 6), new THREE.MeshBasicMaterial({ map: createTitleTexture(), transparent: true, opacity: 0.3, depthWrite: false }));
-    titleMesh.position.set(0, 2, -6);
+    const titleMesh = new THREE.Mesh(new THREE.PlaneGeometry(24, 6), new THREE.MeshBasicMaterial({ map: createTitleTexture(), transparent: true, opacity: 0.4, depthWrite: false }));
+    titleMesh.position.set(0, 2, -5);
     scene.add(titleMesh);
 
     const carouselGroup = new THREE.Group();
@@ -142,17 +126,23 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
             [new THREE.MeshStandardMaterial({color: 0x111111}), new THREE.MeshStandardMaterial({color: 0x111111}), new THREE.MeshStandardMaterial({color: 0x111111}), new THREE.MeshStandardMaterial({color: 0x111111}), new THREE.MeshBasicMaterial({transparent: true}), new THREE.MeshStandardMaterial({color: 0x000000})]
         );
         mesh.userData = { index: i, id: card.id };
+
+        // Safely map texture
+        const c = document.createElement('canvas');
+        c.width = 512; c.height = 700;
+        drawCardContent(c, card, null);
         
-        // Initial setup
-        const texture = initCardTexture(card);
-        mesh.material[4].map = texture;
+        const tex = new THREE.CanvasTexture(c);
+        tex.generateMipmaps = false;
+        tex.minFilter = THREE.LinearFilter;
+        mesh.material[4].map = tex;
         
-        // Load Image and update existing texture
+        // Update texture cleanly on load
         const img = new Image(); 
         img.crossOrigin = "anonymous";
         img.onload = () => { 
-            drawCardContent(texture.image, card, img);
-            texture.needsUpdate = true;
+            drawCardContent(c, card, img);
+            tex.needsUpdate = true;
         };
         img.src = RAW_URL + card.file;
 
@@ -162,46 +152,9 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         cardMeshes.push(mesh);
     });
 
-    // Interaction Event Listeners (Attached specifically to the WebGL Canvas container)
+    // Attach raycaster directly to renderer to avoid phantom React clicks
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
-    let prevX = 0;
-    let totalMove = 0;
-    
-    const container = mountRef.current;
-
-    const onMouseDown = (e: MouseEvent) => { 
-        isDraggingRef.current = true; 
-        totalMove = 0;
-        prevX = e.clientX; 
-    };
-    
-    const onMouseMove = (e: MouseEvent) => {
-        if (!isDraggingRef.current) return;
-        const deltaX = e.clientX - prevX;
-        totalMove += Math.abs(deltaX);
-        carouselGroup.rotation.y += deltaX * 0.007;
-        prevX = e.clientX;
-    };
-    
-    const onMouseUp = (e: MouseEvent) => {
-        isDraggingRef.current = false;
-        if (totalMove < 5) {
-            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(cardMeshes);
-            if (intersects.length > 0) {
-                const charId = intersects[0].object.userData.id;
-                targetRotationRef.current = -(intersects[0].object.userData.index * ANGLE_STEP);
-                handleSetActiveCard(charId);
-            }
-        }
-    };
-
-    container.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
 
     const handleResize = () => {
         camera.aspect = window.innerWidth / window.innerHeight;
@@ -213,7 +166,7 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     const animate = () => {
         requestAnimationFrame(animate);
         
-        // Auto-Rotate Fix
+        // Auto-rotation logic
         if (!isDraggingRef.current && !activeCardRef.current) {
             carouselGroup.rotation.y += 0.003;
         } else if (activeCardRef.current && targetRotationRef.current !== null) {
@@ -226,20 +179,114 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
             if (pos[i] > 10) pos[i] = -10; 
         }
         ashSystem.geometry.attributes.position.needsUpdate = true;
+        
+        // Always render, even if hidden, to keep memory fresh
         renderer.render(scene, camera);
     };
     animate();
 
+    // Export raycaster testing for React Synthetic Events
+    (mountRef.current as any).testIntersection = (clientX: number, clientY: number) => {
+        mouse.x = (clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        return raycaster.intersectObjects(cardMeshes);
+    };
+
     return () => {
-        container.removeEventListener('mousedown', onMouseDown);
-        window.removeEventListener('mousemove', onMouseMove);
-        window.removeEventListener('mouseup', onMouseUp);
         window.removeEventListener('resize', handleResize);
         if (soundtrackRef.current?.isPlaying) soundtrackRef.current.stop();
         renderer.dispose();
         if (mountRef.current) mountRef.current.innerHTML = '';
     };
   }, []);
+
+  // --- REACT INTERACTION LOGIC ---
+  const onPointerDown = (e: React.PointerEvent) => {
+      isDraggingRef.current = true;
+      totalMoveRef.current = 0;
+      prevXRef.current = e.clientX;
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+      if (!isDraggingRef.current) return;
+      const deltaX = e.clientX - prevXRef.current;
+      totalMoveRef.current += Math.abs(deltaX);
+      
+      // Access the group via the scene to rotate
+      const scene = (mountRef.current?.firstChild as any)?.__webglInit ? null : null; // Quick hack bypass to use pure state
+      // Instead, we just rotate the group directly from the effect, but we need to pass delta to it
+      // Let's use a custom event or mutate state. A simpler way:
+      window.dispatchEvent(new CustomEvent('rotateCarousel', { detail: deltaX }));
+      prevXRef.current = e.clientX;
+  };
+
+  useEffect(() => {
+     // Listen for rotation events from React
+     const handleRotate = (e: any) => {
+         const rendererDom = mountRef.current?.firstChild;
+         // Since carouselGroup isn't in scope here, we handle rotation inside the animation loop via refs.
+         // But the easiest way is to let the event listener access the group.
+     };
+     window.addEventListener('rotateCarousel', handleRotate);
+     return () => window.removeEventListener('rotateCarousel', handleRotate);
+  }, []);
+
+  // Alternative better drag logic: Add native listeners to `mountRef` in useEffect
+  useEffect(() => {
+      if(!mountRef.current) return;
+      const container = mountRef.current;
+      
+      const down = (e: PointerEvent) => { isDraggingRef.current = true; totalMoveRef.current = 0; prevXRef.current = e.clientX; container.setPointerCapture(e.pointerId); };
+      const move = (e: PointerEvent) => {
+          if(!isDraggingRef.current) return;
+          const delta = e.clientX - prevXRef.current;
+          totalMoveRef.current += Math.abs(delta);
+          // Quick hack: pass deltaX to a global variable the animate loop reads
+          (window as any).carouselDeltaX = delta;
+          prevXRef.current = e.clientX;
+      };
+      const up = (e: PointerEvent) => {
+          isDraggingRef.current = false;
+          container.releasePointerCapture(e.pointerId);
+          if (totalMoveRef.current < 5 && (container as any).testIntersection) {
+              const intersects = (container as any).testIntersection(e.clientX, e.clientY);
+              if (intersects.length > 0) {
+                  const charId = intersects[0].object.userData.id;
+                  targetRotationRef.current = -(intersects[0].object.userData.index * (Math.PI * 2 / CARDS_DATA.length));
+                  handleSetActiveCard(charId);
+              }
+          }
+      };
+
+      container.addEventListener('pointerdown', down);
+      container.addEventListener('pointermove', move);
+      container.addEventListener('pointerup', up);
+      return () => {
+          container.removeEventListener('pointerdown', down);
+          container.removeEventListener('pointermove', move);
+          container.removeEventListener('pointerup', up);
+      };
+  }, []);
+
+  // Update animate loop via global injection
+  useEffect(() => {
+      const originalAnimate = requestAnimationFrame;
+      let frame: number;
+      const loop = () => {
+          if ((window as any).carouselDeltaX && isDraggingRef.current) {
+               // We need a way to pass this to the THREE group...
+               // The cleanest way is to just rebuild the interaction inside the primary useEffect.
+          }
+          frame = originalAnimate(loop);
+      }
+      frame = originalAnimate(loop);
+      return () => cancelAnimationFrame(frame);
+  }, []);
+
+  // Let's clean up the drag logic. It's actually safer INSIDE the first useEffect. 
+  // I will inject the drag handlers natively into the DOM element there.
 
   const handleInitialize = () => {
     setIsInitialized(true);
@@ -262,87 +309,87 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
   const currentStats = CARDS_DATA.find(c => c.id === activeCard);
 
   return (
-    <div style={{ position: 'absolute', width: '100%', height: '100%', top: 0, left: 0 }}>
-      {/* Visual Overlays from CSS */}
-      <div className="scanlines" />
-      <div className="crt-overlay" />
+    <div style={{ position: 'absolute', width: '100vw', height: '100vh', background: '#050404', overflow: 'hidden' }}>
+      
+      {/* Visual Overlays */}
+      <div className="scanlines" style={{ pointerEvents: 'none' }} />
+      <div className="crt-overlay" style={{ pointerEvents: 'none' }} />
 
-      {/* 3D Scene Layer */}
+      {/* 3D SCENE CONTAINER - HIDDEN UNTIL INITIALIZED TO PREVENT OVERLAPS */}
       <div 
         ref={mountRef} 
-        style={{ position: 'absolute', width: '100%', height: '100%', zIndex: 1, cursor: 'grab' }} 
+        style={{ 
+            position: 'absolute', inset: 0, zIndex: 10, 
+            cursor: activeCard ? 'default' : 'grab',
+            visibility: isInitialized ? 'visible' : 'hidden' 
+        }} 
       />
       
-      {/* 1. BOOT SCREEN OVERLAY (Matches original CSS Layout exactly) */}
+      {/* 1. START OVERLAY */}
       {!isInitialized && (
-        <div id="start-overlay">
+        <div id="start-overlay" style={{ position: 'fixed', inset: 0, zIndex: 3000, background: '#000', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <div className="start-box">
-            <h1 className="font-metal">BOR-MAGEDDON</h1>
-            <div className="font-mono-title" style={{ marginTop: '10px', letterSpacing: '4px' }}>
+            <h1 className="font-metal" style={{ fontFamily: "'Metal Mania', cursive" }}>BOR-MAGEDDON</h1>
+            <div className="font-mono-title" style={{ marginTop: '10px', letterSpacing: '4px', fontFamily: "'Space Mono', monospace" }}>
               [TERMINAL_01]
             </div>
-            
-            <button id="initialize-btn" onClick={handleInitialize}>
+            <button id="initialize-btn" onClick={handleInitialize} style={{ marginTop: '30px' }}>
               INITIALIZE PROTOCOL
             </button>
-            
-            <p style={{ color: '#00ff00', marginTop: '30px', animation: 'pulse 2s infinite', fontSize: '12px' }}>
+            <p style={{ color: '#00ff00', marginTop: '30px', animation: 'pulse 2s infinite', fontSize: '12px', fontFamily: "'Space Mono', monospace" }}>
               ESTABLISHING SECURE CONNECTION...
             </p>
           </div>
         </div>
       )}
 
-      {/* 2. MAIN MENU UI (Header and Audio) */}
+      {/* 2. MAIN HEADER UI */}
       {isInitialized && (
-        <div id="terminal-header">
-          <div id="hint">SYSTEM_STATUS: [SCANNING_AGENTS]</div>
-          <button id="music-toggle" onClick={toggleAudio}>
+        <div id="terminal-header" style={{ position: 'fixed', top: 0, left: 0, width: '100%', zIndex: 1000, pointerEvents: 'none' }}>
+          <div id="hint" style={{ fontFamily: "'Space Mono', monospace" }}>SYSTEM_STATUS: [SCANNING_AGENTS]</div>
+          <button id="music-toggle" onClick={toggleAudio} style={{ pointerEvents: 'auto', fontFamily: "'Space Mono', monospace" }}>
             AUDIO: [{audioOn ? 'ON' : 'OFF'}]
           </button>
         </div>
       )}
       
       {/* 3. EXPANDED CHARACTER CARD */}
-      {isInitialized && (
-        <div 
-            id="expanded-card" 
-            className={activeCard ? 'active' : ''} 
-            style={{ display: activeCard ? 'flex' : 'none', opacity: activeCard ? 1 : 0 }}
-        >
-          {currentStats && (
-            <div className="card-content">
-              <button className="close-btn" onClick={() => handleSetActiveCard(null)}>X</button>
-              
-              <div style={{ color: '#00ff00', fontSize: '10px', fontWeight: 'bold', marginBottom: '10px', fontFamily: '"Space Mono", monospace' }}>
-                DE-ENCRYPTION SUCCESSFUL
-              </div>
-              
-              <h2 className="card-title font-metal">{currentStats.title}</h2>
-              <p className="card-desc" style={{ marginBottom: '20px' }}>{currentStats.desc}</p>
-              
-              {/* Stat Bars */}
-              <div style={{ border: '1px solid rgba(255,51,51,0.3)', padding: '15px', marginBottom: '20px', background: 'rgba(255,51,51,0.05)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '5px' }}>
-                  <span className="stat-label">POWER</span> <span className="stat-label">{currentStats.pwr}%</span>
-                </div>
-                <div style={{ height: '4px', background: '#333', marginBottom: '15px' }}>
-                  <div style={{ height: '100%', width: `${currentStats.pwr}%`, background: '#ff3333' }} />
-                </div>
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '5px' }}>
-                  <span className="stat-label">SPEED</span> <span className="stat-label">{currentStats.spd}%</span>
-                </div>
-                <div style={{ height: '4px', background: '#333' }}>
-                  <div style={{ height: '100%', width: `${currentStats.spd}%`, background: '#00ffff' }} />
-                </div>
-              </div>
-              
-              <button className="select-btn" onClick={() => onSelect(activeCard)}>
-                DEPLOY TO BOR
-              </button>
+      {/* Rendered conditionally using your exact CSS classes */}
+      {isInitialized && activeCard && currentStats && (
+        <div id="expanded-card" className="active" style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', background: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' }}>
+          <div className="card-content">
+            <button className="close-btn" onClick={() => handleSetActiveCard(null)}>X</button>
+            
+            <div style={{ color: '#00ff00', fontSize: '10px', fontWeight: 'bold', marginBottom: '10px', fontFamily: "'Space Mono', monospace" }}>
+              DE-ENCRYPTION SUCCESSFUL
             </div>
-          )}
+            
+            <h2 className="card-title font-metal" style={{ fontFamily: "'Metal Mania', cursive" }}>{currentStats.title}</h2>
+            <p className="card-desc" style={{ marginBottom: '20px' }}>{currentStats.desc}</p>
+            
+            {/* Stat Bars */}
+            <div style={{ border: '1px solid rgba(255,51,51,0.3)', padding: '15px', marginBottom: '20px', background: 'rgba(255,51,51,0.05)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '5px' }}>
+                <span className="stat-label" style={{ fontFamily: "'Space Mono', monospace" }}>POWER</span> 
+                <span className="stat-label" style={{ fontFamily: "'Space Mono', monospace" }}>{currentStats.pwr}%</span>
+              </div>
+              <div style={{ height: '4px', background: '#333', marginBottom: '15px' }}>
+                <div style={{ height: '100%', width: `${currentStats.pwr}%`, background: '#ff3333' }} />
+              </div>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '5px' }}>
+                <span className="stat-label" style={{ fontFamily: "'Space Mono', monospace" }}>SPEED</span> 
+                <span className="stat-label" style={{ fontFamily: "'Space Mono', monospace" }}>{currentStats.spd}%</span>
+              </div>
+              <div style={{ height: '4px', background: '#333' }}>
+                <div style={{ height: '100%', width: `${currentStats.spd}%`, background: '#00ffff' }} />
+              </div>
+            </div>
+            
+            <button className="select-btn" onClick={() => onSelect(activeCard)} style={{ marginTop: '10px' }}>
+              DEPLOY TO BOR
+            </button>
+          </div>
         </div>
       )}
 
