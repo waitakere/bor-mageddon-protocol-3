@@ -1,7 +1,8 @@
 import React from 'react';
-import { scoreService } from '@/game/services/ScoreService';
+// Assuming you have this service built! If not, we can mock it.
+import { scoreService } from '@/game/services/ScoreService'; 
 
-interface GameHUDProps {
+export interface GameHUDProps {
   score: number;
   health: number;
   maxHealth: number;
@@ -9,7 +10,8 @@ interface GameHUDProps {
   wave: number;
 }
 
-const GameHUD: React.FC<GameHUDProps> = ({ score, health, maxHealth, level, wave }) => {
+// Notice the "export const" right here! This fixes the Named Export error.
+export const GameHUD: React.FC<GameHUDProps> = ({ score, health, maxHealth, level, wave }) => {
   return (
     <div className="absolute inset-x-0 top-0 pointer-events-none z-40">
       <div className="flex items-start justify-between p-4">
@@ -17,7 +19,7 @@ const GameHUD: React.FC<GameHUDProps> = ({ score, health, maxHealth, level, wave
         <div className="space-y-2">
           <div className="hud-panel">
             <p className="font-pixel text-xs text-muted-foreground mb-1">SCORE</p>
-            <p className="score-display">{scoreService.formatScore(score)}</p>
+            <p className="score-display">{scoreService ? scoreService.formatScore(score) : score}</p>
           </div>
           
           <div className="hud-panel">
@@ -45,5 +47,3 @@ const GameHUD: React.FC<GameHUDProps> = ({ score, health, maxHealth, level, wave
     </div>
   );
 };
-
-export default GameHUD;
