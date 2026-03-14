@@ -5,138 +5,188 @@ interface CharacterSelectorProps {
   onSelect: (characterName: string) => void;
 }
 
-// Defining character stats for the UI Card
-const CHARACTER_DB: Record<string, { name: string; desc: string; spd: number; pwr: number; occupation: string; weapon: string }> = {
-  marko: {
-    name: "MARKO",
-    occupation: "RTB ELECTRICIAN",
-    weapon: "CHAIN-LINK BELT",
-    desc: "Fired for attempting to unionize the copper mines. Now he is here to dismantle the corrupt RTB management piece by piece.",
-    spd: 50,
-    pwr: 80
+const THEME = { bg: 0x050404, fog: 0x220f05, particle: 0xff3333, ambient: 0x442211, point: 0xff3333 };
+const RAW_URL = 'https://raw.githubusercontent.com/ivanatag/bor-mageddon-protocol-2/main/public/assets/images/characters/';
+const BGM_URL = 'https://raw.githubusercontent.com/ivanatag/bor-mageddon-protocol-2/main/public/assets/audio/bgm/bormageddon-character-menu-soundtrack.wav';
+
+const CARDS_DATA = [
+  { 
+    id: 'marko', title: 'MARKO', accent: '#ff3333', spd: 55, pwr: 90, gradient: ['#3a1010', '#150505'], label: 'AGE: 16', file: 'marko_idle.png', 
+    desc: 'Local basketball prodigy turned wasteland brawler. Fueled by heavy metal and a love for non-stop action.' 
   },
-  maja: {
-    name: "MAJA",
-    occupation: "UNDERGROUND COURIER",
-    weapon: "LEAD PIPE",
-    desc: "Lost her life savings to the hyperinflation banks. She moves fast, hits hard, and takes no prisoners.",
-    spd: 90,
-    pwr: 50
+  { 
+    id: 'maja', title: 'MAJA', accent: '#44ff44', spd: 95, pwr: 65, gradient: ['#103a15', '#051505'], label: 'AGE: 15', file: 'maja_idle.png', 
+    desc: 'Do not let the bubbly personality fool you. Her high agility makes her a lethal blur on the battlefield.' 
   },
-  darko: {
-    name: "DARKO",
-    occupation: "BLACK MARKET SMUGGLER",
-    weapon: "FORBIDDEN CASSETTES",
-    desc: "Street-smart smuggler. Quick on his feet, carries forbidden cassette tapes and a bad attitude.",
-    spd: 85,
-    pwr: 50
+  { 
+    id: 'darko', title: 'DARKO', accent: '#44aaff', spd: 70, pwr: 75, gradient: ['#10203a', '#050a15'], label: 'AGE: 16', file: 'darko_idle.png', 
+    desc: 'A certified tactical supergenius. Delivers high melee damage with a baseball bat.' 
   }
-};
+];
+
+// Helper functions for 3D Textures
+function createTitleTexture() {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 256;
+    const ctx = c.getContext('2d')!; ctx.textAlign = 'center';
+    ctx.font = '900 130px "Metal Mania", Impact, sans-serif';
+    ctx.fillStyle = '#110400'; ctx.fillText('BORMAGEDDON', 522, 138);
+    ctx.fillStyle = '#ff3333'; ctx.fillText('BORMAGEDDON', 512, 128);
+    return new THREE.CanvasTexture(c);
+}
+
+function createCardTexture(card: any, img: HTMLImageElement | null = null) {
+    const c = document.createElement('canvas'); c.width = 512; c.height = 700;
+    const ctx = c.getContext('2d')!;
+    const grad = ctx.createLinearGradient(0, 0, 0, 700);
+    grad.addColorStop(0, card.gradient[0]); grad.addColorStop(1, card.gradient[1]);
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, 512, 700);
+    
+    if (img) { 
+        ctx.imageSmoothingEnabled = false; 
+        ctx.drawImage(img, (512 - img.width * 2.8)/2, (700 - img.height * 2.8)/2 + 20, img.width * 2.8, img.height * 2.8); 
+    }
+    
+    ctx.strokeStyle = card.accent; ctx.lineWidth = 20; ctx.strokeRect(10,10,492,680);
+    ctx.fillStyle = card.accent; ctx.font = 'bold 24px "Space Mono"'; ctx.fillText(card.label, 50, 75);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 75px "Space Mono"'; ctx.fillText(card.title, 50, 610);
+    
+    const tex = new THREE.CanvasTexture(c); tex.magFilter = THREE.NearestFilter;
+    return tex;
+}
 
 export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   
-  // React State for UI Overlays
   const [isInitialized, setIsInitialized] = useState(false);
   const [activeCard, setActiveCard] = useState<string | null>(null);
   const [audioOn, setAudioOn] = useState(true);
+  
+  // Store the audio object in a ref so we can toggle it without recreating it
+  const soundtrackRef = useRef<THREE.Audio | null>(null);
 
   useEffect(() => {
     if (!mountRef.current) return;
 
-    // ==========================================
-    // 1. THREE.JS SCENE SETUP
-    // ==========================================
+    // --- 1. SETUP ---
     const scene = new THREE.Scene();
-    // Transparent background so the HTML scanlines and embers from App.tsx show through!
     scene.background = null; 
-    scene.fog = new THREE.FogExp2(0x050404, 0.05);
+    scene.fog = new THREE.FogExp2(THEME.fog, 0.08);
 
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 1, 6);
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 0, 12);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     mountRef.current.appendChild(renderer.domElement);
 
-    // Lighting (Adjusted to brutalist red/white)
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-    scene.add(ambientLight);
-    
-    const spotLight = new THREE.SpotLight(0xff3333, 50); // Deep red tint
-    spotLight.position.set(0, 5, 5);
-    spotLight.angle = Math.PI / 6;
-    spotLight.penumbra = 0.5;
+    const listener = new THREE.AudioListener();
+    camera.add(listener);
+    soundtrackRef.current = new THREE.Audio(listener);
+
+    // --- 2. PARTICLES & LIGHTING ---
+    const ashCount = 1000;
+    const ashGeo = new THREE.BufferGeometry();
+    const ashPos = new Float32Array(ashCount * 3);
+    for(let i=0; i < ashCount * 3; i++) {
+        ashPos[i] = (Math.random() - 0.5) * 30;
+    }
+    ashGeo.setAttribute('position', new THREE.BufferAttribute(ashPos, 3));
+    const ashMaterial = new THREE.PointsMaterial({ size: 0.08, color: THEME.particle, transparent: true, opacity: 0.4 });
+    const ashSystem = new THREE.Points(ashGeo, ashMaterial);
+    scene.add(ashSystem);
+
+    scene.add(new THREE.AmbientLight(THEME.ambient, 0.6));
+    const spotLight = new THREE.PointLight(THEME.point, 5, 25);
+    spotLight.position.set(0, 5, 8);
     scene.add(spotLight);
 
-    // ==========================================
-    // 2. THE 3D CAROUSEL
-    // ==========================================
+    // --- 3. MESHES & TEXTURES ---
+    const titleMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(26, 7), 
+        new THREE.MeshBasicMaterial({ map: createTitleTexture(), transparent: true, opacity: 0.3, fog: false, depthWrite: false })
+    );
+    titleMesh.position.set(0, 0, -6); 
+    scene.add(titleMesh);
+
     const carouselGroup = new THREE.Group();
     scene.add(carouselGroup);
 
-    const characters = ['marko', 'maja', 'darko'];
-    const radius = 3.5; // Slightly wider radius
+    const cardMeshes: THREE.Mesh[] = [];
+    const RADIUS = 3.8; 
+    const ANGLE_STEP = (Math.PI * 2) / CARDS_DATA.length;
 
-    characters.forEach((char, index) => {
-      const angle = (index / characters.length) * Math.PI * 2;
-      
-      const geometry = new THREE.BoxGeometry(1.5, 2.5, 0.2);
-      const material = new THREE.MeshStandardMaterial({ 
-        color: 0x222222, 
-        metalness: 0.8,
-        roughness: 0.2,
-        emissive: index === 0 ? 0xff3333 : 0x000000, // Highlight Marko in RED initially
-        emissiveIntensity: 0.3
-      });
-      
-      const mesh = new THREE.Mesh(geometry, material);
-      
-      mesh.position.x = Math.cos(angle) * radius;
-      mesh.position.z = Math.sin(angle) * radius;
-      mesh.rotation.y = -angle + Math.PI / 2;
-      
-      mesh.userData = { characterName: char }; 
-      carouselGroup.add(mesh);
+    CARDS_DATA.forEach((card, i) => {
+        const theta = i * ANGLE_STEP;
+        
+        // Multi-material box to only texture the front face
+        const materials = [
+            new THREE.MeshStandardMaterial({color: 0x1a0a05}), // Right
+            new THREE.MeshStandardMaterial({color: 0x1a0a05}), // Left
+            new THREE.MeshStandardMaterial({color: 0x1a0a05}), // Top
+            new THREE.MeshStandardMaterial({color: 0x1a0a05}), // Bottom
+            new THREE.MeshStandardMaterial({transparent: true, emissive: 0x111111}), // FRONT
+            new THREE.MeshStandardMaterial({color: 0x000000})  // Back
+        ];
+        
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(4, 6, 0.2), materials);
+        mesh.userData = { index: i, characterName: card.id }; 
+        
+        // Initial blank texture with just colors
+        mesh.material[4].map = createCardTexture(card);
+        
+        // Load the actual character sprite image
+        const img = new Image(); 
+        img.crossOrigin = "anonymous";
+        img.onload = () => { 
+            mesh.material[4].map = createCardTexture(card, img); 
+            mesh.material[4].needsUpdate = true; 
+        };
+        img.src = RAW_URL + card.file;
+
+        mesh.position.x = Math.sin(theta) * RADIUS; 
+        mesh.position.z = Math.cos(theta) * RADIUS - RADIUS; 
+        mesh.rotation.y = theta;
+
+        carouselGroup.add(mesh);
+        cardMeshes.push(mesh);
     });
 
-    // ==========================================
-    // 3. INTERACTIVITY
-    // ==========================================
+    // --- 4. INTERACTION ---
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
     let isDragging = false;
     let previousMousePosition = { x: 0, y: 0 };
+    let totalMove = 0;
 
     const onMouseDown = (e: MouseEvent) => {
-      isDragging = true;
-      previousMousePosition = { x: e.clientX, y: e.clientY };
+        isDragging = true;
+        totalMove = 0;
+        previousMousePosition = { x: e.clientX, y: e.clientY };
     };
 
     const onMouseMove = (e: MouseEvent) => {
-      if (isDragging) {
-        const deltaMove = {
-          x: e.clientX - previousMousePosition.x,
-          y: e.clientY - previousMousePosition.y
-        };
-        carouselGroup.rotation.y += deltaMove.x * 0.01;
+        if (!isDragging) return;
+        const deltaX = e.clientX - previousMousePosition.x;
+        totalMove += Math.abs(deltaX);
+        carouselGroup.rotation.y += deltaX * 0.01;
         previousMousePosition = { x: e.clientX, y: e.clientY };
-      }
     };
 
     const onMouseUp = (e: MouseEvent) => {
-      isDragging = false;
-      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-      
-      raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(carouselGroup.children);
-      
-      if (intersects.length > 0) {
-        const clickedChar = intersects[0].object.userData.characterName;
-        setActiveCard(clickedChar);
-      }
+        isDragging = false;
+        if (totalMove < 8) { // Only click if they didn't drag
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(cardMeshes);
+            
+            if (intersects.length > 0) {
+                const clickedChar = intersects[0].object.userData.characterName;
+                setActiveCard(clickedChar);
+            }
+        }
     };
 
     window.addEventListener('mousedown', onMouseDown);
@@ -144,50 +194,90 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     window.addEventListener('mouseup', onMouseUp);
 
     const handleResize = () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
     };
     window.addEventListener('resize', handleResize);
 
-    // ==========================================
-    // 4. ANIMATION LOOP
-    // ==========================================
+    // --- 5. ANIMATION LOOP ---
     let animationFrameId: number;
+    let time = 0;
+
     const animate = () => {
-      animationFrameId = requestAnimationFrame(animate);
-      if (!isDragging && !activeCard) {
-        carouselGroup.rotation.y += 0.002;
-      }
-      carouselGroup.position.y = Math.sin(Date.now() * 0.001) * 0.1;
-      renderer.render(scene, camera);
+        animationFrameId = requestAnimationFrame(animate);
+        time++;
+        
+        if (!isDragging && !activeCard) {
+            carouselGroup.rotation.y += 0.002; // Auto-drift
+        }
+        
+        carouselGroup.position.y = Math.sin(time * 0.02) * 0.1; // Gentle bobbing
+
+        // Animate Ash Particles
+        const pos = ashSystem.geometry.attributes.position.array as Float32Array;
+        for(let i = 1; i < pos.length; i += 3) {
+            pos[i] += 0.015;
+            if (pos[i] > 10) pos[i] = -10;
+        }
+        ashSystem.geometry.attributes.position.needsUpdate = true;
+        
+        // Pulse background title
+        titleMesh.material.opacity = 0.2 + Math.abs(Math.sin(time * 0.02)) * 0.15;
+
+        renderer.render(scene, camera);
     };
     animate();
 
     return () => {
-      window.removeEventListener('mousedown', onMouseDown);
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-      window.removeEventListener('resize', handleResize);
-      cancelAnimationFrame(animationFrameId);
-      if (mountRef.current && renderer.domElement) {
-        mountRef.current.removeChild(renderer.domElement);
-      }
-      renderer.dispose();
+        window.removeEventListener('mousedown', onMouseDown);
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+        window.removeEventListener('resize', handleResize);
+        cancelAnimationFrame(animationFrameId);
+        if (mountRef.current && renderer.domElement) {
+            mountRef.current.removeChild(renderer.domElement);
+        }
+        renderer.dispose();
     };
   }, [activeCard]);
 
+  // --- AUDIO LOGIC ---
   const handleInitialize = () => {
     setIsInitialized(true);
-  };
+    
+    // Play the loaded soundtrack
+    if (soundtrackRef.current) {
+        const audioCtx = THREE.AudioContext.getContext();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
 
-  const handleDeployment = () => {
-    if (activeCard) {
-      onSelect(activeCard);
+        const audioLoader = new THREE.AudioLoader();
+        audioLoader.load(BGM_URL, (buffer) => {
+            soundtrackRef.current!.setBuffer(buffer);
+            soundtrackRef.current!.setLoop(true);
+            soundtrackRef.current!.setVolume(0.5);
+            soundtrackRef.current!.play();
+        });
     }
   };
 
-  const currentStats = activeCard ? CHARACTER_DB[activeCard] : null;
+  const toggleAudio = () => {
+    if (soundtrackRef.current) {
+        if (soundtrackRef.current.isPlaying) {
+            soundtrackRef.current.pause();
+            setAudioOn(false);
+        } else {
+            soundtrackRef.current.play();
+            setAudioOn(true);
+        }
+    }
+  };
+
+  const handleDeployment = () => {
+    if (activeCard) onSelect(activeCard);
+  };
+
+  const currentStats = activeCard ? CARDS_DATA.find(c => c.id === activeCard) : null;
 
   return (
     <div className="absolute inset-0 w-full h-full text-white font-mono pointer-events-none select-none z-10">
@@ -195,9 +285,7 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
       {/* 3D Canvas Container */}
       <div ref={mountRef} className="absolute inset-0 w-full h-full -z-10 pointer-events-auto cursor-grab active:cursor-grabbing" />
 
-      {/* =========================================
-          STEP 1: INITIALIZATION OVERLAY (The Title Screen)
-      ========================================= */}
+      {/* INITIALIZATION OVERLAY */}
       {!isInitialized && (
         <div id="start-overlay" className="absolute inset-0 flex items-center justify-center bg-black/90 z-50 pointer-events-auto backdrop-blur-sm">
           <div className="start-box flex flex-col items-center w-full max-w-3xl animate-in fade-in zoom-in duration-500">
@@ -222,9 +310,7 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         </div>
       )}
 
-      {/* =========================================
-          STEP 2: TERMINAL HEADER (Visible after init)
-      ========================================= */}
+      {/* TERMINAL HEADER */}
       {isInitialized && (
         <div id="terminal-header" className="absolute top-0 left-0 w-full p-6 flex justify-between items-center bg-black/80 border-b border-red-900/50 pointer-events-auto backdrop-blur-sm z-20">
           <div id="hint" className="text-sm font-bold text-red-500 animate-pulse tracking-widest">
@@ -232,7 +318,7 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
           </div>
           <div id="audio-controls">
             <button 
-              onClick={() => setAudioOn(!audioOn)}
+              onClick={toggleAudio}
               className="text-xs font-bold border border-red-900 px-4 py-2 bg-black hover:bg-red-600 hover:text-white transition-colors cursor-pointer tracking-widest"
             >
               AUDIO: [{audioOn ? 'ON' : 'OFF'}]
@@ -241,9 +327,7 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         </div>
       )}
 
-      {/* =========================================
-          STEP 3: EXPANDED CHARACTER CARD
-      ========================================= */}
+      {/* EXPANDED CHARACTER CARD */}
       {isInitialized && activeCard && currentStats && (
         <div id="expanded-card" className="absolute bottom-12 right-12 w-96 bg-[#1a0a05] border-4 border-double border-[#ff3333] p-8 z-30 pointer-events-auto shadow-[20px_20px_0px_#000] transition-all animate-in fade-in slide-in-from-right-10">
           
@@ -256,8 +340,7 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
           
           <div className="card-header border-b border-red-900/50 pb-4 mb-4 mt-4">
             <span className="text-[10px] text-green-500 block mb-2 tracking-widest font-bold">DE-ENCRYPTION SUCCESSFUL</span>
-            <h2 className="font-metal text-5xl text-white drop-shadow-[3px_3px_0px_#ff3333] tracking-wider uppercase">{currentStats.name}</h2>
-            <p className="text-red-500 text-xs tracking-widest mt-2 font-bold">// {currentStats.occupation}</p>
+            <h2 className="font-metal text-5xl text-white drop-shadow-[3px_3px_0px_#ff3333] tracking-wider uppercase">{currentStats.title}</h2>
           </div>
           
           <p className="text-sm text-gray-300 mb-6 leading-relaxed h-20">
