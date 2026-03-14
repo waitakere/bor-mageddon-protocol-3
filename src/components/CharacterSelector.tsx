@@ -5,30 +5,30 @@ interface CharacterSelectorProps {
   onSelect: (characterName: string) => void;
 }
 
-const THEME = { bg: 0x050404, fog: 0x220f05, particle: 0xff3333, ambient: 0xffffff, point: 0xff5533 };
+const THEME = { bg: 0x050404, fog: 0x1a0a05, particle: 0xff3333, ambient: 0xffffff, point: 0xff4422 };
 const RAW_URL = 'https://raw.githubusercontent.com/ivanatag/bor-mageddon-protocol-2/main/public/assets/images/characters/';
 const BGM_URL = 'https://raw.githubusercontent.com/ivanatag/bor-mageddon-protocol-2/main/public/assets/audio/bgm/bormageddon-character-menu-soundtrack.wav';
 
 const CARDS_DATA = [
   { 
-    id: 'marko', title: 'MARKO', accent: '#ff3333', spd: 55, pwr: 90, gradient: ['#3a1010', '#150505'], label: 'AGE: 16', file: 'marko_idle.png', 
-    desc: 'Local basketball prodigy turned wasteland brawler. Fueled by heavy metal and a love for non-stop action.' 
+    id: 'marko', title: 'MARKO', accent: '#ff3333', spd: 50, pwr: 50, gradient: ['#3a1010', '#150505'], label: 'CLASS: BRAWLER', file: 'marko_idle.png', 
+    desc: 'Local basketball prodigy. Balanced speed and power. Ideal for maintaining the front lines in Bor.' 
   },
   { 
-    id: 'maja', title: 'MAJA', accent: '#44ff44', spd: 95, pwr: 65, gradient: ['#103a15', '#051505'], label: 'AGE: 15', file: 'maja_idle.png', 
-    desc: 'Do not let the bubbly personality fool you. Her high agility makes her a lethal blur on the battlefield.' 
+    id: 'maja', title: 'MAJA', accent: '#44ff44', spd: 30, pwr: 95, gradient: ['#103a15', '#051505'], label: 'CLASS: ENFORCER', file: 'maja_idle.png', 
+    desc: 'Devastating raw power. Though she moves with more weight, her armored strikes shatter bureaucratic resistance.' 
   },
   { 
-    id: 'darko', title: 'DARKO', accent: '#44aaff', spd: 70, pwr: 75, gradient: ['#10203a', '#050a15'], label: 'AGE: 16', file: 'darko_idle.png', 
-    desc: 'A certified tactical supergenius. Delivers high melee damage with a baseball bat.' 
+    id: 'darko', title: 'DARKO', accent: '#44aaff', spd: 95, pwr: 35, gradient: ['#10203a', '#050a15'], label: 'CLASS: SPEEDSTER', file: 'darko_idle.png', 
+    desc: 'A tactical blur. Sacrifices raw impact for extreme agility and evasive maneuvers. Death by a thousand cuts.' 
   }
 ];
 
+// Utility: Canvas Textures for 3D Cards
 function createTitleTexture() {
     const c = document.createElement('canvas'); c.width = 1024; c.height = 256;
     const ctx = c.getContext('2d')!; ctx.textAlign = 'center';
     ctx.font = '900 130px "Metal Mania", Impact, sans-serif';
-    ctx.fillStyle = '#110400'; ctx.fillText('BORMAGEDDON', 522, 138);
     ctx.fillStyle = '#ff3333'; ctx.fillText('BORMAGEDDON', 512, 128);
     return new THREE.CanvasTexture(c);
 }
@@ -51,7 +51,6 @@ function createCardTexture(card: any, img: HTMLImageElement | null = null) {
     
     const tex = new THREE.CanvasTexture(c); 
     tex.magFilter = THREE.NearestFilter;
-    tex.colorSpace = THREE.SRGBColorSpace; 
     return tex;
 }
 
@@ -59,11 +58,9 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
   const mountRef = useRef<HTMLDivElement>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [activeCard, setActiveCard] = useState<string | null>(null);
-  const [audioOn, setAudioOn] = useState(true);
   
   const soundtrackRef = useRef<THREE.Audio | null>(null);
   const activeCardRef = useRef<string | null>(null);
-  const isInitializedRef = useRef<boolean>(false);
   const targetRotationRef = useRef<number | null>(null);
 
   const handleSetActiveCard = (cardId: string | null) => {
@@ -76,106 +73,84 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     if (!mountRef.current) return;
 
     const scene = new THREE.Scene();
-    scene.background = null; 
     scene.fog = new THREE.FogExp2(THEME.fog, 0.08);
-
     const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, 0, 12);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     mountRef.current.appendChild(renderer.domElement);
 
     const listener = new THREE.AudioListener();
     camera.add(listener);
     soundtrackRef.current = new THREE.Audio(listener);
 
-    const ashCount = 1000;
+    // Particles (Falling Ash)
     const ashGeo = new THREE.BufferGeometry();
-    const ashPos = new Float32Array(ashCount * 3);
-    for(let i=0; i < ashCount * 3; i++) ashPos[i] = (Math.random() - 0.5) * 30;
+    const ashPos = new Float32Array(1000 * 3);
+    for(let i=0; i < 3000; i++) ashPos[i] = (Math.random() - 0.5) * 30;
     ashGeo.setAttribute('position', new THREE.BufferAttribute(ashPos, 3));
-    const ashMaterial = new THREE.PointsMaterial({ size: 0.08, color: THEME.particle, transparent: true, opacity: 0.4 });
-    const ashSystem = new THREE.Points(ashGeo, ashMaterial);
+    const ashSystem = new THREE.Points(ashGeo, new THREE.PointsMaterial({ size: 0.05, color: THEME.particle, transparent: true, opacity: 0.4 }));
     scene.add(ashSystem);
 
-    scene.add(new THREE.AmbientLight(THEME.ambient, 0.4));
-    const spotLight = new THREE.PointLight(THEME.point, 10, 25);
-    spotLight.position.set(0, 5, 8);
-    scene.add(spotLight);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+    const pointLight = new THREE.PointLight(THEME.point, 20, 30);
+    pointLight.position.set(0, 5, 10);
+    scene.add(pointLight);
 
-    const titleMesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(26, 7), 
-        new THREE.MeshBasicMaterial({ map: createTitleTexture(), transparent: true, opacity: 0.6, fog: false, depthWrite: false })
-    );
-    titleMesh.position.set(0, 0, -6); 
+    const titleMesh = new THREE.Mesh(new THREE.PlaneGeometry(24, 6), new THREE.MeshBasicMaterial({ map: createTitleTexture(), transparent: true, opacity: 0.5, depthWrite: false }));
+    titleMesh.position.set(0, 2, -5);
     scene.add(titleMesh);
 
     const carouselGroup = new THREE.Group();
+    const RADIUS = 4;
+    carouselGroup.position.z = -RADIUS;
     scene.add(carouselGroup);
 
     const cardMeshes: THREE.Mesh[] = [];
-    const RADIUS = 3.8; 
-    carouselGroup.position.z = -RADIUS;
-    
     const ANGLE_STEP = (Math.PI * 2) / CARDS_DATA.length;
 
     CARDS_DATA.forEach((card, i) => {
         const theta = i * ANGLE_STEP;
-        const materials = [
-            new THREE.MeshStandardMaterial({color: 0x1a0a05}), new THREE.MeshStandardMaterial({color: 0x1a0a05}), 
-            new THREE.MeshStandardMaterial({color: 0x1a0a05}), new THREE.MeshStandardMaterial({color: 0x1a0a05}), 
-            new THREE.MeshBasicMaterial({transparent: true}), new THREE.MeshStandardMaterial({color: 0x000000}) 
-        ];
-        
-        const mesh = new THREE.Mesh(new THREE.BoxGeometry(4, 6, 0.2), materials);
-        mesh.userData = { index: i, characterName: card.id }; 
+        const mesh = new THREE.Mesh(
+            new THREE.BoxGeometry(4, 6, 0.15), 
+            [new THREE.MeshStandardMaterial({color: 0x111111}), new THREE.MeshStandardMaterial({color: 0x111111}), new THREE.MeshStandardMaterial({color: 0x111111}), new THREE.MeshStandardMaterial({color: 0x111111}), new THREE.MeshBasicMaterial({transparent: true}), new THREE.MeshStandardMaterial({color: 0x000000})]
+        );
+        mesh.userData = { index: i, id: card.id };
         mesh.material[4].map = createCardTexture(card);
         
         const img = new Image(); img.crossOrigin = "anonymous";
         img.onload = () => { mesh.material[4].map = createCardTexture(card, img); mesh.material[4].needsUpdate = true; };
         img.src = RAW_URL + card.file;
 
-        mesh.position.x = Math.sin(theta) * RADIUS; 
-        mesh.position.z = Math.cos(theta) * RADIUS; 
+        mesh.position.set(Math.sin(theta) * RADIUS, 0, Math.cos(theta) * RADIUS);
         mesh.rotation.y = theta;
-
         carouselGroup.add(mesh);
         cardMeshes.push(mesh);
     });
 
+    // Interaction logic
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
-    let isDragging = false, totalMove = 0;
-    let previousMousePosition = { x: 0, y: 0 };
+    let isDragging = false;
+    let prevX = 0;
 
-    const onMouseDown = (e: MouseEvent) => {
-        if (!isInitializedRef.current) return; 
-        isDragging = true; totalMove = 0;
-        previousMousePosition = { x: e.clientX, y: e.clientY };
-    };
-
+    const onMouseDown = (e: MouseEvent) => { isDragging = true; prevX = e.clientX; };
     const onMouseMove = (e: MouseEvent) => {
         if (!isDragging) return;
-        const deltaX = e.clientX - previousMousePosition.x;
-        totalMove += Math.abs(deltaX);
-        carouselGroup.rotation.y += deltaX * 0.01;
-        previousMousePosition = { x: e.clientX, y: e.clientY };
+        carouselGroup.rotation.y += (e.clientX - prevX) * 0.01;
+        prevX = e.clientX;
     };
-
     const onMouseUp = (e: MouseEvent) => {
-        if (!isInitializedRef.current) return;
         isDragging = false;
-        if (totalMove < 8) { 
-            mouse.x = (e.clientX / window.innerWidth) * 2 - 1; mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(cardMeshes);
-            if (intersects.length > 0) {
-                const clickedObj = intersects[0].object;
-                targetRotationRef.current = -(clickedObj.userData.index * ANGLE_STEP);
-                handleSetActiveCard(clickedObj.userData.characterName); 
-            }
+        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(cardMeshes);
+        if (intersects.length > 0) {
+            const charId = intersects[0].object.userData.id;
+            targetRotationRef.current = -(intersects[0].object.userData.index * ANGLE_STEP);
+            handleSetActiveCard(charId);
         }
     };
 
@@ -183,31 +158,15 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
 
-    const handleResize = () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    };
-    window.addEventListener('resize', handleResize);
-
-    let animationFrameId: number; let time = 0;
-
     const animate = () => {
-        animationFrameId = requestAnimationFrame(animate);
-        time++;
-        if (!isDragging && !activeCardRef.current) carouselGroup.rotation.y += 0.002;
+        requestAnimationFrame(animate);
+        if (!isDragging && !activeCardRef.current) carouselGroup.rotation.y += 0.003;
         else if (activeCardRef.current && targetRotationRef.current !== null) {
             carouselGroup.rotation.y += (targetRotationRef.current - carouselGroup.rotation.y) * 0.1;
         }
-        carouselGroup.position.y = Math.sin(time * 0.02) * 0.1;
-
         const pos = ashSystem.geometry.attributes.position.array as Float32Array;
-        for(let i = 1; i < pos.length; i += 3) {
-            pos[i] += 0.015; if (pos[i] > 10) pos[i] = -10;
-        }
+        for(let i = 1; i < pos.length; i += 3) { pos[i] += 0.02; if (pos[i] > 10) pos[i] = -10; }
         ashSystem.geometry.attributes.position.needsUpdate = true;
-        titleMesh.material.opacity = 0.4 + Math.abs(Math.sin(time * 0.02)) * 0.2;
-
         renderer.render(scene, camera);
     };
     animate();
@@ -216,77 +175,48 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         window.removeEventListener('mousedown', onMouseDown);
         window.removeEventListener('mousemove', onMouseMove);
         window.removeEventListener('mouseup', onMouseUp);
-        window.removeEventListener('resize', handleResize);
-        cancelAnimationFrame(animationFrameId);
-        
-        // FIXED: Kill the Web Audio track perfectly before unmounting
-        if (soundtrackRef.current && soundtrackRef.current.isPlaying) {
-            soundtrackRef.current.stop();
-        }
-
-        if (mountRef.current && renderer.domElement) mountRef.current.removeChild(renderer.domElement);
+        if (soundtrackRef.current?.isPlaying) soundtrackRef.current.stop();
         renderer.dispose();
     };
-  }, []); 
+  }, []);
 
   const handleInitialize = () => {
-    setIsInitialized(true); isInitializedRef.current = true;
-    if (soundtrackRef.current) {
-        const audioCtx = THREE.AudioContext.getContext();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        new THREE.AudioLoader().load(BGM_URL, (buffer) => {
-            soundtrackRef.current!.setBuffer(buffer);
-            soundtrackRef.current!.setLoop(true);
-            soundtrackRef.current!.setVolume(0.5);
-            soundtrackRef.current!.play();
-        });
-    }
+    setIsInitialized(true);
+    new THREE.AudioLoader().load(BGM_URL, (buffer) => {
+        soundtrackRef.current!.setBuffer(buffer);
+        soundtrackRef.current!.setLoop(true);
+        soundtrackRef.current!.play();
+    });
   };
 
-  const toggleAudio = () => {
-    if (soundtrackRef.current) {
-        if (soundtrackRef.current.isPlaying) { soundtrackRef.current.pause(); setAudioOn(false); } 
-        else { soundtrackRef.current.play(); setAudioOn(true); }
-    }
-  };
-
-  const currentStats = activeCard ? CARDS_DATA.find(c => c.id === activeCard) : null;
+  const currentStats = CARDS_DATA.find(c => c.id === activeCard);
 
   return (
-    <div className="absolute inset-0 w-full h-full text-white font-mono pointer-events-none select-none z-10">
-      <div ref={mountRef} className="absolute inset-0 w-full h-full -z-10 pointer-events-auto cursor-grab active:cursor-grabbing" />
-      {!isInitialized && (
-        <div id="start-overlay" className="absolute inset-0 flex items-center justify-center bg-black/90 z-50 pointer-events-auto backdrop-blur-sm">
-          <div className="start-box flex flex-col items-center w-full max-w-3xl animate-in fade-in zoom-in duration-500">
-            <h1 className="font-metal text-white text-6xl md:text-8xl tracking-widest drop-shadow-[4px_4px_0px_#ff3333] mb-4">BOR-MAGEDDON</h1>
-            <h2 className="font-mono-title text-xl md:text-2xl text-gray-400 mb-12">[TERMINAL_01]</h2>
-            <hr className="w-full border-t border-red-900 mb-8 opacity-50" />
-            <button onClick={handleInitialize} className="bg-[#ff3333] border-none px-10 py-5 cursor-pointer shadow-[8px_8px_0px_#660000] text-xl mt-8 font-mono font-bold text-black uppercase tracking-widest hover:bg-white hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[10px_10px_0px_#999] transition-all">INITIALIZE PROTOCOL</button>
-            <p className="mt-8 text-green-500 font-mono text-sm tracking-widest animate-pulse">ESTABLISHING SECURE CONNECTION...</p>
-          </div>
+    <div className="absolute inset-0 w-full h-full pointer-events-none select-none z-10">
+      <div ref={mountRef} className="absolute inset-0 pointer-events-auto cursor-grab active:cursor-grabbing" />
+      
+      {!isInitialized ? (
+        <div className="absolute inset-0 flex items-center justify-center bg-black z-50 pointer-events-auto">
+          <button onClick={handleInitialize} className="bg-red-600 px-12 py-6 text-white font-black text-2xl shadow-[8px_8px_0px_#440000] hover:bg-white hover:text-red-600 transition-all uppercase italic">
+            Initialize Protocol
+          </button>
         </div>
-      )}
-      {isInitialized && (
-        <div id="terminal-header" className="absolute top-0 left-0 w-full p-6 flex justify-between items-center bg-black/80 border-b border-red-900/50 pointer-events-auto backdrop-blur-sm z-20">
-          <div id="hint" className="text-sm font-bold text-red-500 animate-pulse tracking-widest">SYSTEM_STATUS: [DRAG_TO_ROTATE] // [CLICK_CARD_FOR_ARCHIVE]</div>
-          <div id="audio-controls">
-            <button onClick={toggleAudio} className="text-xs font-bold border border-red-900 px-4 py-2 bg-black hover:bg-red-600 hover:text-white transition-colors cursor-pointer tracking-widest">AUDIO: [{audioOn ? 'ON' : 'OFF'}]</button>
+      ) : activeCard && currentStats && (
+        <div className="absolute bottom-12 right-12 w-96 bg-black/90 border-2 border-red-600 p-8 z-30 pointer-events-auto animate-in slide-in-from-right-10">
+          <h2 className="text-5xl font-black italic mb-2 tracking-tighter">{currentStats.title}</h2>
+          <p className="text-zinc-400 text-xs mb-6 leading-relaxed">{currentStats.desc}</p>
+          <div className="space-y-4 mb-8">
+            <div>
+              <div className="flex justify-between text-[10px] mb-1"><span>POWER</span><span>{currentStats.pwr}%</span></div>
+              <div className="h-1 bg-zinc-800"><div className="h-full bg-red-600" style={{ width: `${currentStats.pwr}%` }} /></div>
+            </div>
+            <div>
+              <div className="flex justify-between text-[10px] mb-1"><span>SPEED</span><span>{currentStats.spd}%</span></div>
+              <div className="h-1 bg-zinc-800"><div className="h-full bg-cyan-400" style={{ width: `${currentStats.spd}%` }} /></div>
+            </div>
           </div>
-        </div>
-      )}
-      {isInitialized && activeCard && currentStats && (
-        <div id="expanded-card" className="absolute bottom-12 right-12 w-96 bg-[#1a0a05] border-4 border-double border-[#ff3333] p-8 z-30 pointer-events-auto shadow-[20px_20px_0px_#000] transition-all animate-in fade-in slide-in-from-right-10">
-          <button onClick={() => handleSetActiveCard(null)} className="absolute top-4 right-4 bg-[#ff3333] text-black border-none font-bold px-3 py-1 cursor-pointer hover:bg-white">X</button>
-          <div className="card-header border-b border-red-900/50 pb-4 mb-4 mt-4">
-            <span className="text-[10px] text-green-500 block mb-2 tracking-widest font-bold">DE-ENCRYPTION SUCCESSFUL</span>
-            <h2 className="font-metal text-5xl text-white drop-shadow-[3px_3px_0px_#ff3333] tracking-wider uppercase">{currentStats.title}</h2>
-          </div>
-          <p className="text-sm text-gray-300 mb-6 leading-relaxed h-20">{currentStats.desc}</p>
-          <div className="flex gap-6 mb-8 text-sm font-bold border border-red-900/50 p-4 bg-black/50">
-            <div className="stat flex-1 text-gray-500">SPD: <span className="text-red-500 text-lg ml-2">{currentStats.spd}</span></div>
-            <div className="stat flex-1 text-gray-500">PWR: <span className="text-red-500 text-lg ml-2">{currentStats.pwr}</span></div>
-          </div>
-          <button onClick={() => onSelect(activeCard)} className="w-full bg-[#ff3333] text-black py-4 text-lg hover:bg-white font-bold border-none cursor-pointer shadow-[6px_6px_0px_#660000] transition-all tracking-widest">DEPLOY TO BOR</button>
+          <button onClick={() => onSelect(activeCard)} className="w-full bg-red-600 py-4 font-black text-black hover:bg-white transition-all uppercase italic">Deploy to Bor</button>
+          <button onClick={() => handleSetActiveCard(null)} className="w-full mt-2 text-zinc-600 text-[10px] hover:text-white uppercase tracking-widest">Return to Terminal</button>
         </div>
       )}
     </div>
