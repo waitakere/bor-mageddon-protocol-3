@@ -24,21 +24,36 @@ const CARDS_DATA = [
   }
 ];
 
-// Utility: Canvas Textures for 3D Cards using the required fonts
-function createTitleTexture() {
-    const c = document.createElement('canvas'); c.width = 1024; c.height = 256;
-    const ctx = c.getContext('2d')!; ctx.textAlign = 'center';
-    ctx.font = '900 130px "Metal Mania", cursive';
-    ctx.fillStyle = '#ff3333'; ctx.fillText('BORMAGEDDON', 512, 128);
-    return new THREE.CanvasTexture(c);
+// --- TEXTURE FIX ---
+// Instead of replacing textures (which causes WebGL crashes), we create the texture 
+// once and draw onto its existing canvas memory when the image loads.
+
+function initCardTexture(card: any) {
+    const c = document.createElement('canvas');
+    c.width = 512; 
+    c.height = 700;
+    const tex = new THREE.CanvasTexture(c);
+    
+    // CRITICAL FIX: Stops the "Texture is immutable" WebGL crash
+    tex.generateMipmaps = false; 
+    tex.minFilter = THREE.LinearFilter;
+    tex.magFilter = THREE.NearestFilter;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    
+    drawCardContent(c, card, null);
+    tex.needsUpdate = true;
+    return tex;
 }
 
-function createCardTexture(card: any, img: HTMLImageElement | null = null) {
-    const c = document.createElement('canvas'); c.width = 512; c.height = 700;
+function drawCardContent(c: HTMLCanvasElement, card: any, img: HTMLImageElement | null) {
     const ctx = c.getContext('2d')!;
+    ctx.clearRect(0, 0, 512, 700);
+
     const grad = ctx.createLinearGradient(0, 0, 0, 700);
-    grad.addColorStop(0, card.gradient[0]); grad.addColorStop(1, card.gradient[1]);
-    ctx.fillStyle = grad; ctx.fillRect(0, 0, 512, 700);
+    grad.addColorStop(0, card.gradient[0]); 
+    grad.addColorStop(1, card.gradient[1]);
+    ctx.fillStyle = grad; 
+    ctx.fillRect(0, 0, 512, 700);
     
     if (img) { 
         ctx.imageSmoothingEnabled = false; 
@@ -46,15 +61,22 @@ function createCardTexture(card: any, img: HTMLImageElement | null = null) {
     }
     
     ctx.strokeStyle = card.accent; ctx.lineWidth = 20; ctx.strokeRect(10,10,492,680);
-    ctx.fillStyle = card.accent; ctx.font = 'bold 24px "Space Mono", monospace'; ctx.fillText(card.label, 50, 75);
-    ctx.fillStyle = '#fff'; ctx.font = '900 75px "Metal Mania", cursive'; ctx.fillText(card.title, 50, 610);
-    
-    const tex = new THREE.CanvasTexture(c); 
-    tex.magFilter = THREE.NearestFilter;
+    ctx.fillStyle = card.accent; ctx.font = 'bold 24px "Space Mono"'; ctx.fillText(card.label, 50, 75);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 75px "Space Mono"'; ctx.fillText(card.title, 50, 610);
+}
+
+function createTitleTexture() {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 256;
+    const ctx = c.getContext('2d')!; ctx.textAlign = 'center';
+    ctx.font = '900 130px "Metal Mania", Impact, sans-serif';
+    ctx.fillStyle = '#ff3333'; ctx.fillText('BORMAGEDDON', 512, 128);
+    const tex = new THREE.CanvasTexture(c);
+    tex.generateMipmaps = false;
     tex.minFilter = THREE.LinearFilter;
     return tex;
 }
 
+// --- MAIN COMPONENT ---
 export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -89,7 +111,6 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     camera.add(listener);
     soundtrackRef.current = new THREE.Audio(listener);
 
-    // Particles (Falling Ash)
     const ashGeo = new THREE.BufferGeometry();
     const ashPos = new Float32Array(1000 * 3);
     for(let i=0; i < 3000; i++) ashPos[i] = (Math.random() - 0.5) * 30;
@@ -102,7 +123,7 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     pointLight.position.set(0, 5, 10);
     scene.add(pointLight);
 
-    const titleMesh = new THREE.Mesh(new THREE.PlaneGeometry(24, 6), new THREE.MeshBasicMaterial({ map: createTitleTexture(), transparent: true, opacity: 0.2, depthWrite: false }));
+    const titleMesh = new THREE.Mesh(new THREE.PlaneGeometry(24, 6), new THREE.MeshBasicMaterial({ map: createTitleTexture(), transparent: true, opacity: 0.3, depthWrite: false }));
     titleMesh.position.set(0, 2, -6);
     scene.add(titleMesh);
 
@@ -121,14 +142,17 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
             [new THREE.MeshStandardMaterial({color: 0x111111}), new THREE.MeshStandardMaterial({color: 0x111111}), new THREE.MeshStandardMaterial({color: 0x111111}), new THREE.MeshStandardMaterial({color: 0x111111}), new THREE.MeshBasicMaterial({transparent: true}), new THREE.MeshStandardMaterial({color: 0x000000})]
         );
         mesh.userData = { index: i, id: card.id };
-        mesh.material[4].map = createCardTexture(card);
         
-        const img = new Image(); img.crossOrigin = "anonymous";
+        // Initial setup
+        const texture = initCardTexture(card);
+        mesh.material[4].map = texture;
+        
+        // Load Image and update existing texture
+        const img = new Image(); 
+        img.crossOrigin = "anonymous";
         img.onload = () => { 
-            const newTex = createCardTexture(card, img);
-            mesh.material[4].map?.dispose(); 
-            mesh.material[4].map = newTex;
-            mesh.material[4].needsUpdate = true; 
+            drawCardContent(texture.image, card, img);
+            texture.needsUpdate = true;
         };
         img.src = RAW_URL + card.file;
 
@@ -138,31 +162,31 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         cardMeshes.push(mesh);
     });
 
+    // Interaction Event Listeners (Attached specifically to the WebGL Canvas container)
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
     let prevX = 0;
-    let totalMouseMoveX = 0;
-
-    // We attach events ONLY to the canvas so clicking the UI buttons doesn't select characters
-    const canvas = renderer.domElement;
+    let totalMove = 0;
+    
+    const container = mountRef.current;
 
     const onMouseDown = (e: MouseEvent) => { 
         isDraggingRef.current = true; 
-        totalMouseMoveX = 0;
+        totalMove = 0;
         prevX = e.clientX; 
     };
     
     const onMouseMove = (e: MouseEvent) => {
         if (!isDraggingRef.current) return;
         const deltaX = e.clientX - prevX;
-        totalMouseMoveX += Math.abs(deltaX);
+        totalMove += Math.abs(deltaX);
         carouselGroup.rotation.y += deltaX * 0.007;
         prevX = e.clientX;
     };
     
     const onMouseUp = (e: MouseEvent) => {
         isDraggingRef.current = false;
-        if (totalMouseMoveX < 5) {
+        if (totalMove < 5) {
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
@@ -175,9 +199,9 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         }
     };
 
-    canvas.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('mousemove', onMouseMove); // Keep window for drag-off-screen
-    window.addEventListener('mouseup', onMouseUp);     // Keep window for drag-release
+    container.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
 
     const handleResize = () => {
         camera.aspect = window.innerWidth / window.innerHeight;
@@ -189,10 +213,10 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     const animate = () => {
         requestAnimationFrame(animate);
         
-        // Auto-rotation fix: explicitly checks if a card is selected
-        if (!isDraggingRef.current && activeCardRef.current === null) {
+        // Auto-Rotate Fix
+        if (!isDraggingRef.current && !activeCardRef.current) {
             carouselGroup.rotation.y += 0.003;
-        } else if (activeCardRef.current !== null && targetRotationRef.current !== null) {
+        } else if (activeCardRef.current && targetRotationRef.current !== null) {
             carouselGroup.rotation.y += (targetRotationRef.current - carouselGroup.rotation.y) * 0.1;
         }
         
@@ -207,12 +231,13 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     animate();
 
     return () => {
-        canvas.removeEventListener('mousedown', onMouseDown);
+        container.removeEventListener('mousedown', onMouseDown);
         window.removeEventListener('mousemove', onMouseMove);
         window.removeEventListener('mouseup', onMouseUp);
         window.removeEventListener('resize', handleResize);
         if (soundtrackRef.current?.isPlaying) soundtrackRef.current.stop();
         renderer.dispose();
+        if (mountRef.current) mountRef.current.innerHTML = '';
     };
   }, []);
 
@@ -237,17 +262,20 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
   const currentStats = CARDS_DATA.find(c => c.id === activeCard);
 
   return (
-    <div className="absolute inset-0 w-full h-full pointer-events-none select-none z-10 overflow-hidden bg-[#050404]">
-      
-      {/* Required Overlays from your CSS */}
+    <div style={{ position: 'absolute', width: '100%', height: '100%', top: 0, left: 0 }}>
+      {/* Visual Overlays from CSS */}
       <div className="scanlines" />
       <div className="crt-overlay" />
 
-      {/* 3D Container (Allows pointer events so we can spin it) */}
-      <div ref={mountRef} className="absolute inset-0 pointer-events-auto cursor-grab active:cursor-grabbing z-0" />
+      {/* 3D Scene Layer */}
+      <div 
+        ref={mountRef} 
+        style={{ position: 'absolute', width: '100%', height: '100%', zIndex: 1, cursor: 'grab' }} 
+      />
       
-      {!isInitialized ? (
-        <div id="start-overlay" className="pointer-events-auto z-50">
+      {/* 1. BOOT SCREEN OVERLAY (Matches original CSS Layout exactly) */}
+      {!isInitialized && (
+        <div id="start-overlay">
           <div className="start-box">
             <h1 className="font-metal">BOR-MAGEDDON</h1>
             <div className="font-mono-title" style={{ marginTop: '10px', letterSpacing: '4px' }}>
@@ -263,53 +291,61 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
             </p>
           </div>
         </div>
-      ) : (
-        <>
-          {/* Header UI */}
-          <div id="terminal-header" className="pointer-events-auto">
-            <div id="hint">SYSTEM_STATUS: [SCANNING_AGENTS]</div>
-            <button id="music-toggle" onClick={toggleAudio}>
-                AUDIO: [{audioOn ? 'ON' : 'OFF'}]
-            </button>
-          </div>
-          
-          {/* Expanded Card Details */}
-          <div id="expanded-card" className={activeCard ? 'active' : ''} style={{ display: activeCard ? 'flex' : 'none', pointerEvents: 'auto' }}>
-            {activeCard && currentStats && (
-              <div className="card-content">
-                <button className="close-btn" onClick={() => handleSetActiveCard(null)}>X</button>
-                
-                <div style={{ color: '#00ff00', fontSize: '10px', fontWeight: 'bold', marginBottom: '10px' }}>
-                  DE-ENCRYPTION SUCCESSFUL
-                </div>
-                
-                <h2 className="card-title font-metal">{currentStats.title}</h2>
-                <p className="card-desc mb-6">{currentStats.desc}</p>
-                
-                <div style={{ border: '1px solid rgba(255,51,51,0.3)', padding: '15px', marginBottom: '20px', background: 'rgba(255,51,51,0.05)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '5px' }}>
-                    <span className="stat-label">POWER</span> <span className="stat-label">{currentStats.pwr}%</span>
-                  </div>
-                  <div style={{ height: '4px', background: '#333', marginBottom: '15px' }}>
-                    <div style={{ height: '100%', width: `${currentStats.pwr}%`, background: '#ff3333' }} />
-                  </div>
-                  
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '5px' }}>
-                    <span className="stat-label">SPEED</span> <span className="stat-label">{currentStats.spd}%</span>
-                  </div>
-                  <div style={{ height: '4px', background: '#333' }}>
-                    <div style={{ height: '100%', width: `${currentStats.spd}%`, background: '#00ffff' }} />
-                  </div>
-                </div>
-                
-                <button className="select-btn" onClick={() => onSelect(activeCard)}>
-                  DEPLOY TO BOR
-                </button>
-              </div>
-            )}
-          </div>
-        </>
       )}
+
+      {/* 2. MAIN MENU UI (Header and Audio) */}
+      {isInitialized && (
+        <div id="terminal-header">
+          <div id="hint">SYSTEM_STATUS: [SCANNING_AGENTS]</div>
+          <button id="music-toggle" onClick={toggleAudio}>
+            AUDIO: [{audioOn ? 'ON' : 'OFF'}]
+          </button>
+        </div>
+      )}
+      
+      {/* 3. EXPANDED CHARACTER CARD */}
+      {isInitialized && (
+        <div 
+            id="expanded-card" 
+            className={activeCard ? 'active' : ''} 
+            style={{ display: activeCard ? 'flex' : 'none', opacity: activeCard ? 1 : 0 }}
+        >
+          {currentStats && (
+            <div className="card-content">
+              <button className="close-btn" onClick={() => handleSetActiveCard(null)}>X</button>
+              
+              <div style={{ color: '#00ff00', fontSize: '10px', fontWeight: 'bold', marginBottom: '10px', fontFamily: '"Space Mono", monospace' }}>
+                DE-ENCRYPTION SUCCESSFUL
+              </div>
+              
+              <h2 className="card-title font-metal">{currentStats.title}</h2>
+              <p className="card-desc" style={{ marginBottom: '20px' }}>{currentStats.desc}</p>
+              
+              {/* Stat Bars */}
+              <div style={{ border: '1px solid rgba(255,51,51,0.3)', padding: '15px', marginBottom: '20px', background: 'rgba(255,51,51,0.05)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '5px' }}>
+                  <span className="stat-label">POWER</span> <span className="stat-label">{currentStats.pwr}%</span>
+                </div>
+                <div style={{ height: '4px', background: '#333', marginBottom: '15px' }}>
+                  <div style={{ height: '100%', width: `${currentStats.pwr}%`, background: '#ff3333' }} />
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '5px' }}>
+                  <span className="stat-label">SPEED</span> <span className="stat-label">{currentStats.spd}%</span>
+                </div>
+                <div style={{ height: '4px', background: '#333' }}>
+                  <div style={{ height: '100%', width: `${currentStats.spd}%`, background: '#00ffff' }} />
+                </div>
+              </div>
+              
+              <button className="select-btn" onClick={() => onSelect(activeCard)}>
+                DEPLOY TO BOR
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
     </div>
   );
 };
