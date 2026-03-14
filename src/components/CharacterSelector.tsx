@@ -25,6 +25,14 @@ const CARDS_DATA = [
 ];
 
 // Utility: Canvas Textures for 3D Cards
+function createTitleTexture() {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 256;
+    const ctx = c.getContext('2d')!; ctx.textAlign = 'center';
+    ctx.font = '900 130px "Metal Mania", Impact, sans-serif';
+    ctx.fillStyle = '#ff3333'; ctx.fillText('BORMAGEDDON', 512, 128);
+    return new THREE.CanvasTexture(c);
+}
+
 function createCardTexture(card: any, img: HTMLImageElement | null = null) {
     const c = document.createElement('canvas'); c.width = 512; c.height = 700;
     const ctx = c.getContext('2d')!;
@@ -38,12 +46,12 @@ function createCardTexture(card: any, img: HTMLImageElement | null = null) {
     }
     
     ctx.strokeStyle = card.accent; ctx.lineWidth = 20; ctx.strokeRect(10,10,492,680);
-    ctx.fillStyle = card.accent; ctx.font = 'bold 24px monospace'; ctx.fillText(card.label, 50, 75);
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 75px monospace'; ctx.fillText(card.title, 50, 610);
+    ctx.fillStyle = card.accent; ctx.font = 'bold 24px "Space Mono"'; ctx.fillText(card.label, 50, 75);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 75px "Space Mono"'; ctx.fillText(card.title, 50, 610);
     
     const tex = new THREE.CanvasTexture(c); 
     tex.magFilter = THREE.NearestFilter;
-    tex.minFilter = THREE.LinearFilter;
+    tex.minFilter = THREE.LinearFilter; // Fixes WebGL 'immutable texture' crash
     return tex;
 }
 
@@ -54,7 +62,6 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
   
   const soundtrackRef = useRef<THREE.Audio | null>(null);
   const activeCardRef = useRef<string | null>(null);
-  const carouselGroupRef = useRef<THREE.Group | null>(null);
   const targetRotationRef = useRef<number | null>(null);
 
   const handleSetActiveCard = (cardId: string | null) => {
@@ -93,9 +100,12 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     pointLight.position.set(0, 5, 10);
     scene.add(pointLight);
 
+    const titleMesh = new THREE.Mesh(new THREE.PlaneGeometry(24, 6), new THREE.MeshBasicMaterial({ map: createTitleTexture(), transparent: true, opacity: 0.5, depthWrite: false }));
+    titleMesh.position.set(0, 2, -5);
+    scene.add(titleMesh);
+
     const carouselGroup = new THREE.Group();
-    carouselGroupRef.current = carouselGroup;
-    const RADIUS = 4.5;
+    const RADIUS = 4;
     carouselGroup.position.z = -RADIUS;
     scene.add(carouselGroup);
 
@@ -106,14 +116,7 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         const theta = i * ANGLE_STEP;
         const mesh = new THREE.Mesh(
             new THREE.BoxGeometry(4, 6, 0.15), 
-            [
-                new THREE.MeshStandardMaterial({color: 0x111111}), 
-                new THREE.MeshStandardMaterial({color: 0x111111}), 
-                new THREE.MeshStandardMaterial({color: 0x111111}), 
-                new THREE.MeshStandardMaterial({color: 0x111111}), 
-                new THREE.MeshBasicMaterial({transparent: true}), 
-                new THREE.MeshStandardMaterial({color: 0x000000})
-            ]
+            [new THREE.MeshStandardMaterial({color: 0x111111}), new THREE.MeshStandardMaterial({color: 0x111111}), new THREE.MeshStandardMaterial({color: 0x111111}), new THREE.MeshStandardMaterial({color: 0x111111}), new THREE.MeshBasicMaterial({transparent: true}), new THREE.MeshStandardMaterial({color: 0x000000})]
         );
         mesh.userData = { index: i, id: card.id };
         mesh.material[4].map = createCardTexture(card);
@@ -121,7 +124,7 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
         const img = new Image(); img.crossOrigin = "anonymous";
         img.onload = () => { 
             const newTex = createCardTexture(card, img);
-            mesh.material[4].map?.dispose();
+            mesh.material[4].map?.dispose(); // Cleans old texture memory
             mesh.material[4].map = newTex;
             mesh.material[4].needsUpdate = true; 
         };
@@ -142,9 +145,7 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
     const onMouseDown = (e: MouseEvent) => { isDragging = true; prevX = e.clientX; };
     const onMouseMove = (e: MouseEvent) => {
         if (!isDragging) return;
-        if (carouselGroupRef.current) {
-            carouselGroupRef.current.rotation.y += (e.clientX - prevX) * 0.007;
-        }
+        carouselGroup.rotation.y += (e.clientX - prevX) * 0.01;
         prevX = e.clientX;
     };
     const onMouseUp = (e: MouseEvent) => {
@@ -166,12 +167,10 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
 
     const animate = () => {
         requestAnimationFrame(animate);
-        if (carouselGroupRef.current) {
-            if (!isDragging && !activeCardRef.current) {
-                carouselGroupRef.current.rotation.y += 0.003;
-            } else if (activeCardRef.current && targetRotationRef.current !== null) {
-                carouselGroupRef.current.rotation.y += (targetRotationRef.current - carouselGroupRef.current.rotation.y) * 0.1;
-            }
+        if (!isDragging && !activeCardRef.current) {
+            carouselGroup.rotation.y += 0.003;
+        } else if (activeCardRef.current && targetRotationRef.current !== null) {
+            carouselGroup.rotation.y += (targetRotationRef.current - carouselGroup.rotation.y) * 0.1;
         }
         
         const pos = ashSystem.geometry.attributes.position.array as Float32Array;
@@ -205,32 +204,35 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
   const currentStats = CARDS_DATA.find(c => c.id === activeCard);
 
   return (
-    <div className="absolute inset-0 w-full h-full pointer-events-none select-none z-10 overflow-hidden">
+    <div className="absolute inset-0 w-full h-full pointer-events-none select-none z-10">
       <div ref={mountRef} className="absolute inset-0 pointer-events-auto cursor-grab active:cursor-grabbing" />
       
       {!isInitialized ? (
-        <div className="absolute inset-0 flex items-center justify-center bg-black z-50 pointer-events-auto">
-          <div className="relative p-12 border-4 border-orange-700/50 bg-black shadow-[0_0_50px_rgba(154,52,18,0.3)] flex flex-col items-center">
+        <div className="absolute inset-0 flex items-center justify-center bg-[#050404] z-50 pointer-events-auto">
+          {/* TERMINAL 01 AESTHETIC RESTORED */}
+          <div className="flex flex-col items-center border-2 border-[#ff3333] p-16 shadow-[0_0_40px_rgba(255,51,51,0.3)] min-w-[600px] bg-black">
+            
             <h1 className="text-white text-6xl md:text-8xl font-black italic tracking-tighter mb-2 drop-shadow-[4px_4px_0px_#ff3333] [font-family:Impact,sans-serif]">
               BOR-MAGEDDON
             </h1>
-            <div className="text-gray-400 font-mono text-xl tracking-[0.4em] mb-12 bg-zinc-900/80 px-4 py-1 border border-zinc-700">
+            
+            <div className="text-gray-400 font-mono text-2xl tracking-[0.2em] mb-8">
               [TERMINAL_01]
             </div>
             
-            <div className="w-full h-[2px] bg-gradient-to-r from-transparent via-zinc-700 to-transparent mb-12" />
+            <div className="w-full border-t border-zinc-700 mb-10" />
 
             <button 
                 onClick={handleInitialize} 
-                className="group relative bg-[#4a1d0d] border-2 border-orange-900 px-16 py-6 text-white font-mono text-2xl shadow-[0_0_20px_rgba(154,52,18,0.4)] hover:bg-orange-800 hover:scale-105 transition-all active:scale-95"
+                className="bg-[#8b4513] border-2 border-[#5c2e0b] px-12 py-5 text-white font-mono font-bold text-2xl tracking-[0.1em] shadow-[4px_4px_0px_#000] hover:bg-[#a0522d] transition-colors mb-12 active:translate-y-1 active:shadow-none cursor-pointer"
             >
-                <span className="relative z-10 tracking-[0.2em] font-bold">INITIALIZE PROTOCOL</span>
-                <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                INITIALIZE PROTOCOL
             </button>
             
-            <div className="mt-12 text-green-600 font-mono text-xs tracking-widest animate-pulse">
+            {/* Syntax Error Fixed Here (No more mismatched </p>) */}
+            <div className="text-[#00ff00] font-mono text-sm tracking-widest animate-pulse font-bold">
                 ESTABLISHING SECURE CONNECTION...
-            </p>
+            </div>
           </div>
         </div>
       ) : (
@@ -265,14 +267,14 @@ export const CharacterSelector: React.FC<CharacterSelectorProps> = ({ onSelect }
                
                <button 
                 onClick={() => onSelect(activeCard)}
-                className="w-full bg-red-600 py-4 font-black text-black text-xl hover:bg-white transition-all uppercase italic shadow-[4px_4px_0px_#440000]"
+                className="w-full bg-red-600 py-4 font-black text-black text-xl hover:bg-white transition-all uppercase italic shadow-[4px_4px_0px_#440000] cursor-pointer"
                >
                 DEPLOY TO BOR
                </button>
                
                <button 
                 onClick={() => handleSetActiveCard(null)} 
-                className="w-full mt-4 text-zinc-600 text-[10px] hover:text-white uppercase tracking-widest transition-colors"
+                className="w-full mt-4 text-zinc-600 text-[10px] hover:text-white uppercase tracking-widest transition-colors cursor-pointer"
                >
                 [BACK_TO_SELECTOR]
                </button>
