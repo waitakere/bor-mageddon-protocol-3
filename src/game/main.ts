@@ -1,8 +1,6 @@
 import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { MainLevel } from './scenes/MainLevel';
-import { UIScene } from './scenes/UIScene';
-// import { EndingScene } from './scenes/EndingScene'; // Uncomment if you have this file ready!
 
 /**
  * BOR-MAGEDDON 1993: Core Engine Configuration
@@ -25,8 +23,9 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
         mode: Phaser.Scale.FIT, // Ensures the 1080p game scales correctly on smaller monitors
         autoCenter: Phaser.Scale.CENTER_BOTH
     },
-    scene: [BootScene, MainLevel, UIScene], // Add EndingScene here when it's ready
-    pixelArt: true,      // Crucial for 16-bit Yugoslav sprites; prevents blurriness
-    roundPixels: true,   // Prevents sub-pixel rendering tearing on moving sprites
+    // REMOVED UIScene FROM HERE!
+    scene: [BootScene, MainLevel], 
+    pixelArt: true,       // Crucial for 16-bit Yugoslav sprites; prevents blurriness
+    roundPixels: true,    // Prevents sub-pixel rendering tearing on moving sprites
     backgroundColor: '#050505' // Base industrial void behind the parallax layers
 };
