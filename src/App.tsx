@@ -1,90 +1,69 @@
-import React, { useState } from 'react';
-import { CharacterSelector } from './components/CharacterSelector';
-import { GameContainer } from './components/GameContainer';
-import { SettingsMenu, ControlsHUD } from './components/SettingsMenu';
-import { WorldMap } from './components/WorldMap';
-import { GameHUD } from './components/GameHUD';
+import React, { useEffect, useState } from 'react';
 
-export default function App() {
-  // --- Core Game Flow State ---
-  const [gameState, setGameState] = useState<'MENU' | 'PLAYING'>('MENU');
-  const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null);
-  
-  // --- UI Overlays & Polish State ---
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isMapOpen, setIsMapOpen] = useState(false);
-  const [crtEnabled, setCrtEnabled] = useState(true);
-  const [volume, setVolume] = useState(0.5);
+export const StartScreen = ({ onStart }: { onStart: () => void }) => {
+    const [particles, setParticles] = useState<{ id: number; left: string; delay: string; duration: string; size: string }[]>([]);
 
-  const handleCharacterSelect = (character: string) => {
-    setSelectedCharacter(character);
-    setGameState('PLAYING');
-  };
+    useEffect(() => {
+        // Generate 30 random upward-falling red particles
+        const newParticles = Array.from({ length: 30 }).map((_, i) => ({
+            id: i,
+            left: `${Math.random() * 100}vw`,
+            delay: `${Math.random() * 5}s`,
+            duration: `${4 + Math.random() * 6}s`,
+            size: `${2 + Math.random() * 4}px`
+        }));
+        setParticles(newParticles);
+    }, []);
 
-  return (
-    <div className="w-screen h-screen bg-black overflow-hidden relative">
-      
-      {/* Top Right Navigation UI */}
-      <div className="absolute top-4 right-4 z-50 flex gap-3">
-        {gameState === 'PLAYING' && (
-          <button 
-            onClick={() => setIsMapOpen(true)}
-            className="text-[#b87333] font-mono text-xs border border-[#b87333] px-3 py-1 bg-black/80 hover:bg-[#b87333] hover:text-black transition-colors uppercase tracking-widest"
-          >
-            [OPERATIVNA MAPA]
-          </button>
-        )}
-        
-        <button 
-          onClick={() => setIsSettingsOpen(true)}
-          className="text-white font-mono text-xs border border-zinc-600 px-3 py-1 bg-black/80 hover:bg-white hover:text-black transition-colors uppercase tracking-widest"
-        >
-          [SETTINGS]
-        </button>
-      </div>
+    return (
+        <div className="relative w-full h-screen bg-black flex justify-center items-center overflow-hidden">
+            
+            {/* 1. CRT & Scanline Overlays */}
+            <div className="scanlines"></div>
+            <div className="crt-overlay"></div>
 
-      {/* --- MAIN GAME STATE ROUTING --- */}
-      {gameState === 'MENU' && (
-        <CharacterSelector onSelect={handleCharacterSelect} />
-      )}
-      
-      {gameState === 'PLAYING' && selectedCharacter && (
-        <GameContainer selectedCharacter={selectedCharacter} />
-      )}
+            {/* 2. Upward Falling Red Particles */}
+            {particles.map(p => (
+                <div 
+                    key={p.id} 
+                    className="particle"
+                    style={{
+                        left: p.left,
+                        animationDelay: p.delay,
+                        animationDuration: p.duration,
+                        width: p.size,
+                        height: p.size
+                    }}
+                />
+            ))}
 
-      {/* --- HUD & OVERLAYS --- */}
-      
-      {/* Permanent Controls Reminder */}
-      {gameState === 'PLAYING' && <ControlsHUD />}
+            {/* 3. The Main UI Box */}
+            <div className="start-box flex flex-col items-center">
+                
+                {/* Metal Mania Title */}
+                <h1 className="font-metal text-6xl md:text-8xl mb-4">
+                    BOR-MAGEDDON
+                </h1>
+                
+                {/* Space Mono Subtitle */}
+                <h2 className="font-mono-title text-xl md:text-2xl text-gray-400 mb-12">
+                    [TERMINAL_01]
+                </h2>
 
-      {/* Modern React Game HUD (Option B) */}
-      {gameState === 'PLAYING' && <GameHUD />}
+                <hr className="w-full border-t border-red-900 mb-8 opacity-50" />
 
-      {/* Settings Modal */}
-      <SettingsMenu 
-        isOpen={isSettingsOpen} 
-        onClose={() => setIsSettingsOpen(false)} 
-        crtEnabled={crtEnabled}
-        onCrtToggle={setCrtEnabled}
-        volume={volume}
-        onVolumeChange={setVolume}
-      />
+                {/* The Big Red Button */}
+                <button 
+                    id="initialize-btn" 
+                    onClick={onStart}
+                >
+                    INITIALIZE PROTOCOL
+                </button>
 
-      {/* World Map / Level Selector Modal */}
-      {isMapOpen && (
-        <WorldMap onClose={() => setIsMapOpen(false)} />
-      )}
-
-      {/* 1993 CRT Scanline & Phosphor Overlay */}
-      {crtEnabled && (
-        <div 
-          className="pointer-events-none absolute inset-0 z-40 mix-blend-overlay opacity-30"
-          style={{
-            background: "linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 118, 0.06))",
-            backgroundSize: "100% 2px, 3px 100%"
-          }}
-        />
-      )}
-    </div>
-  );
-}
+                <p className="mt-8 text-green-500 font-mono text-sm tracking-widest animate-pulse">
+                    ESTABLISHING SECURE CONNECTION...
+                </p>
+            </div>
+        </div>
+    );
+};
