@@ -9,9 +9,8 @@ export class BootScene extends Phaser.Scene {
         console.log("REAL BOOT INITIATED: Loading actual assets...");
 
         // ==========================================
-        // 1. LOAD ENVIRONMENT ASSETS (From your screenshot!)
+        // 1. LOAD ENVIRONMENT ASSETS 
         // ==========================================
-        // Notice the path: assets/images/environments/...
         this.load.image('part1_sky', 'assets/images/environments/part1_sky.png');
         this.load.image('part1_mid', 'assets/images/environments/part1_mid.png');
         this.load.image('part1_floor', 'assets/images/environments/part1_floor.png');
@@ -22,13 +21,13 @@ export class BootScene extends Phaser.Scene {
         this.load.image('kontejner', 'assets/images/environments/kontejner.png');
 
         // ==========================================
-        // 2. LOAD REAL TEXTURE ATLASES (From your screenshot!)
+        // 2. LOAD REAL TEXTURE ATLASES 
         // ==========================================
-        // Notice the path: assets/sprites/...
         this.load.atlas('marko', 'assets/sprites/marko.png', 'assets/sprites/marko.json');
         this.load.atlas('maja', 'assets/sprites/maja.png', 'assets/sprites/maja.json');
         this.load.atlas('darko', 'assets/sprites/darko.png', 'assets/sprites/darko.json');
         
+        // This mega-atlas now holds MUP, Dizel, Miner, AND Slobodan!
         this.load.atlas('enemies_1993', 'assets/sprites/enemies_1993.png', 'assets/sprites/enemies_1993.json');
 
         // ==========================================
@@ -39,16 +38,11 @@ export class BootScene extends Phaser.Scene {
         ]);
 
         // ==========================================
-        // 4. GENERATE PLACEHOLDERS FOR MISSING ASSETS
+        // 4. GENERATE PLACEHOLDERS FOR MISSING ITEMS
         // ==========================================
-        // (Since Slobodan's PNG isn't in the sprites folder yet, we keep him as a box so the game doesn't crash!)
         const graphics = this.add.graphics();
-
-        graphics.fillStyle(0x9900ff, 1); 
-        graphics.fillRect(0, 0, 128, 200);
-        graphics.generateTexture('boss_slobodan_93', 128, 200);
         
-        // Placeholder items in case they get dropped
+        // Placeholder items in case they drop from barrels
         graphics.fillStyle(0x00ff00, 1); 
         graphics.fillRect(0, 0, 32, 32); 
         graphics.generateTexture('item_dinar', 32, 32); 
@@ -68,7 +62,7 @@ export class BootScene extends Phaser.Scene {
     }
 
     create() {
-        // Generate the 1993 enemy animations from the real Mega-Atlas
+        // Generate ALL 1993 character animations from the Mega-Atlas (including Slobodan)
         this.createEnemy1993Animations();
 
         console.log("BOOT COMPLETE. Launching MainLevel...");
@@ -95,6 +89,15 @@ export class BootScene extends Phaser.Scene {
             {
                 character: 'Miner',
                 animations: ['miner-walk', 'miner-melee', 'miner-damage', 'miner-dying', 'miner-knockdown-get-up']
+            },
+            // SLOBODAN IS NOW PARSED DIRECTLY FROM THE ENEMIES_1993 ATLAS!
+            {
+                character: 'SlobodanCEO',
+                animations: [
+                    'slobodan-walk', 'slobodan-run', 'slobodan-jump', 'slobodan-jump-punch', 
+                    'slobodan-punch-1', 'slobodan-punch-2', 'slobodan-damage', 
+                    'slobodan-special-attack', 'slobodan-dying', 'slobodan-knockdown-get-up'
+                ]
             }
         ];
 
