@@ -10,24 +10,29 @@ export const GameContainer: React.FC<GameContainerProps> = ({ selectedCharacter 
   const gameRef = useRef<Phaser.Game | null>(null);
 
   useEffect(() => {
-    // Prevent React Strict Mode from booting two copies of the game at the same time
-    if (gameRef.current) return;
-
-    // Merge the imported settings with the specific HTML div ID we are creating below
-    const finalConfig: Phaser.Types.Core.GameConfig = {
+    // 1. Initialize the Phaser Game Engine
+    // We add the 'parent' property here, matching the ID of the div below!
+    const config: Phaser.Types.Core.GameConfig = {
       ...GameConfig,
-      parent: 'phaser-container'
+      parent: 'game-container', 
     };
 
-    // Boot the Phaser Engine
-    const game = new Phaser.Game(finalConfig);
-    gameRef.current = game;
+    gameRef.current = new Phaser.Game(config);
 
-    // Pass the chosen character into Phaser's global memory (Registry)
-    // MainLevel.ts will read this exact string to decide who to spawn!
-    game.registry.set('selectedCharacter', selectedCharacter.toLowerCase());
+    // 2. Pass the selected character to the game scene
+    // We delay this slightly to ensure the engine has booted
+    setTimeout(() => {
+        if (gameRef.current) {
+            // Find the active scene and pass the character ID
+            const activeScene = gameRef.current.scene.getScene('MainLevel');
+            if (activeScene) {
+                // (Optional: You can use this later to spawn Maja instead of Marko!)
+                activeScene.registry.set('selectedCharacter', selectedCharacter);
+            }
+        }
+    }, 500);
 
-    // Cleanup function: If the user leaves this screen, safely kill the game engine
+    // 3. Cleanup on unmount
     return () => {
       if (gameRef.current) {
         gameRef.current.destroy(true);
@@ -37,9 +42,10 @@ export const GameContainer: React.FC<GameContainerProps> = ({ selectedCharacter 
   }, [selectedCharacter]);
 
   return (
+    // The id="game-container" is CRITICAL. It is exactly where Phaser will inject the canvas!
     <div 
-      id="phaser-container" 
-      className="w-full h-full flex justify-center items-center bg-black absolute inset-0 z-20"
+        id="game-container" 
+        className="w-full h-full bg-[#050505] overflow-hidden" 
     />
   );
 };
