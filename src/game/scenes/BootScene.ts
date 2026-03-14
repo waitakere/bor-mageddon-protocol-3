@@ -9,9 +9,22 @@ export class BootScene extends Phaser.Scene {
         console.log("REAL BOOT INITIATED: Loading actual assets...");
 
         // ==========================================
-        // 1. LOAD REAL TEXTURE ATLASES
+        // 1. LOAD ENVIRONMENT ASSETS (From your screenshot!)
         // ==========================================
-        // Paths updated to match your flat 'assets/sprites/' structure
+        // Notice the path: assets/images/environments/...
+        this.load.image('part1_sky', 'assets/images/environments/part1_sky.png');
+        this.load.image('part1_mid', 'assets/images/environments/part1_mid.png');
+        this.load.image('part1_floor', 'assets/images/environments/part1_floor.png');
+
+        // Breakable Objects
+        this.load.image('barrel', 'assets/images/environments/barrel.png');
+        this.load.image('crate', 'assets/images/environments/crate.png');
+        this.load.image('kontejner', 'assets/images/environments/kontejner.png');
+
+        // ==========================================
+        // 2. LOAD REAL TEXTURE ATLASES (From your screenshot!)
+        // ==========================================
+        // Notice the path: assets/sprites/...
         this.load.atlas('marko', 'assets/sprites/marko.png', 'assets/sprites/marko.json');
         this.load.atlas('maja', 'assets/sprites/maja.png', 'assets/sprites/maja.json');
         this.load.atlas('darko', 'assets/sprites/darko.png', 'assets/sprites/darko.json');
@@ -19,26 +32,29 @@ export class BootScene extends Phaser.Scene {
         this.load.atlas('enemies_1993', 'assets/sprites/enemies_1993.png', 'assets/sprites/enemies_1993.json');
 
         // ==========================================
-        // 2. LOAD REAL AUDIO SPRITE
+        // 3. LOAD REAL AUDIO SPRITE
         // ==========================================
         this.load.audioSprite('sfx_atlas', 'assets/audio/sfx_atlas.json', [
             'assets/audio/sfx_atlas.mp3'
         ]);
 
         // ==========================================
-        // 3. GENERATE PLACEHOLDERS FOR MISSING ASSETS
+        // 4. GENERATE PLACEHOLDERS FOR MISSING ASSETS
         // ==========================================
-        // (We keep these as colored boxes until you upload the real art!)
+        // (Since Slobodan's PNG isn't in the sprites folder yet, we keep him as a box so the game doesn't crash!)
         const graphics = this.add.graphics();
 
         graphics.fillStyle(0x9900ff, 1); 
         graphics.fillRect(0, 0, 128, 200);
         graphics.generateTexture('boss_slobodan_93', 128, 200);
+        
+        // Placeholder items in case they get dropped
+        graphics.fillStyle(0x00ff00, 1); 
+        graphics.fillRect(0, 0, 32, 32); 
+        graphics.generateTexture('item_dinar', 32, 32); 
+        graphics.generateTexture('item_health', 32, 32); 
+        graphics.generateTexture('item_pickaxe', 32, 32); 
         graphics.clear();
-
-        graphics.fillStyle(0x555555, 1); graphics.fillRect(0, 0, 128, 128); graphics.generateTexture('kiosk', 128, 128); graphics.clear();
-        graphics.fillStyle(0x00ff00, 1); graphics.fillRect(0, 0, 32, 32); graphics.generateTexture('item_dinar', 32, 32); graphics.generateTexture('item_health', 32, 32); graphics.generateTexture('item_pickaxe', 32, 32); graphics.clear();
-        graphics.fillStyle(0x111122, 1); graphics.fillRect(0, 0, 1920, 1080); graphics.generateTexture('part1_sky', 1920, 1080); graphics.clear();
 
         // Safety override so missing animations don't crash the engine
         const originalPlay = Phaser.GameObjects.Sprite.prototype.play;
