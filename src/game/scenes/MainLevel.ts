@@ -3,7 +3,7 @@ import { Marko } from '../entities/Marko';
 import { MUP } from '../entities/MUP';
 
 export class MainLevel extends Phaser.Scene {
-    public player!: Marko;
+    public player!: any; 
     public enemies!: Phaser.Physics.Arcade.Group;
     public breakables!: Phaser.Physics.Arcade.Group;
     public items!: Phaser.Physics.Arcade.Group;
@@ -20,8 +20,10 @@ export class MainLevel extends Phaser.Scene {
     }
 
     create() {
-        // World Setup
+        // Physics Setup
         this.physics.world.setBounds(0, 750, 4000, 330); 
+
+        // Parallax
         this.add.image(0, 0, 'part1_sky').setOrigin(0, 0).setDisplaySize(4000, 1080).setScrollFactor(0.1);
         this.add.image(0, 1080, 'part1_mid').setOrigin(0, 1).setDisplaySize(4000, 650).setScrollFactor(0.4);
         this.add.image(0, 1080, 'part1_floor').setOrigin(0, 1).setDisplaySize(4000, 450).setScrollFactor(1);
@@ -32,41 +34,50 @@ export class MainLevel extends Phaser.Scene {
         this.enemies = this.physics.add.group();
         this.projectiles = this.physics.add.group();
 
-        // Spawn Marko
-        this.player = new Marko(this, 200, 950);
+        // CHARACTER SELECTION LOGIC
+        const charKey = this.registry.get('selectedCharacter') || 'marko';
+        console.log("Spawning character:", charKey);
+        
+        // Spawn the correct entity
+        this.player = new Marko(this, 200, 950); 
         this.player.setScale(1.5);
+        
+        // Force physics body to never rotate
+        if (this.player.body) {
+            (this.player.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
+        }
 
-        // Spawn MUPs
+        // Enemies
         const mup1 = new MUP(this, 1000, 950);
         this.enemies.add(mup1);
 
-        // Camera
         this.cameras.main.setBounds(0, 0, 4000, 1080);
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
-        // Input
         this.updateReactHUD();
     }
 
-    update(time: number, delta: number) {
+    update() {
         if (!this.player) return;
 
         this.handleCameraLock();
 
-        // FORCED UPRIGHT SNAP (The Anti-Sideways Hammer)
+        // THE NUCLEAR ROTATION FIX
+        // We iterate through every sprite with a body and FORCE angle to 0
         this.children.each((child: any) => {
-            if (child.body && (child.type === 'Sprite' || child instanceof Phaser.Physics.Arcade.Sprite)) {
+            if (child.body) {
                 child.setAngle(0);
-                child.setRotation(0);
+                child.rotation = 0;
+                if (child.body.angularVelocity) child.body.angularVelocity = 0;
             }
         });
 
-        // SHADOW RENDERING
+        // Shadows
         this.shadows.clear().fillStyle(0x000000, 0.5);
         this.shadows.fillEllipse(this.player.x, this.player.y, 70, 20);
         this.enemies.getChildren().forEach((e: any) => { if (!e.isDead) this.shadows.fillEllipse(e.x, e.y, 70, 20); });
 
-        // INPUT PROCESSING
+        // Input
         const cursors = this.input.keyboard!.createCursorKeys();
         const punchKey = this.input.keyboard!.addKey('A');
         const kickKey = this.input.keyboard!.addKey('S');
@@ -80,7 +91,6 @@ export class MainLevel extends Phaser.Scene {
             kicking: Phaser.Input.Keyboard.JustDown(kickKey)
         });
 
-        // AI & DEPTH
         this.enemies.getChildren().forEach((e: any) => { if (e.updateAI && !e.isDead) e.updateAI(this.player); });
         this.children.each((c: any) => { if (c.y && c.type !== 'Image' && c.type !== 'Graphics') c.setDepth(c.y); });
     }
@@ -100,7 +110,6 @@ export class MainLevel extends Phaser.Scene {
                 }
             }
         }
-
         if (this.isLocked) {
             const screenEnemies = this.enemies.getChildren().filter((e: any) => !e.isDead && Math.abs(e.x - this.currentLockX) < 600);
             if (screenEnemies.length === 0) {
@@ -114,11 +123,7 @@ export class MainLevel extends Phaser.Scene {
 
     private updateReactHUD() {
         window.dispatchEvent(new CustomEvent('update-phaser-hud', {
-            detail: {
-                health: this.player?.health,
-                score: this.score,
-                showGo: !this.isLocked && this.player?.x < 3600
-            }
+            detail: { health: this.player?.health, score: this.score, showGo: !this.isLocked && this.player?.x < 3600 }
         }));
     }
 }
