@@ -1,171 +1,165 @@
 import Phaser from 'phaser';
-import { AudioManager } from '../systems/AudioManager';
-import { GoreManager } from '../systems/GoreManager';
 
-/**
- * Enemy: Represents industrial-era threats in Bor.
- * Handles AI movement, damage states, and Armor Break logic.
- */
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
-    public hp: number = 100;
-    public maxHealth: number = 100;
-    public enemyType: string;
+    public health: number = 100;
     public isDead: boolean = false;
-    public isHurt: boolean = false;
     public isAttacking: boolean = false;
-    public isKnockedDown: boolean = false;
-    public isArmorBroken: boolean = false;
+    public skinPrefix: string; 
+    public damageMultiplier: number = 1.0;
+    
+    private speed: number = 80;
+    private attackRange: number = 70;
+    private attackCooldown: boolean = false;
 
-    protected audio: AudioManager;
-    protected gore: GoreManager;
-    private armorBreakTimer: Phaser.Time.TimerEvent | null = null;
-
-    constructor(scene: Phaser.Scene, x: number, y: number, texture: string, gore: GoreManager, audio: AudioManager) {
-        super(scene, x, y, texture);
-        this.enemyType = texture;
-        this.gore = gore;
-        this.audio = audio;
-
+    constructor(scene: Phaser.Scene, x: number, y: number, skinPrefix: string = 'mup') {
+        // Loads dynamically based on the prefix passed in (mup, dizel, rudar, sloba)
+        super(scene, x, y, 'enemies_1993', `${skinPrefix}-idle/frame_000.png`);
+        this.skinPrefix = skinPrefix;
+        
         scene.add.existing(this);
         scene.physics.add.existing(this);
-
-        // 1. FIX: ANCHORING & ORIENTATION
-        this.setOrigin(0.5, 1); // Anchor at feet for proper depth sorting and floor alignment
-        this.setRotation(0);     // Force upright
+        this.setOrigin(0.5, 1);
         
-        // 2. HITBOX CALIBRATION
-        // Hitbox is now a flat "pancake" at the feet for better 2.5D collisions
+        // --- BOSS vs GRUNT SCALING ---
+        if (skinPrefix === 'sloba') {
+            this.setScale(2.1); // Boss is massive
+            this.health = 600;
+            this.damageMultiplier = 2.0;
+            this.speed = 110; // Slightly faster to pressure the player
+        } else {
+            this.setScale(1.7); // Standard enemy size
+            this.health = 100;
+        }
+        
+        // 2.5D HITBOX CALIBRATION (Pancake Hitbox at feet)
         this.setCollideWorldBounds(true);
         if (this.body) {
-            this.body.setSize(80, 30); 
-            this.body.setOffset(this.width / 2 - 40, this.height - 30);
-            
-            // 3. FIX: PREVENT ROTATION DRIFT
-            // This stops Arcade Physics from tilting the sprite when it hits walls or moves
+            this.body.setSize(60, 30);
+            this.body.setOffset(this.width/2 - 30, this.height - 30);
             (this.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
         }
     }
 
-    /**
-     * "The Stalker" AI Logic: Aligns with player's vertical lane then approaches on X-axis.
-     */
-    public updateAI(player: Phaser.Physics.Arcade.Sprite) {
-        if (this.isDead || this.isHurt || this.isAttacking || this.isKnockedDown) {
-            this.setVelocity(0, 0);
-            return;
-        }
-
-        // Always force rotation to 0 in case external forces impact the body
-        this.setRotation(0);
+    // --- 2.5D STALKER AI ---
+    public updateAI(player: any) {
+        if (this.isDead || this.isAttacking || player.isDead) return;
+        this.setAngle(0);
 
         const distanceX = player.x - this.x;
         const distanceY = player.y - this.y;
         const absDistX = Math.abs(distanceX);
         const absDistY = Math.abs(distanceY);
 
-        // 1. Lane Alignment (Z-axis/Y movement)
+        // 1. Lane Alignment (Move UP/DOWN to match player's depth)
         if (absDistY > 15) {
-            this.setVelocityY(distanceY > 0 ? 100 : -100);
+            this.setVelocityY(distanceY > 0 ? this.speed : -this.speed);
         } else {
             this.setVelocityY(0);
         }
 
-        // 2. Approach (X-axis movement)
-        if (absDistX > 100) { // Tighter follow distance for 16-bit feel
-            this.setVelocityX(distanceX > 0 ? 120 : -120);
+        // 2. Approach (Move LEFT/RIGHT to get into attack range)
+        if (absDistX > this.attackRange) {
+            this.setVelocityX(distanceX > 0 ? this.speed : -this.speed);
             this.setFlipX(distanceX < 0);
-            this.play(`${this.enemyType}_walk`, true);
+            
+            if (this.scene.anims.exists(`${this.skinPrefix}-walk`)) {
+                this.play(`${this.skinPrefix}-walk`, true);
+            }
         } 
-        // 3. Attack Trigger
-        else if (absDistX <= 100 && absDistY <= 30) {
+        // 3. Attack Trigger (Only attack if in range AND aligned on the Y-axis)
+        else if (absDistX <= this.attackRange && absDistY <= 20) {
             this.setVelocityX(0);
-            this.executeEnemyAttack();
+            this.setVelocityY(0); // Stop moving to swing
+            if (!this.attackCooldown) {
+                this.executeAttack(player);
+            } else {
+                if (this.scene.anims.exists(`${this.skinPrefix}-idle`)) {
+                    this.play(`${this.skinPrefix}-idle`, true);
+                }
+            }
         } else {
+            // Waiting to align
             this.setVelocityX(0);
-            this.play(`${this.enemyType}_idle`, true);
+            if (this.scene.anims.exists(`${this.skinPrefix}-idle`)) {
+                this.play(`${this.skinPrefix}-idle`, true);
+            }
         }
     }
 
-    protected executeEnemyAttack() {
-        // Overridden by specific enemy classes (e.g., MUP nightstick swing)
+    private executeAttack(player: any) {
+        this.isAttacking = true;
+        this.setFlipX(player.x < this.x);
+
+        // Mix up attacks slightly if multiple punches exist
+        const attackAnim = `${this.skinPrefix}-punch-1`;
+
+        if (this.scene.anims.exists(attackAnim)) {
+            this.play(attackAnim, true);
+            this.once('animationcomplete', () => {
+                this.isAttacking = false;
+                this.triggerCooldown();
+                
+                // Damage calculation
+                if (Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y) <= this.attackRange + 20) {
+                    if (player.takeDamage) player.takeDamage(10 * this.damageMultiplier);
+                }
+            });
+        } else {
+            // Failsafe
+            this.scene.time.delayedCall(400, () => {
+                this.isAttacking = false;
+                this.triggerCooldown();
+                if (Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y) <= this.attackRange + 20) {
+                    if (player.takeDamage) player.takeDamage(10 * this.damageMultiplier);
+                }
+            });
+        }
     }
 
-    /**
-     * Damage Logic: Accounts for Armor Break multipliers and gore feedback.
-     */
+    private triggerCooldown() {
+        this.attackCooldown = true;
+        // Bosses attack faster!
+        const delay = this.skinPrefix === 'sloba' ? 800 : 1200;
+        this.scene.time.delayedCall(delay, () => { this.attackCooldown = false; });
+    }
+
     public takeDamage(amount: number) {
         if (this.isDead) return;
-
-        const finalDamage = this.isArmorBroken ? Math.floor(amount * 1.5) : amount;
-        this.hp -= finalDamage;
         
-        this.isHurt = true;
-        
-        // Final Fight red flash effect
-        this.setTint(0xff0000); 
-
-        // Audio & Juice
-        this.audio.playMaleDamageGrunt();
-        this.scene.cameras.main.shake(100, 0.005);
-
-        // Spawn particles 
-        this.scene.events.emit('spawn-gore', this.x, this.y - (this.height / 2), 'BUREAUCRATIC', 'HIT');
-
-        this.scene.time.delayedCall(200, () => {
-            if (!this.isDead) {
-                this.isHurt = false;
-                // If armor is broken, return to Copper tint, otherwise clear
-                this.isArmorBroken ? this.setTint(0xB87333) : this.clearTint();
-            }
-        });
-
-        if (this.hp <= 0) this.die();
-    }
-
-    /**
-     * Applies Armor Break state: Reduces defense and tints sprite Copper/Rust.
-     */
-    public applyArmorBreak() {
-        if (this.isDead) return;
-
-        this.isArmorBroken = true;
-        this.setTint(0xB87333); 
-        
-        this.scene.events.emit('spawn-industrial-debris', { x: this.x, y: this.y - (this.height / 2) });
-
-        if (this.armorBreakTimer) this.armorBreakTimer.remove();
-        this.armorBreakTimer = this.scene.time.delayedCall(5000, () => {
-            this.isArmorBroken = false;
-            if (!this.isDead) this.clearTint();
-        });
-    }
-
-    protected die() {
-        this.isDead = true;
+        this.health -= amount;
+        this.isAttacking = false; 
         this.setVelocity(0, 0);
-        if (this.body) this.body.enable = false; 
-
-        this.scene.events.emit('spawn-gore', this.x, this.y - (this.height / 2), 'BUREAUCRATIC', 'FINISHER');
-        this.audio.playRandomSFX(['Break_1', 'Break_2', 'Break_3'], 0.8);
         
-        this.play(`${this.enemyType}_die`);
+        // Final Fight Red Flash
+        this.setTint(0xff0000);
 
-        // Sinking Archive Tween: Final Fight style fade out
-        this.scene.tweens.add({
-            targets: this,
-            alpha: 0,
-            duration: 100,
-            repeat: 5,
-            yoyo: true,
-            onComplete: () => {
-                this.scene.tweens.add({
-                    targets: this,
-                    alpha: 0,
-                    y: this.y + 20,
-                    duration: 1000,
-                    onComplete: () => this.destroy()
+        if (this.health <= 0) {
+            this.isDead = true;
+            (this.scene as any).registerEnemyDeath();
+
+            if (this.scene.anims.exists(`${this.skinPrefix}-dying`)) {
+                this.play(`${this.skinPrefix}-dying`, true);
+                
+                // Sinking / Blinking Body Effect from your old code
+                this.once('animationcomplete', () => {
+                    this.scene.tweens.add({
+                        targets: this, alpha: 0, duration: 150, repeat: 3, yoyo: true,
+                        onComplete: () => {
+                            this.scene.tweens.add({
+                                targets: this, alpha: 0, y: this.y + 20, duration: 800,
+                                onComplete: () => this.destroy()
+                            });
+                        }
+                    });
                 });
+            } else {
+                this.scene.time.delayedCall(300, () => this.destroy());
             }
-        });
+        } else {
+            if (this.scene.anims.exists(`${this.skinPrefix}-damage`)) {
+                this.play(`${this.skinPrefix}-damage`, true);
+            }
+            this.scene.time.delayedCall(150, () => this.clearTint());
+        }
     }
 }
