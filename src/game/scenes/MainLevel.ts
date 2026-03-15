@@ -15,16 +15,16 @@ export class MainLevel extends Phaser.Scene {
     private sectors: number[] = [800, 1600, 2400, 3200];
     private isLocked: boolean = false;
     private currentLockX: number = 0;
-    private score: number = 0;
+    public score: number = 0; // Exposed for enemy scripts to update
 
     constructor() {
         super({ key: 'MainLevel' });
     }
 
     create() {
+        // Set physics bounds (ground plane)
         this.physics.world.setBounds(0, 750, 4000, 330); 
 
-        // Parallax Layers
         this.add.image(0, 0, 'part1_sky').setOrigin(0, 0).setDisplaySize(4000, 1080).setScrollFactor(0.1);
         this.add.image(0, 1080, 'part1_mid').setOrigin(0, 1).setDisplaySize(4000, 650).setScrollFactor(0.4);
         this.add.image(0, 1080, 'part1_floor').setOrigin(0, 1).setDisplaySize(4000, 450).setScrollFactor(1);
@@ -35,7 +35,6 @@ export class MainLevel extends Phaser.Scene {
         this.enemies = this.physics.add.group();
         this.projectiles = this.physics.add.group();
 
-        // Spawning Logic based on Registry
         const charKey = this.registry.get('selectedCharacter') || 'marko';
         switch(charKey) {
             case 'maja': this.player = new Maja(this, 200, 950); break;
@@ -43,9 +42,10 @@ export class MainLevel extends Phaser.Scene {
             default: this.player = new Marko(this, 200, 950); break;
         }
 
-        this.player.setScale(1.5);
+        // RESET SCALE: Characters are naturally high-res
+        this.player.setScale(1);
 
-        // Enemies
+        // Spawn Enemy (MUP will scale itself up in its own class)
         this.enemies.add(new MUP(this, 1000, 950));
 
         this.cameras.main.setBounds(0, 0, 4000, 1080);
@@ -59,7 +59,7 @@ export class MainLevel extends Phaser.Scene {
 
         this.handleCameraLock();
 
-        // Rotation Lock for all entities
+        // Lock rotation globally to prevent physics spinning
         this.children.each((child: any) => {
             if (child.body && child.type === 'Sprite') {
                 child.setAngle(0);
@@ -67,18 +67,21 @@ export class MainLevel extends Phaser.Scene {
             }
         });
 
-        // Shadows
+        // Update Shadows
         this.shadows.clear().fillStyle(0x000000, 0.5);
         this.shadows.fillEllipse(this.player.x, this.player.y, 70, 20);
-        this.enemies.getChildren().forEach((e: any) => { if (!e.isDead) this.shadows.fillEllipse(e.x, e.y, 70, 20); });
+        this.enemies.getChildren().forEach((e: any) => { 
+            if (!e.isDead) this.shadows.fillEllipse(e.x, e.y, 70, 20); 
+        });
 
-        // Input Mapping
+        // Input Mapping (Includes SPACE for jump)
         const cursors = this.input.keyboard!.createCursorKeys();
         const keys = {
             up: cursors.up.isDown,
             down: cursors.down.isDown,
             left: cursors.left.isDown,
             right: cursors.right.isDown,
+            space: Phaser.Input.Keyboard.JustDown(this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)),
             punch: Phaser.Input.Keyboard.JustDown(this.input.keyboard!.addKey('A')),
             kicking: Phaser.Input.Keyboard.JustDown(this.input.keyboard!.addKey('S')),
             special: Phaser.Input.Keyboard.JustDown(this.input.keyboard!.addKey('Q')),
@@ -87,7 +90,7 @@ export class MainLevel extends Phaser.Scene {
 
         this.player.update(keys);
 
-        // Enemy AI & Depth
+        // Enemy AI & Depth Sorting
         this.enemies.getChildren().forEach((e: any) => { if (e.updateAI && !e.isDead) e.updateAI(this.player); });
         this.children.each((c: any) => { if (c.y && c.type !== 'Image' && c.type !== 'Graphics') c.setDepth(c.y); });
     }
