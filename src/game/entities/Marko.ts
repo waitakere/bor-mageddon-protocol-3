@@ -7,21 +7,15 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     public damageMultiplier: number = 1.0;
     public isAttacking: boolean = false;
     public isDead: boolean = false;
-    
-    // NEW JUMP STATE
     public isJumping: boolean = false;
 
-    // Movement Stats
     private walkSpeed: number = 160;
     private runSpeed: number = 320;
     private lastKey: string = '';
     private lastKeyTime: number = 0;
     private isRunning: boolean = false;
 
-    // --- COMBO SYSTEM VARIABLES ---
-    private comboStep: number = 1; // Tracks if we are on -1 or -2
-    private comboResetTimer: Phaser.Time.TimerEvent | null = null;
-    private queuedAttackType: 'punch' | 'kick' | null = null;
+    private queuedAction: string | null = null;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'marko', 'marko-idle/frame_000.png');
@@ -39,25 +33,14 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         if (this.isDead) return;
         this.setAngle(0);
 
-        // --- JUMP LOGIC (2.5D) ---
         if (input.space && !this.isJumping && !this.isAttacking) {
             this.isJumping = true;
-            
-            // Visual jump only (physics body stays on ground for shadows)
             this.scene.tweens.add({
-                targets: this,
-                displayOriginY: this.height + 150, // Moves sprite visual UP
-                duration: 350,
-                yoyo: true,
-                ease: 'Sine.easeInOut',
-                onComplete: () => {
-                    this.isJumping = false;
-                    this.displayOriginY = this.height; // Reset origin
-                }
+                targets: this, displayOriginY: this.height + 150, duration: 350, yoyo: true, ease: 'Sine.easeInOut',
+                onComplete: () => { this.isJumping = false; this.displayOriginY = this.height; }
             });
         }
 
-        // --- DASH LOGIC ---
         const now = this.scene.time.now;
         if (input.left || input.right) {
             const dir = input.left ? 'left' : 'right';
@@ -67,33 +50,31 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             }
         } else { this.isRunning = false; this.lastKey = ''; }
 
-        // --- COMBO INPUT LOGIC (Disabled while jumping) ---
-        if ((input.punch || input.kicking) && !this.isJumping) {
-            const attackType = input.punch ? 'punch' : 'kick';
-            
+        // --- NEW ACTION MAP LOGIC ---
+        let requestedAction: string | null = null;
+        if (input.special) requestedAction = 'special';
+        else if (input.finisher) requestedAction = 'finisher';
+        else if (input.p1) requestedAction = 'punch-1';
+        else if (input.p2) requestedAction = 'punch-2';
+        else if (input.k1) requestedAction = 'kick-1';
+        else if (input.k2) requestedAction = 'kick-2';
+
+        if (requestedAction && !this.isJumping) {
             if (!this.isAttacking) {
-                // If not attacking, start the attack immediately
-                this.executeAttack(attackType);
+                this.executeAction(requestedAction);
             } else {
-                // If already animating, queue the next move so it chains smoothly!
-                this.queuedAttackType = attackType;
+                this.queuedAction = requestedAction;
             }
             return; 
         }
 
-        // --- MOVEMENT LOGIC (Only if not attacking) ---
         if (!this.isAttacking) {
             const speed = this.isRunning ? this.runSpeed : this.walkSpeed;
             let vx = input.left ? -speed : (input.right ? speed : 0);
-            
-            // Prevent up/down movement while mid-air
             let vy = 0;
-            if (!this.isJumping) {
-                vy = input.up ? -speed * 0.6 : (input.down ? speed * 0.6 : 0);
-            }
+            if (!this.isJumping) vy = input.up ? -speed * 0.6 : (input.down ? speed * 0.6 : 0);
             
             this.setVelocity(vx, vy);
-            
             if (vx !== 0) this.setFlipX(vx < 0);
             
             if (vx !== 0 || vy !== 0) {
@@ -105,53 +86,39 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    // --- THE COMBO EXECUTION ENGINE ---
-    private executeAttack(type: 'punch' | 'kick') {
-        this.isAttacking = true;
-        this.setVelocity(0, 0); // Stop moving while hitting
+    private executeAction(action: string) {
+        if (action === 'special') {
+            if (this.smfMeter >= 25) { this.executeMegaphoneScream(); return; }
+            action = 'punch-1'; // Fallback if no SMF
+        }
+        if (action === 'finisher') {
+            if (this.smfMeter >= 100) { this.executeChainWhip(); return; }
+            action = 'kick-2'; // Fallback if no SMF
+        }
 
-        // 1. Determine which animation to play (e.g., 'marko-punch-1' or 'marko-punch-2')
-        const animName = `${this.characterName}-${type}-${this.comboStep}`;
-        
-        // Failsafe: If -2 doesn't exist, just play -1 again
-        const animToPlay = this.scene.anims.exists(animName) ? animName : `${this.characterName}-${type}-1`;
-        
-        // 2. Play it!
+        this.isAttacking = true;
+        this.setVelocity(0, 0);
+
+        const animToPlay = `${this.characterName}-${action}`;
         if (this.scene.anims.exists(animToPlay)) {
             this.play(animToPlay, true);
         }
 
-        // 3. Deal Damage Hitbox (Simplified)
         const hitZone = this.scene.add.zone(this.x + (this.flipX ? -50 : 50), this.y - 40, 60, 60);
         this.scene.physics.add.existing(hitZone);
         this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
-            // If it's the 2nd combo step, deal slightly more damage!
-            const damage = (this.comboStep === 2 ? 15 : 10) * this.damageMultiplier;
+            const damage = (action.includes('2') ? 15 : 10) * this.damageMultiplier;
             if (enemy.takeDamage) enemy.takeDamage(damage);
             hitZone.destroy(); 
         });
 
-        // 4. Advance the combo step (1 becomes 2, 2 resets to 1)
-        this.comboStep = this.comboStep === 1 ? 2 : 1;
-
-        // 5. Reset the Combo Timer (600ms window to press the next button)
-        if (this.comboResetTimer) this.comboResetTimer.remove();
-        this.comboResetTimer = this.scene.time.delayedCall(600, () => {
-            this.comboStep = 1; // Reset back to step 1 if player stops attacking
-            this.queuedAttackType = null;
-        });
-
-        // 6. When the animation finishes, check if they queued up another hit!
         this.once('animationcomplete', () => {
-            if (hitZone.active) hitZone.destroy(); // Cleanup hitbox if it missed
-            
-            if (this.queuedAttackType) {
-                // Instantly chain into the next attack
-                const nextAttack = this.queuedAttackType;
-                this.queuedAttackType = null;
-                this.executeAttack(nextAttack);
+            if (hitZone.active) hitZone.destroy();
+            if (this.queuedAction) {
+                const next = this.queuedAction;
+                this.queuedAction = null;
+                this.executeAction(next);
             } else {
-                // Combo finished, return to idle/movement
                 this.isAttacking = false;
                 this.smfMeter = Math.min(this.smfMeter + 5, 100);
                 (this.scene as any).updateReactHUD();
@@ -159,32 +126,78 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         });
     }
 
+    private executeMegaphoneScream() {
+        this.isAttacking = true;
+        this.setVelocity(0, 0);
+        this.smfMeter -= 25;
+        (this.scene as any).updateReactHUD();
+
+        const anim = this.scene.anims.exists('marko-special') ? 'marko-special' : 'marko-punch-2';
+        this.play(anim, true);
+
+        // Screen shake to simulate sonic wave
+        this.scene.cameras.main.shake(300, 0.01);
+
+        // Large cone/zone in front of him
+        const direction = this.flipX ? -1 : 1;
+        const waveZone = this.scene.add.zone(this.x + (100 * direction), this.y - 40, 200, 100);
+        this.scene.physics.add.existing(waveZone);
+        
+        this.scene.physics.add.overlap(waveZone, (this.scene as any).enemies, (wz, enemy: any) => {
+            if (enemy.takeDamage) {
+                enemy.takeDamage(20 * this.damageMultiplier);
+                if (enemy.body) enemy.setVelocityX(200 * direction); // Pushes enemies back
+            }
+        });
+
+        this.scene.time.delayedCall(250, () => { if (waveZone.active) waveZone.destroy(); });
+        this.once('animationcomplete', () => { this.isAttacking = false; });
+    }
+
+    private executeChainWhip() {
+        this.isAttacking = true;
+        this.smfMeter = 0;
+        (this.scene as any).updateReactHUD();
+
+        const anim = this.scene.anims.exists('marko-finisher') ? 'marko-finisher' : 'marko-kick-2';
+        this.play(anim, true);
+
+        // Heavy visual hit
+        this.scene.cameras.main.shake(600, 0.02);
+
+        // 360-degree massive damage radius
+        const spinZone = this.scene.add.circle(this.x, this.y - 40, 150);
+        this.scene.physics.add.existing(spinZone);
+        
+        this.scene.physics.overlap(spinZone, (this.scene as any).enemies, (sz, enemy: any) => {
+            if (enemy.takeDamage) {
+                enemy.takeDamage(90 * this.damageMultiplier);
+                if (enemy.body) enemy.setVelocityY(-200); // Pops them into the air
+            }
+        });
+
+        this.scene.time.delayedCall(200, () => { if (spinZone.active) spinZone.destroy(); });
+        this.once('animationcomplete', () => { this.isAttacking = false; });
+    }
+
     public takeDamage(amount: number) {
         this.health -= amount;
-        
-        // Getting hit breaks your combo!
-        this.comboStep = 1;
-        this.queuedAttackType = null;
-        
-        if (this.health <= 0) {
-            this.die();
-        } else {
+        this.queuedAction = null;
+        if (this.health <= 0) { this.die(); } 
+        else {
             const dmgAnim = `${this.characterName}-damage`;
             if (this.scene.anims.exists(dmgAnim)) {
-                this.isAttacking = true; 
-                this.play(dmgAnim, true);
+                this.isAttacking = true; this.play(dmgAnim, true);
                 this.once('animationcomplete', () => { this.isAttacking = false; });
             } else {
-                this.setTint(0xff0000);
-                this.scene.time.delayedCall(200, () => this.clearTint());
+                this.setTint(0xff0000); this.scene.time.delayedCall(200, () => this.clearTint());
             }
         }
         (this.scene as any).updateReactHUD();
     }
 
     private die() {
-        this.isDead = true;
-        this.setVelocity(0, 0);
+        this.isDead = true; this.setVelocity(0, 0);
         const dieAnim = `${this.characterName}-die`;
         if (this.scene.anims.exists(dieAnim)) this.play(dieAnim, true);
     }
