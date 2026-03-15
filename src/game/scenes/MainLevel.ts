@@ -15,14 +15,13 @@ export class MainLevel extends Phaser.Scene {
     private sectors: number[] = [800, 1600, 2400, 3200];
     private isLocked: boolean = false;
     private currentLockX: number = 0;
-    public score: number = 0; // Exposed for enemy scripts to update
+    public score: number = 0;
 
     constructor() {
         super({ key: 'MainLevel' });
     }
 
     create() {
-        // Set physics bounds (ground plane)
         this.physics.world.setBounds(0, 750, 4000, 330); 
 
         this.add.image(0, 0, 'part1_sky').setOrigin(0, 0).setDisplaySize(4000, 1080).setScrollFactor(0.1);
@@ -42,15 +41,11 @@ export class MainLevel extends Phaser.Scene {
             default: this.player = new Marko(this, 200, 950); break;
         }
 
-        // RESET SCALE: Characters are naturally high-res
         this.player.setScale(1);
-
-        // Spawn Enemy (MUP will scale itself up in its own class)
         this.enemies.add(new MUP(this, 1000, 950));
 
         this.cameras.main.setBounds(0, 0, 4000, 1080);
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
-
         this.updateReactHUD();
     }
 
@@ -59,38 +54,46 @@ export class MainLevel extends Phaser.Scene {
 
         this.handleCameraLock();
 
-        // Lock rotation globally to prevent physics spinning
         this.children.each((child: any) => {
             if (child.body && child.type === 'Sprite') {
-                child.setAngle(0);
-                child.rotation = 0;
+                child.setAngle(0); child.rotation = 0;
             }
         });
 
-        // Update Shadows
         this.shadows.clear().fillStyle(0x000000, 0.5);
         this.shadows.fillEllipse(this.player.x, this.player.y, 70, 20);
         this.enemies.getChildren().forEach((e: any) => { 
             if (!e.isDead) this.shadows.fillEllipse(e.x, e.y, 70, 20); 
         });
 
-        // Input Mapping (Includes SPACE for jump)
+        // INPUT COMBINATION LOGIC
         const cursors = this.input.keyboard!.createCursorKeys();
+        const kb = this.input.keyboard!;
+        
+        const q = kb.addKey('Q');
+        const w = kb.addKey('W');
+        const a = kb.addKey('A');
+        const s = kb.addKey('S');
+
         const keys = {
             up: cursors.up.isDown,
             down: cursors.down.isDown,
             left: cursors.left.isDown,
             right: cursors.right.isDown,
-            space: Phaser.Input.Keyboard.JustDown(this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)),
-            punch: Phaser.Input.Keyboard.JustDown(this.input.keyboard!.addKey('A')),
-            kicking: Phaser.Input.Keyboard.JustDown(this.input.keyboard!.addKey('S')),
-            special: Phaser.Input.Keyboard.JustDown(this.input.keyboard!.addKey('Q')),
-            finisher: Phaser.Input.Keyboard.JustDown(this.input.keyboard!.addKey('E'))
+            space: Phaser.Input.Keyboard.JustDown(kb.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)),
+            
+            p1: Phaser.Input.Keyboard.JustDown(q),
+            p2: Phaser.Input.Keyboard.JustDown(w),
+            k1: Phaser.Input.Keyboard.JustDown(a),
+            k2: Phaser.Input.Keyboard.JustDown(s),
+            
+            // Special: Q+W Pressed simultaneously
+            special: (Phaser.Input.Keyboard.JustDown(q) && w.isDown) || (Phaser.Input.Keyboard.JustDown(w) && q.isDown),
+            // Finisher: A+S Pressed simultaneously
+            finisher: (Phaser.Input.Keyboard.JustDown(a) && s.isDown) || (Phaser.Input.Keyboard.JustDown(s) && a.isDown)
         };
 
         this.player.update(keys);
-
-        // Enemy AI & Depth Sorting
         this.enemies.getChildren().forEach((e: any) => { if (e.updateAI && !e.isDead) e.updateAI(this.player); });
         this.children.each((c: any) => { if (c.y && c.type !== 'Image' && c.type !== 'Graphics') c.setDepth(c.y); });
     }
@@ -101,8 +104,7 @@ export class MainLevel extends Phaser.Scene {
             if (this.player.x > lockPoint && this.player.x < lockPoint + 50 && !this.isLocked) {
                 const enemies = this.enemies.getChildren().filter((e: any) => !e.isDead && e.x < lockPoint + 1000);
                 if (enemies.length > 0) {
-                    this.isLocked = true;
-                    this.currentLockX = lockPoint;
+                    this.isLocked = true; this.currentLockX = lockPoint;
                     cam.stopFollow();
                     this.physics.world.setBounds(lockPoint - (cam.width / 2), 750, cam.width, 330);
                     this.updateReactHUD();
@@ -119,12 +121,7 @@ export class MainLevel extends Phaser.Scene {
 
     public updateReactHUD() {
         window.dispatchEvent(new CustomEvent('update-phaser-hud', {
-            detail: { 
-                health: this.player?.health, 
-                smf: this.player?.smfMeter,
-                score: this.score, 
-                showGo: !this.isLocked && this.player?.x < 3600 
-            }
+            detail: { health: this.player?.health, smf: this.player?.smfMeter, score: this.score, showGo: !this.isLocked && this.player?.x < 3600 }
         }));
     }
 }
