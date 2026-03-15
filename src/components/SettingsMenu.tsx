@@ -12,11 +12,16 @@ export const ControlsHUD: React.FC = () => {
       <ul className="text-zinc-300 font-mono text-[10px] space-y-1">
         <li><span className="text-orange-500 font-bold">ARROWS:</span> MOVE</li>
         <li><span className="text-orange-500 font-bold">SPACE:</span> JUMP</li>
-        <li><span className="text-orange-500 font-bold">A:</span> PUNCH / MELEE / PICKUP</li>
-        <li><span className="text-orange-500 font-bold">S:</span> KICK</li>
-        <li><span className="text-orange-500 font-bold">D:</span> SHOOT</li>
-        <li><span className="text-orange-500 font-bold">Q:</span> SPECIAL ABILITY</li>
-        <li><span className="text-orange-500 font-bold">E:</span> FINISHER</li>
+        <li><span className="text-orange-500 font-bold">Q:</span> PUNCH 1 (JAB)</li>
+        <li><span className="text-orange-500 font-bold">W:</span> PUNCH 2 (HOOK)</li>
+        <li><span className="text-orange-500 font-bold">A:</span> KICK 1 (SNAP)</li>
+        <li><span className="text-orange-500 font-bold">S:</span> KICK 2 (HEAVY)</li>
+        <li className="pt-2 mt-1 border-t border-zinc-700/50">
+          <span className="text-red-500 font-bold">Q + W:</span> SPECIAL ABILITY
+        </li>
+        <li>
+          <span className="text-red-500 font-bold">A + S:</span> FINISHER
+        </li>
       </ul>
     </div>
   );
@@ -53,12 +58,12 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
     window.addEventListener('keydown', handleKeyDown);
 
     // Pause/Resume Phaser Engine
-    if (window.phaserGame) {
+    if ((window as any).phaserGame) {
       if (isOpen) {
         // Pausing MainLevel halts movement, AI, and physics
-        window.phaserGame.scene.pause('MainLevel'); 
+        (window as any).phaserGame.scene.pause('MainLevel'); 
       } else {
-        window.phaserGame.scene.resume('MainLevel');
+        (window as any).phaserGame.scene.resume('MainLevel');
       }
     }
 
@@ -77,8 +82,8 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
   // Sends volume data directly to the Phaser engine
   const handleVolumeChange = (newVolume: number) => {
     onVolumeChange(newVolume);
-    if (window.phaserGame) {
-      window.phaserGame.sound.volume = newVolume;
+    if ((window as any).phaserGame) {
+      (window as any).phaserGame.sound.volume = newVolume;
     }
   };
 
