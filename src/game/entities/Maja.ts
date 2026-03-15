@@ -1,27 +1,33 @@
 import Phaser from 'phaser';
 
 export class Maja extends Phaser.Physics.Arcade.Sprite {
-    public health: number = 150;
+    public health: number = 150; // Tank health
     public smfMeter: number = 0;
     public characterName: string = 'maja';
-    public damageMultiplier: number = 1.5;
+    public damageMultiplier: number = 1.5; // Heavy damage
     public isAttacking: boolean = false;
     public isDead: boolean = false;
 
+    // Movement Stats
     private walkSpeed: number = 110;
     private runSpeed: number = 220;
     private lastKey: string = '';
     private lastKeyTime: number = 0;
     private isRunning: boolean = false;
 
+    // --- COMBO SYSTEM VARIABLES ---
+    private comboStep: number = 1;
+    private comboResetTimer: Phaser.Time.TimerEvent | null = null;
+    private queuedAttackType: 'punch' | 'kick' | null = null;
+
     constructor(scene: Phaser.Scene, x: number, y: number) {
-        super(scene, x, y, 'maja', 'maja-idle/frame_001.png');
+        super(scene, x, y, 'maja', 'maja-idle/frame_000.png');
         scene.add.existing(this);
         scene.physics.add.existing(this);
         this.setOrigin(0.5, 1);
         if (this.body) {
-            this.body.setSize(90, 30);
-            this.body.setOffset(this.width/2 - 45, this.height - 30);
+            this.body.setSize(60, 30);
+            this.body.setOffset(this.width / 2 - 30, this.height - 30);
             (this.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
         }
     }
@@ -30,6 +36,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         if (this.isDead) return;
         this.setAngle(0);
 
+        // --- DASH LOGIC ---
         const now = this.scene.time.now;
         if (input.left || input.right) {
             const dir = input.left ? 'left' : 'right';
@@ -39,39 +46,104 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             }
         } else { this.isRunning = false; this.lastKey = ''; }
 
-        if ((input.punch || input.kicking) && !this.isAttacking) {
-            this.isAttacking = true;
-            this.setVelocity(0, 0);
-            this.play(`${this.characterName}-${input.punch ? 'punch' : 'kick'}`, true);
-            this.once('animationcomplete', () => { 
-                this.isAttacking = false;
-                this.smfMeter = Math.min(this.smfMeter + 8, 100);
-            });
-            return;
+        // --- COMBO INPUT LOGIC ---
+        if (input.punch || input.kicking) {
+            const attackType = input.punch ? 'punch' : 'kick';
+            if (!this.isAttacking) {
+                this.executeAttack(attackType);
+            } else {
+                this.queuedAttackType = attackType;
+            }
+            return; 
         }
 
+        // --- MOVEMENT LOGIC ---
         if (!this.isAttacking) {
             const speed = this.isRunning ? this.runSpeed : this.walkSpeed;
             let vx = input.left ? -speed : (input.right ? speed : 0);
             let vy = input.up ? -speed * 0.6 : (input.down ? speed * 0.6 : 0);
+            
             this.setVelocity(vx, vy);
             if (vx !== 0) this.setFlipX(vx < 0);
+            
             if (vx !== 0 || vy !== 0) {
                 const anim = this.isRunning ? `${this.characterName}-run` : `${this.characterName}-walk`;
                 this.play(this.scene.anims.exists(anim) ? anim : `${this.characterName}-walk`, true);
-            } else { this.play(`${this.characterName}-idle`, true); }
+            } else {
+                this.play(`${this.characterName}-idle`, true);
+            }
         }
+    }
+
+    // --- COMBO EXECUTION ENGINE ---
+    private executeAttack(type: 'punch' | 'kick') {
+        this.isAttacking = true;
+        this.setVelocity(0, 0);
+
+        const animName = `${this.characterName}-${type}-${this.comboStep}`;
+        const animToPlay = this.scene.anims.exists(animName) ? animName : `${this.characterName}-${type}-1`;
+        
+        if (this.scene.anims.exists(animToPlay)) {
+            this.play(animToPlay, true);
+        }
+
+        // Maja has a slightly wider reach
+        const hitZone = this.scene.add.zone(this.x + (this.flipX ? -60 : 60), this.y - 40, 70, 60);
+        this.scene.physics.add.existing(hitZone);
+        this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
+            const damage = (this.comboStep === 2 ? 15 : 10) * this.damageMultiplier;
+            if (enemy.takeDamage) enemy.takeDamage(damage);
+            hitZone.destroy(); 
+        });
+
+        this.comboStep = this.comboStep === 1 ? 2 : 1;
+
+        if (this.comboResetTimer) this.comboResetTimer.remove();
+        this.comboResetTimer = this.scene.time.delayedCall(600, () => {
+            this.comboStep = 1;
+            this.queuedAttackType = null;
+        });
+
+        this.once('animationcomplete', () => {
+            if (hitZone.active) hitZone.destroy();
+            
+            if (this.queuedAttackType) {
+                const nextAttack = this.queuedAttackType;
+                this.queuedAttackType = null;
+                this.executeAttack(nextAttack);
+            } else {
+                this.isAttacking = false;
+                this.smfMeter = Math.min(this.smfMeter + 5, 100);
+                (this.scene as any).updateReactHUD();
+            }
+        });
     }
 
     public takeDamage(amount: number) {
         this.health -= amount;
-        this.play(`${this.characterName}-damage`, true);
-        if (this.health <= 0) this.die();
+        this.comboStep = 1;
+        this.queuedAttackType = null;
+        
+        if (this.health <= 0) {
+            this.die();
+        } else {
+            const dmgAnim = `${this.characterName}-damage`;
+            if (this.scene.anims.exists(dmgAnim)) {
+                this.isAttacking = true; 
+                this.play(dmgAnim, true);
+                this.once('animationcomplete', () => { this.isAttacking = false; });
+            } else {
+                this.setTint(0xff0000);
+                this.scene.time.delayedCall(200, () => this.clearTint());
+            }
+        }
+        (this.scene as any).updateReactHUD();
     }
 
     private die() {
         this.isDead = true;
         this.setVelocity(0, 0);
-        this.play(`${this.characterName}-die`, true);
+        const dieAnim = `${this.characterName}-die`;
+        if (this.scene.anims.exists(dieAnim)) this.play(dieAnim, true);
     }
 }
