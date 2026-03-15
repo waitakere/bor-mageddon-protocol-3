@@ -7,6 +7,9 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     public damageMultiplier: number = 1.0;
     public isAttacking: boolean = false;
     public isDead: boolean = false;
+    
+    // NEW JUMP STATE
+    public isJumping: boolean = false;
 
     // Movement Stats
     private walkSpeed: number = 160;
@@ -36,6 +39,24 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         if (this.isDead) return;
         this.setAngle(0);
 
+        // --- JUMP LOGIC (2.5D) ---
+        if (input.space && !this.isJumping && !this.isAttacking) {
+            this.isJumping = true;
+            
+            // Visual jump only (physics body stays on ground for shadows)
+            this.scene.tweens.add({
+                targets: this,
+                displayOriginY: this.height + 150, // Moves sprite visual UP
+                duration: 350,
+                yoyo: true,
+                ease: 'Sine.easeInOut',
+                onComplete: () => {
+                    this.isJumping = false;
+                    this.displayOriginY = this.height; // Reset origin
+                }
+            });
+        }
+
         // --- DASH LOGIC ---
         const now = this.scene.time.now;
         if (input.left || input.right) {
@@ -46,8 +67,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             }
         } else { this.isRunning = false; this.lastKey = ''; }
 
-        // --- COMBO INPUT LOGIC ---
-        if (input.punch || input.kicking) {
+        // --- COMBO INPUT LOGIC (Disabled while jumping) ---
+        if ((input.punch || input.kicking) && !this.isJumping) {
             const attackType = input.punch ? 'punch' : 'kick';
             
             if (!this.isAttacking) {
@@ -64,7 +85,12 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         if (!this.isAttacking) {
             const speed = this.isRunning ? this.runSpeed : this.walkSpeed;
             let vx = input.left ? -speed : (input.right ? speed : 0);
-            let vy = input.up ? -speed * 0.6 : (input.down ? speed * 0.6 : 0);
+            
+            // Prevent up/down movement while mid-air
+            let vy = 0;
+            if (!this.isJumping) {
+                vy = input.up ? -speed * 0.6 : (input.down ? speed * 0.6 : 0);
+            }
             
             this.setVelocity(vx, vy);
             
@@ -74,7 +100,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 const anim = this.isRunning ? `${this.characterName}-run` : `${this.characterName}-walk`;
                 this.play(this.scene.anims.exists(anim) ? anim : `${this.characterName}-walk`, true);
             } else {
-                this.play(`${this.characterName}-idle`, true);
+                if (!this.isJumping) this.play(`${this.characterName}-idle`, true);
             }
         }
     }
