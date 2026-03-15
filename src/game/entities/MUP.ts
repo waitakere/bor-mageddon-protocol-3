@@ -1,185 +1,113 @@
 import Phaser from 'phaser';
 
-/**
- * MUP (Ministarstvo Unutrašnjih Poslova) - 1993 Riot Police
- * Heavy, armored melee unit.
- */
 export class MUP extends Phaser.Physics.Arcade.Sprite {
-    public health: number = 120; // Tankier than standard enemies
-    public maxHealth: number = 120;
+    public health: number = 100;
     public isDead: boolean = false;
-    public isHurt: boolean = false;
     public isAttacking: boolean = false;
-    
-    private speed: number = 90;
-    private attackRange: number = 110; // Nightstick reach
-    private attackCooldown: number = 0;
+    private speed: number = 80;
+    private attackRange: number = 70;
+    private attackCooldown: boolean = false;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
-        // Start with the default frame from the mega-atlas
-        super(scene, x, y, 'enemies_1993', 'mup-idle/frame_001.png');
-
+        super(scene, x, y, 'enemies_1993', 'mup-idle/frame_000.png');
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        const body = this.body as Phaser.Physics.Arcade.Body;
-
-        // 1. FIX: ANCHORING & ORIENTATION
-        this.setOrigin(0.5, 1); // Anchor at feet
-        this.setRotation(0);     // Force upright
+        this.setOrigin(0.5, 1);
         
-        // 2. BELT-SCROLLER HITBOX
-        // Wide at feet, thin height for 2.5D lane movement
-        body.setSize(70, 30);
-        body.setOffset(this.width / 2 - 35, this.height - 30); 
+        // UPGRADED SCALE: Makes the enemy physically imposing
+        this.setScale(1.7);
         
-        body.setCollideWorldBounds(true);
-        body.setAllowGravity(false); 
-        
-        // 3. FIX: PREVENT PHYSICS ROTATION
-        body.setAllowRotation(false);
-
-        this.play('mup-idle');
+        if (this.body) {
+            this.body.setSize(50, 30);
+            this.body.setOffset(this.width/2 - 25, this.height - 30);
+            (this.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
+        }
     }
 
-    /**
-     * AI Logic: Called every frame by MainLevel.ts
-     */
     public updateAI(player: any) {
-        if (this.isDead || this.isHurt || this.isAttacking) {
-            this.setVelocity(0, 0);
-            return;
-        }
+        if (this.isDead || this.isAttacking || player.isDead) return;
+        this.setAngle(0);
 
-        // Safeguard to ensure he never tilts
-        this.setRotation(0);
+        const dist = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
 
-        const distanceX = Math.abs(this.x - player.x);
-        const distanceY = Math.abs(this.y - player.y);
-
-        // Turn to face the player
-        this.setFlipX(player.x < this.x);
-
-        // 1. Check if in attack range (X reach and Y 'lane' alignment)
-        if (distanceX < this.attackRange && distanceY < 30) {
-            this.setVelocity(0, 0);
-            
-            if (this.scene.time.now > this.attackCooldown) {
-                this.executeAttack(player);
-            } else if (this.anims.currentAnim?.key !== 'mup-idle') {
-                this.play('mup-idle', true);
+        if (dist > this.attackRange) {
+            // Chase the player
+            this.scene.physics.moveToObject(this, player, this.speed);
+            this.setFlipX(player.x < this.x);
+            if (this.scene.anims.exists('mup-walk')) {
+                this.play('mup-walk', true);
             }
         } else {
-            // 2. Move towards the player
-            const dirX = player.x > this.x ? 1 : -1;
-            const dirY = player.y > this.y ? 1 : -1;
-
-            // Lane Alignment: Move vertically to get into the same 'lane' as player
-            let vx = distanceX > (this.attackRange - 20) ? dirX * this.speed : 0;
-            let vy = distanceY > 10 ? dirY * (this.speed * 0.7) : 0;
-
-            this.setVelocity(vx, vy);
-            
-            if (vx !== 0 || vy !== 0) {
-                this.play('mup-walk', true);
+            // In Range: Stop and Attack
+            this.setVelocity(0, 0);
+            if (!this.attackCooldown) {
+                this.executeAttack(player);
             } else {
-                this.play('mup-idle', true);
+                if (this.scene.anims.exists('mup-idle')) this.play('mup-idle', true);
             }
         }
     }
 
     private executeAttack(player: any) {
         this.isAttacking = true;
-        
-        // Randomly choose between nightstick swing 1 or 2
-        const attackAnim = Phaser.Math.Between(0, 1) === 0 ? 'mup-punch-1' : 'mup-punch-2';
-        this.play(attackAnim, true);
+        this.setFlipX(player.x < this.x);
 
-        // Heavy swing sound
-        this.scene.sound.playAudioSprite('sfx_atlas', 'woosh_heavy', { volume: 0.6 });
+        const attackAnim = 'mup-punch-1';
 
-        // Apply damage at the apex of the swing
-        this.scene.time.delayedCall(300, () => {
-            if (this.isDead || this.isHurt || !this.scene) return;
-
-            const distanceX = Math.abs(this.x - player.x);
-            const distanceY = Math.abs(this.y - player.y);
-
-            // Re-check range (did player dodge?)
-            if (distanceX < this.attackRange + 10 && distanceY < 40) {
-                player.takeDamage(15);
-                this.scene.cameras.main.shake(100, 0.002);
-            }
-        });
-
-        this.on('animationcomplete', (anim: Phaser.Animations.Animation) => {
-            if (anim.key.includes('mup-punch')) {
+        if (this.scene.anims.exists(attackAnim)) {
+            this.play(attackAnim, true);
+            this.once('animationcomplete', () => {
                 this.isAttacking = false;
-                this.attackCooldown = this.scene.time.now + 1500; 
-                this.play('mup-idle', true);
-            }
-        }, this);
-    }
-
-    public takeDamage(amount: number) {
-        if (this.isDead) return;
-
-        this.health -= amount;
-        this.isHurt = true;
-        this.isAttacking = false;
-
-        // Visual feedback: Flash Red
-        this.setTint(0xff0000);
-        this.scene.time.delayedCall(150, () => {
-            if (!this.isDead) this.clearTint();
-        });
-
-        // Pushback
-        const pushDir = this.flipX ? 20 : -20;
-        this.scene.tweens.add({
-            targets: this,
-            x: this.x + pushDir,
-            duration: 100
-        });
-
-        if (this.health <= 0) {
-            this.die();
+                this.triggerCooldown();
+                
+                // If player is still in range, deal damage
+                if (Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y) <= this.attackRange + 20) {
+                    if (player.takeDamage) player.takeDamage(10);
+                }
+            });
         } else {
-            this.play('mup-damage', true);
+            // Failsafe if enemy animation is missing
             this.scene.time.delayedCall(400, () => {
-                if (!this.isDead) {
-                    this.isHurt = false;
-                    this.play('mup-idle', true);
+                this.isAttacking = false;
+                this.triggerCooldown();
+                if (Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y) <= this.attackRange + 20) {
+                    if (player.takeDamage) player.takeDamage(10);
                 }
             });
         }
     }
 
-    private die() {
-        this.isDead = true;
-        this.setVelocity(0, 0);
+    private triggerCooldown() {
+        this.attackCooldown = true;
+        this.scene.time.delayedCall(1200, () => { this.attackCooldown = false; });
+    }
+
+    public takeDamage(amount: number) {
+        if (this.isDead) return;
         
-        if (this.body) (this.body as Phaser.Physics.Arcade.Body).enable = false;
+        this.health -= amount;
+        this.isAttacking = false; // Interrupt their attack
+        this.setVelocity(0, 0);
 
-        this.play('mup-dying', true);
-
-        // Red Flash Death Flicker (Final Fight Style)
-        this.setTint(0xff0000);
-        this.scene.tweens.add({
-            targets: this,
-            alpha: { from: 0.7, to: 0 },
-            duration: 100,
-            repeat: 5,
-            onComplete: () => {
-                // Sink into floor effect
-                this.scene.tweens.add({
-                    targets: this,
-                    y: this.y + 30,
-                    alpha: 0,
-                    duration: 1000,
-                    onComplete: () => this.destroy()
-                });
+        if (this.health <= 0) {
+            this.isDead = true;
+            if (this.scene.anims.exists('mup-dying')) {
+                this.play('mup-dying', true);
+                this.once('animationcomplete', () => this.destroy());
+            } else {
+                this.setTint(0xff0000);
+                this.scene.time.delayedCall(300, () => this.destroy());
             }
-        });
+            (this.scene as any).score += 100;
+        } else {
+            if (this.scene.anims.exists('mup-damage')) {
+                this.play('mup-damage', true);
+            } else {
+                this.setTint(0xff0000);
+                this.scene.time.delayedCall(150, () => this.clearTint());
+            }
+        }
+        (this.scene as any).updateReactHUD();
     }
 }
