@@ -41,31 +41,43 @@ export class BootScene extends Phaser.Scene {
 
     private createPlayerAnimations() {
         const characters = ['marko', 'maja', 'darko'];
+        
+        // Updated to match your exact folder structure
         const actionMap = { 
             'idle': 'idle', 
             'walk': 'walk', 
             'run': 'run', 
-            'punch': 'punch', 
-            'kick': 'kick', 
-            'damage': 'damage_&_hurt', 
-            'die': 'knockdown' 
+            'punch-1': 'punch-1', 
+            'punch-2': 'punch-2', 
+            'kick-1': 'kick-1', 
+            'kick-2': 'kick-2', 
+            'damage': 'damage', 
+            'die': 'knockdown' // Assuming death is still 'knockdown', change if needed
         };
 
         characters.forEach(char => {
-            Object.entries(actionMap).forEach(([key, folder]) => {
-                const animKey = `${char}-${key}`; 
-                const framePrefix = `${char}-${folder}/frame_`;
+            Object.entries(actionMap).forEach(([actionKey, folderName]) => {
+                const animKey = `${char}-${actionKey}`; 
+                const framePrefix = `${char}-${folderName}/frame_`;
                 
                 // Snappy Timing: Attacks are 15fps, Movement is 10fps
-                const fps = (key === 'punch' || key === 'kick') ? 15 : 10;
-                const isLoop = ['idle', 'walk', 'run'].includes(key);
+                const fps = actionKey.includes('punch') || actionKey.includes('kick') ? 15 : 10;
+                const isLoop = ['idle', 'walk', 'run'].includes(actionKey);
 
                 this.createAutoAnimation(char, animKey, framePrefix, isLoop, fps);
             });
+
+            // =========================================================
+            // ALIAS SYSTEM: Prevents game crashes if code calls generic names
+            // If the character logic calls 'maja-kick', route it to 'maja-kick-1'
+            // =========================================================
+            this.createFallbackAnimation(`${char}-punch`, `${char}-punch-1`);
+            this.createFallbackAnimation(`${char}-kick`, `${char}-kick-1`);
         });
     }
 
     private createEnemyAnimations() {
+        // MUP animations mapped exactly to your folder structure
         const keys = ['mup-idle', 'mup-walk', 'mup-punch-1', 'mup-punch-2', 'mup-damage', 'mup-dying'];
         keys.forEach(k => this.createAutoAnimation('enemies_1993', k, `${k}/frame_`, k.includes('idle') || k.includes('walk'), 10));
     }
@@ -73,12 +85,33 @@ export class BootScene extends Phaser.Scene {
     private createAutoAnimation(atlasKey: string, animKey: string, framePrefix: string, isLooping: boolean, fps: number) {
         const texture = this.textures.get(atlasKey);
         const frames: Phaser.Types.Animations.AnimationFrame[] = [];
-        for (let i = 1; i <= 60; i++) {
+        
+        // FIX: Start at 0 instead of 1 to catch 'frame_000.png'
+        for (let i = 0; i <= 60; i++) {
             const frameName = `${framePrefix}${i.toString().padStart(3, '0')}.png`;
-            if (texture.has(frameName)) frames.push({ key: atlasKey, frame: frameName });
+            if (texture.has(frameName)) {
+                frames.push({ key: atlasKey, frame: frameName });
+            }
         }
+        
         if (frames.length > 0) {
             this.anims.create({ key: animKey, frames, frameRate: fps, repeat: isLooping ? -1 : 0 });
+        }
+    }
+
+    // Helper function to create an alias for an animation if the exact key is missing
+    private createFallbackAnimation(newKey: string, sourceKey: string) {
+        if (!this.anims.exists(newKey) && this.anims.exists(sourceKey)) {
+            const sourceAnim = this.anims.get(sourceKey);
+            // Map the exact frame objects from the loaded source animation
+            const frameConfig = sourceAnim.frames.map(f => ({ key: f.textureKey, frame: f.textureFrame }));
+            
+            this.anims.create({
+                key: newKey,
+                frames: frameConfig,
+                frameRate: sourceAnim.frameRate,
+                repeat: sourceAnim.repeat ? -1 : 0
+            });
         }
     }
 }
