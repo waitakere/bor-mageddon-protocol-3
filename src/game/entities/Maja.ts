@@ -1,12 +1,13 @@
 import Phaser from 'phaser';
 
 export class Maja extends Phaser.Physics.Arcade.Sprite {
-    public health: number = 150; // Tank health
+    public health: number = 150;
     public smfMeter: number = 0;
     public characterName: string = 'maja';
-    public damageMultiplier: number = 1.5; // Heavy damage
+    public damageMultiplier: number = 1.5;
     public isAttacking: boolean = false;
     public isDead: boolean = false;
+    public isJumping: boolean = false;
 
     // Movement Stats
     private walkSpeed: number = 110;
@@ -15,7 +16,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     private lastKeyTime: number = 0;
     private isRunning: boolean = false;
 
-    // --- COMBO SYSTEM VARIABLES ---
+    // Combo System Variables
     private comboStep: number = 1;
     private comboResetTimer: Phaser.Time.TimerEvent | null = null;
     private queuedAttackType: 'punch' | 'kick' | null = null;
@@ -36,6 +37,22 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         if (this.isDead) return;
         this.setAngle(0);
 
+        // --- 2.5D JUMP LOGIC ---
+        if (input.space && !this.isJumping && !this.isAttacking) {
+            this.isJumping = true;
+            this.scene.tweens.add({
+                targets: this,
+                displayOriginY: this.height + 150, // Moves sprite texture UP
+                duration: 350,
+                yoyo: true,
+                ease: 'Sine.easeInOut',
+                onComplete: () => {
+                    this.isJumping = false;
+                    this.displayOriginY = this.height;
+                }
+            });
+        }
+
         // --- DASH LOGIC ---
         const now = this.scene.time.now;
         if (input.left || input.right) {
@@ -47,7 +64,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         } else { this.isRunning = false; this.lastKey = ''; }
 
         // --- COMBO INPUT LOGIC ---
-        if (input.punch || input.kicking) {
+        if ((input.punch || input.kicking) && !this.isJumping) {
             const attackType = input.punch ? 'punch' : 'kick';
             if (!this.isAttacking) {
                 this.executeAttack(attackType);
@@ -61,7 +78,12 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         if (!this.isAttacking) {
             const speed = this.isRunning ? this.runSpeed : this.walkSpeed;
             let vx = input.left ? -speed : (input.right ? speed : 0);
-            let vy = input.up ? -speed * 0.6 : (input.down ? speed * 0.6 : 0);
+            let vy = 0;
+            
+            // Prevent up/down movement while mid-air
+            if (!this.isJumping) {
+                vy = input.up ? -speed * 0.6 : (input.down ? speed * 0.6 : 0);
+            }
             
             this.setVelocity(vx, vy);
             if (vx !== 0) this.setFlipX(vx < 0);
@@ -70,7 +92,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 const anim = this.isRunning ? `${this.characterName}-run` : `${this.characterName}-walk`;
                 this.play(this.scene.anims.exists(anim) ? anim : `${this.characterName}-walk`, true);
             } else {
-                this.play(`${this.characterName}-idle`, true);
+                if (!this.isJumping) this.play(`${this.characterName}-idle`, true);
             }
         }
     }
@@ -85,38 +107,40 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         
         if (this.scene.anims.exists(animToPlay)) {
             this.play(animToPlay, true);
-        }
-
-        // Maja has a slightly wider reach
-        const hitZone = this.scene.add.zone(this.x + (this.flipX ? -60 : 60), this.y - 40, 70, 60);
-        this.scene.physics.add.existing(hitZone);
-        this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
-            const damage = (this.comboStep === 2 ? 15 : 10) * this.damageMultiplier;
-            if (enemy.takeDamage) enemy.takeDamage(damage);
-            hitZone.destroy(); 
-        });
-
-        this.comboStep = this.comboStep === 1 ? 2 : 1;
-
-        if (this.comboResetTimer) this.comboResetTimer.remove();
-        this.comboResetTimer = this.scene.time.delayedCall(600, () => {
-            this.comboStep = 1;
-            this.queuedAttackType = null;
-        });
-
-        this.once('animationcomplete', () => {
-            if (hitZone.active) hitZone.destroy();
             
-            if (this.queuedAttackType) {
-                const nextAttack = this.queuedAttackType;
+            const hitZone = this.scene.add.zone(this.x + (this.flipX ? -60 : 60), this.y - 40, 70, 60);
+            this.scene.physics.add.existing(hitZone);
+            this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
+                const damage = (this.comboStep === 2 ? 15 : 10) * this.damageMultiplier;
+                if (enemy.takeDamage) enemy.takeDamage(damage);
+                hitZone.destroy(); 
+            });
+
+            this.comboStep = this.comboStep === 1 ? 2 : 1;
+
+            if (this.comboResetTimer) this.comboResetTimer.remove();
+            this.comboResetTimer = this.scene.time.delayedCall(600, () => {
+                this.comboStep = 1;
                 this.queuedAttackType = null;
-                this.executeAttack(nextAttack);
-            } else {
-                this.isAttacking = false;
-                this.smfMeter = Math.min(this.smfMeter + 5, 100);
-                (this.scene as any).updateReactHUD();
-            }
-        });
+            });
+
+            this.once('animationcomplete', () => {
+                if (hitZone.active) hitZone.destroy();
+                
+                if (this.queuedAttackType) {
+                    const nextAttack = this.queuedAttackType;
+                    this.queuedAttackType = null;
+                    this.executeAttack(nextAttack);
+                } else {
+                    this.isAttacking = false;
+                    this.smfMeter = Math.min(this.smfMeter + 5, 100);
+                    (this.scene as any).updateReactHUD();
+                }
+            });
+        } else {
+            // Absolute failsafe if no animation exists
+            this.isAttacking = false;
+        }
     }
 
     public takeDamage(amount: number) {
