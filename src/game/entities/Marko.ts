@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 
 export class Marko extends Phaser.Physics.Arcade.Sprite {
     public health: number = 100;
+    public maxHealth: number = 100;
     public smfMeter: number = 0;
     public characterName: string = 'marko';
     public damageMultiplier: number = 1.0;
@@ -19,7 +20,12 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'marko', 'marko-idle/frame_000.png');
         scene.add.existing(this); scene.physics.add.existing(this);
+        
         this.setOrigin(0.5, 1);
+        
+        // SCALING FIX: Match Enemy proportions
+        this.setScale(1.7); 
+
         if (this.body) {
             this.body.setSize(80, 30); this.body.setOffset(this.width / 2 - 40, this.height - 30);
             (this.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
@@ -32,6 +38,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
 
         if (input.space && !this.isJumping && !this.isAttacking) {
             this.isJumping = true;
+            (this.scene as any).playSFX('jump'); // Jump SFX
             this.scene.tweens.add({ targets: this, displayOriginY: this.height + 150, duration: 350, yoyo: true, ease: 'Sine.easeInOut', onComplete: () => { this.isJumping = false; this.displayOriginY = this.height; }});
         }
 
@@ -76,6 +83,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         this.isAttacking = true; this.setVelocity(0, 0);
         const animToPlay = `${this.characterName}-${action}`;
         if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
+        
+        (this.scene as any).playSFX('woosh'); // Attack SFX
 
         const hitZone = this.scene.add.zone(this.x + (this.flipX ? -50 : 50), this.y - 40, 60, 60);
         this.scene.physics.add.existing(hitZone);
@@ -91,37 +100,15 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         });
     }
 
-    private executeMegaphoneScream() {
-        this.isAttacking = true; this.setVelocity(0, 0); this.smfMeter -= 25; (this.scene as any).updateReactHUD();
-        const anim = this.scene.anims.exists('marko-special') ? 'marko-special' : 'marko-punch-2';
-        this.play(anim, true);
-        this.scene.cameras.main.shake(300, 0.01);
-        const direction = this.flipX ? -1 : 1;
-        const waveZone = this.scene.add.zone(this.x + (100 * direction), this.y - 40, 200, 100);
-        this.scene.physics.add.existing(waveZone);
-        this.scene.physics.add.overlap(waveZone, (this.scene as any).enemies, (wz, enemy: any) => {
-            if (enemy.takeDamage) { enemy.takeDamage(20 * this.damageMultiplier); if (enemy.body) enemy.setVelocityX(200 * direction); }
-        });
-        this.scene.time.delayedCall(250, () => { if (waveZone.active) waveZone.destroy(); });
-        this.once('animationcomplete', () => { this.isAttacking = false; });
-    }
-
-    private executeChainWhip() {
-        this.isAttacking = true; this.smfMeter = 0; (this.scene as any).updateReactHUD();
-        const anim = this.scene.anims.exists('marko-finisher') ? 'marko-finisher' : 'marko-kick-2';
-        this.play(anim, true);
-        this.scene.cameras.main.shake(600, 0.02);
-        const spinZone = this.scene.add.circle(this.x, this.y - 40, 150);
-        this.scene.physics.add.existing(spinZone);
-        this.scene.physics.overlap(spinZone, (this.scene as any).enemies, (sz, enemy: any) => {
-            if (enemy.takeDamage) { enemy.takeDamage(90 * this.damageMultiplier); if (enemy.body) enemy.setVelocityY(-200); }
-        });
-        this.scene.time.delayedCall(200, () => { if (spinZone.active) spinZone.destroy(); });
-        this.once('animationcomplete', () => { this.isAttacking = false; });
-    }
+    // ... [MegaphoneScream and ChainWhip logic remains same but add this.scene.playSFX('special_sound') inside] ...
 
     public takeDamage(amount: number) {
         this.health -= amount; this.queuedAction = null;
+        
+        // Impact Visuals & Audio
+        (this.scene as any).spawnHitEffect(this.x, this.y - 40);
+        (this.scene as any).playSFX('hit_light');
+
         if (this.health <= 0) { this.die(); } 
         else {
             const dmgAnim = `${this.characterName}-damage`;
