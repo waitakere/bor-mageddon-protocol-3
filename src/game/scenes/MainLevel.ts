@@ -7,9 +7,7 @@ import { Enemy } from '../entities/Enemy';
 export class MainLevel extends Phaser.Scene {
     public player!: any; 
     public enemies!: Phaser.Physics.Arcade.Group;
-    public breakables!: Phaser.Physics.Arcade.Group;
     public items!: Phaser.Physics.Arcade.Group;
-    public projectiles!: Phaser.Physics.Arcade.Group;
     private shadows!: Phaser.GameObjects.Graphics;
     
     // Wave Manager Data
@@ -17,7 +15,7 @@ export class MainLevel extends Phaser.Scene {
         { triggerX: 800, totalEnemies: 4, maxActive: 2 },
         { triggerX: 1600, totalEnemies: 6, maxActive: 3 },
         { triggerX: 2400, totalEnemies: 8, maxActive: 3 },
-        { triggerX: 3200, totalEnemies: 4, maxActive: 4 } // Final Sector (Sloba appears here)
+        { triggerX: 3200, totalEnemies: 5, maxActive: 4 } // Final Sector
     ];
     private currentSectorIndex: number = 0;
     private isLocked: boolean = false;
@@ -30,15 +28,15 @@ export class MainLevel extends Phaser.Scene {
 
     create() {
         this.physics.world.setBounds(0, 750, 4000, 330); 
+        
+        // PARALLAX FIX: Aligning Midground to Horizon
         this.add.image(0, 0, 'part1_sky').setOrigin(0, 0).setDisplaySize(4000, 1080).setScrollFactor(0.1);
-        this.add.image(0, 1080, 'part1_mid').setOrigin(0, 1).setDisplaySize(4000, 650).setScrollFactor(0.4);
-        this.add.image(0, 1080, 'part1_floor').setOrigin(0, 1).setDisplaySize(4000, 450).setScrollFactor(1);
+        this.add.image(0, 750, 'part1_mid').setOrigin(0, 1).setDisplaySize(4000, 650).setScrollFactor(0.5);
+        this.add.image(0, 1080, 'part1_floor').setOrigin(0, 1).setDisplaySize(4000, 330).setScrollFactor(1);
 
         this.shadows = this.add.graphics().setAlpha(0.4);
-        this.breakables = this.physics.add.group({ immovable: true });
         this.items = this.physics.add.group();
         this.enemies = this.physics.add.group();
-        this.projectiles = this.physics.add.group();
 
         const charKey = this.registry.get('selectedCharacter') || 'marko';
         switch(charKey) {
@@ -47,7 +45,15 @@ export class MainLevel extends Phaser.Scene {
             default: this.player = new Marko(this, 200, 950); break;
         }
 
-        this.player.setScale(1);
+        // SCALING FIX: Increase player size
+        this.player.setScale(1.7);
+
+        // INITIAL SPAWN FIX: Spawn generic thug, not Sloba
+        this.enemies.add(new Enemy(this, 1000, 950, 'mup'));
+
+        // Pickups Overlap
+        this.physics.add.overlap(this.player, this.items, this.collectItem, undefined, this);
+
         this.cameras.main.setBounds(0, 0, 4000, 1080);
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
         this.updateReactHUD();
@@ -64,8 +70,8 @@ export class MainLevel extends Phaser.Scene {
 
         // Shadows
         this.shadows.clear().fillStyle(0x000000, 0.5);
-        this.shadows.fillEllipse(this.player.x, this.player.y, 70, 20);
-        this.enemies.getChildren().forEach((e: any) => { if (!e.isDead) this.shadows.fillEllipse(e.x, e.y, e.width*0.6, 20); });
+        this.shadows.fillEllipse(this.player.x, this.player.y, 70 * this.player.scale, 20);
+        this.enemies.getChildren().forEach((e: any) => { if (!e.isDead) this.shadows.fillEllipse(e.x, e.y, e.width * 0.6, 20); });
 
         const cursors = this.input.keyboard!.createCursorKeys();
         const kb = this.input.keyboard!;
@@ -82,10 +88,51 @@ export class MainLevel extends Phaser.Scene {
 
         this.player.update(keys);
         
-        // Depth sorting and AI
         this.enemies.getChildren().forEach((e: any) => { if (e.updateAI && !e.isDead) e.updateAI(this.player); });
         this.children.each((c: any) => { if (c.y && c.type !== 'Image' && c.type !== 'Graphics') c.setDepth(c.y); });
     }
+
+    // --- SYSTEMS ---
+
+    public playSFX(marker: string, volume: number = 0.5) {
+        try {
+            // Safely try to play sound. If marker doesn't exist, it fails silently instead of crashing.
+            this.sound.playAudioSprite('sfx_atlas', marker, { volume });
+        } catch (e) {
+            console.warn(`Audio Marker missed: ${marker}`);
+        }
+    }
+
+    public spawnHitEffect(x: number, y: number) {
+        const explosion = this.add.sprite(x, y, 'explosion_01').setDepth(y + 10);
+        explosion.setScale(0.5);
+        this.tweens.add({
+            targets: explosion,
+            scale: 1.2, alpha: 0, duration: 200,
+            onComplete: () => explosion.destroy()
+        });
+    }
+
+    public dropItem(x: number, y: number) {
+        if (Math.random() > 0.3) return; // 30% chance to drop food
+        const items = ['item-burek', 'item-coffee', 'item-pork', 'item-beer', 'item-sandwich'];
+        const randomItem = items[Math.floor(Math.random() * items.length)];
+        
+        const drop = this.physics.add.sprite(x, y - 20, randomItem);
+        this.items.add(drop);
+    }
+
+    private collectItem(player: any, item: any) {
+        item.destroy();
+        this.playSFX('pickup', 0.8); // Try generic pickup sound
+        this.player.health = Math.min(this.player.health + 30, this.player.maxHealth || 150);
+        
+        const healText = this.add.text(this.player.x, this.player.y - 80, '+HP', { font: '900 20px "Space Mono"', color: '#00ff00' }).setOrigin(0.5);
+        this.tweens.add({ targets: healText, y: healText.y - 30, alpha: 0, duration: 1000, onComplete: () => healText.destroy() });
+        this.updateReactHUD();
+    }
+
+    // --- WAVE MANAGER ---
 
     private handleWaveManager() {
         const cam = this.cameras.main;
@@ -105,15 +152,13 @@ export class MainLevel extends Phaser.Scene {
             const activeEnemies = this.enemies.getChildren().filter((e: any) => !e.isDead).length;
             const isFinalSector = this.currentSectorIndex === this.sectors.length - 1;
 
-            // Spawn Regular Enemies
             if (activeEnemies < currentSector.maxActive && this.spawnedThisWave < currentSector.totalEnemies) {
-                // Array of regular gangs
                 const gangTypes = ['mup', 'dizel', 'dizelcic', 'rudar'];
                 const randomType = gangTypes[Math.floor(Math.random() * gangTypes.length)];
                 this.spawnEnemyOffScreen(cam.worldView, randomType);
             }
 
-            // Spawn Sloba in the final sector
+            // ONLY spawn Sloba in the final sector
             if (isFinalSector && !this.bossSpawned && this.killedThisWave >= currentSector.totalEnemies - 1) {
                 this.spawnEnemyOffScreen(cam.worldView, 'sloba');
                 this.bossSpawned = true;
