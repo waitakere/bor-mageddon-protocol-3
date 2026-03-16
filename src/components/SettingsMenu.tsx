@@ -22,6 +22,9 @@ export const ControlsHUD: React.FC = () => {
         <li>
           <span className="text-red-500 font-bold">A + S:</span> FINISHER
         </li>
+        <li className="pt-2 mt-1 border-t border-zinc-700/50 text-yellow-400">
+          <span className="text-yellow-500 font-bold">P:</span> PAUSE GAME
+        </li>
       </ul>
     </div>
   );
