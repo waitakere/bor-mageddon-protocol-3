@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 
 export class Darko extends Phaser.Physics.Arcade.Sprite {
     public health: number = 90;
+    public maxHealth: number = 90; // Added for item healing cap
     public smfMeter: number = 0;
     public characterName: string = 'darko';
     public damageMultiplier: number = 0.7; 
@@ -19,7 +20,10 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'darko', 'darko-idle/frame_000.png');
         scene.add.existing(this); scene.physics.add.existing(this);
+        
         this.setOrigin(0.5, 1);
+        this.setScale(1.7); // SCALING FIX: Match enemy proportions
+        
         if (this.body) {
             this.body.setSize(50, 30); this.body.setOffset(this.width / 2 - 25, this.height - 30);
             (this.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
@@ -32,6 +36,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
         if (input.space && !this.isJumping && !this.isAttacking) {
             this.isJumping = true;
+            (this.scene as any).playSFX('jump'); // JUMP AUDIO
             this.scene.tweens.add({ targets: this, displayOriginY: this.height + 150, duration: 350, yoyo: true, ease: 'Sine.easeInOut', onComplete: () => { this.isJumping = false; this.displayOriginY = this.height; }});
         }
 
@@ -77,6 +82,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         const animToPlay = `${this.characterName}-${action}`;
         if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
 
+        (this.scene as any).playSFX('woosh'); // ATTACK AUDIO
+
         const hitZone = this.scene.add.zone(this.x + (this.flipX ? -50 : 50), this.y - 40, 60, 60);
         this.scene.physics.add.existing(hitZone);
         this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
@@ -95,6 +102,9 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.isAttacking = true; this.setVelocity(0, 0); this.smfMeter -= 25; (this.scene as any).updateReactHUD();
         const anim = this.scene.anims.exists('darko-special') ? 'darko-special' : 'darko-kick-2';
         this.play(anim, true);
+        
+        (this.scene as any).playSFX('woosh'); // SPIN AUDIO
+
         const spinZone = this.scene.add.circle(this.x, this.y - 40, 100);
         this.scene.physics.add.existing(spinZone);
         this.scene.physics.add.overlap(spinZone, (this.scene as any).enemies, (sz, enemy: any) => {
@@ -108,6 +118,9 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.isAttacking = true; this.smfMeter = 0; (this.scene as any).updateReactHUD();
         const anim = this.scene.anims.exists('darko-finisher') ? 'darko-finisher' : 'darko-punch-2';
         this.play(anim, true);
+        
+        (this.scene as any).playSFX('special_sound'); // RIFF AUDIO
+
         this.scene.cameras.main.shake(800, 0.015); this.scene.cameras.main.flash(300, 0, 255, 255);
         const enemies = (this.scene as any).enemies.getChildren();
         enemies.forEach((enemy: any) => {
@@ -118,6 +131,11 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
     public takeDamage(amount: number) {
         this.health -= amount; this.queuedAction = null;
+        
+        // IMPACT VISUALS & AUDIO
+        (this.scene as any).spawnHitEffect(this.x, this.y - 40);
+        (this.scene as any).playSFX('hit_light');
+
         if (this.health <= 0) { this.die(); } 
         else {
             const dmgAnim = `${this.characterName}-damage`;
