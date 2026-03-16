@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 
 export class Maja extends Phaser.Physics.Arcade.Sprite {
     public health: number = 150;
+    public maxHealth: number = 150; // Added for item healing cap
     public smfMeter: number = 0;
     public characterName: string = 'maja';
     public damageMultiplier: number = 1.5;
@@ -19,7 +20,10 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'maja', 'maja-idle/frame_000.png');
         scene.add.existing(this); scene.physics.add.existing(this);
+        
         this.setOrigin(0.5, 1);
+        this.setScale(1.7); // SCALING FIX: Match enemy proportions
+
         if (this.body) {
             this.body.setSize(60, 30); this.body.setOffset(this.width / 2 - 30, this.height - 30);
             (this.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
@@ -32,6 +36,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
         if (input.space && !this.isJumping && !this.isAttacking) {
             this.isJumping = true;
+            (this.scene as any).playSFX('jump'); // JUMP AUDIO
             this.scene.tweens.add({ targets: this, displayOriginY: this.height + 150, duration: 350, yoyo: true, ease: 'Sine.easeInOut', onComplete: () => { this.isJumping = false; this.displayOriginY = this.height; }});
         }
 
@@ -77,6 +82,8 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         const animToPlay = `${this.characterName}-${action}`;
         if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
 
+        (this.scene as any).playSFX('woosh'); // ATTACK AUDIO
+
         const hitZone = this.scene.add.zone(this.x + (this.flipX ? -60 : 60), this.y - 40, 70, 60);
         this.scene.physics.add.existing(hitZone);
         this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
@@ -104,7 +111,12 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             const anim = this.scene.anims.exists('maja-special') ? 'maja-special' : 'maja-punch-1';
             this.play(anim, true);
             grabbedEnemy.setVelocity(0, 0);
-            this.scene.time.delayedCall(200, () => { this.scene.cameras.main.shake(300, 0.02); grabbedEnemy.takeDamage(40 * this.damageMultiplier); });
+            
+            this.scene.time.delayedCall(200, () => { 
+                this.scene.cameras.main.shake(300, 0.02); 
+                grabbedEnemy.takeDamage(40 * this.damageMultiplier); 
+                (this.scene as any).playSFX('hit_heavy'); // SUPLEX IMPACT
+            });
             this.once('animationcomplete', () => { this.isAttacking = false; });
         } else { this.play('maja-idle', true); this.scene.time.delayedCall(300, () => { this.isAttacking = false; }); }
     }
@@ -113,6 +125,9 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.isAttacking = true; this.smfMeter = 0; (this.scene as any).updateReactHUD();
         const anim = this.scene.anims.exists('maja-finisher') ? 'maja-finisher' : 'maja-run';
         this.play(anim, true);
+        
+        (this.scene as any).playSFX('special_sound');
+
         const direction = this.flipX ? -1 : 1;
         this.setVelocityX(500 * direction); this.scene.cameras.main.shake(600, 0.01);
         const drillZone = this.scene.add.zone(this.x, this.y, 100, 80);
@@ -128,6 +143,11 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
     public takeDamage(amount: number) {
         this.health -= amount; this.queuedAction = null;
+
+        // IMPACT VISUALS & AUDIO
+        (this.scene as any).spawnHitEffect(this.x, this.y - 40);
+        (this.scene as any).playSFX('hit_heavy');
+
         if (this.health <= 0) { this.die(); } 
         else {
             const dmgAnim = `${this.characterName}-damage`;
