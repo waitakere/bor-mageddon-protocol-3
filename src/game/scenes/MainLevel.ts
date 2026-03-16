@@ -10,12 +10,11 @@ export class MainLevel extends Phaser.Scene {
     public items!: Phaser.Physics.Arcade.Group;
     private shadows!: Phaser.GameObjects.Graphics;
     
-    // Wave Manager Data
     private sectors = [
         { triggerX: 800, totalEnemies: 4, maxActive: 2 },
         { triggerX: 1600, totalEnemies: 6, maxActive: 3 },
         { triggerX: 2400, totalEnemies: 8, maxActive: 3 },
-        { triggerX: 3200, totalEnemies: 5, maxActive: 4 } // Final Sector
+        { triggerX: 3200, totalEnemies: 5, maxActive: 4 } 
     ];
     private currentSectorIndex: number = 0;
     private isLocked: boolean = false;
@@ -29,7 +28,6 @@ export class MainLevel extends Phaser.Scene {
     create() {
         this.physics.world.setBounds(0, 750, 4000, 330); 
         
-        // PARALLAX FIX: Aligning Midground to Horizon
         this.add.image(0, 0, 'part1_sky').setOrigin(0, 0).setDisplaySize(4000, 1080).setScrollFactor(0.1);
         this.add.image(0, 750, 'part1_mid').setOrigin(0, 1).setDisplaySize(4000, 650).setScrollFactor(0.5);
         this.add.image(0, 1080, 'part1_floor').setOrigin(0, 1).setDisplaySize(4000, 330).setScrollFactor(1);
@@ -45,13 +43,9 @@ export class MainLevel extends Phaser.Scene {
             default: this.player = new Marko(this, 200, 950); break;
         }
 
-        // SCALING FIX: Increase player size
         this.player.setScale(1.7);
-
-        // INITIAL SPAWN FIX: Spawn generic thug, not Sloba
         this.enemies.add(new Enemy(this, 1000, 950, 'mup'));
 
-        // Pickups Overlap
         this.physics.add.overlap(this.player, this.items, this.collectItem, undefined, this);
 
         this.cameras.main.setBounds(0, 0, 4000, 1080);
@@ -68,7 +62,6 @@ export class MainLevel extends Phaser.Scene {
             if (child.body && child.type === 'Sprite') { child.setAngle(0); child.rotation = 0; }
         });
 
-        // Shadows
         this.shadows.clear().fillStyle(0x000000, 0.5);
         this.shadows.fillEllipse(this.player.x, this.player.y, 70 * this.player.scale, 20);
         this.enemies.getChildren().forEach((e: any) => { if (!e.isDead) this.shadows.fillEllipse(e.x, e.y, e.width * 0.6, 20); });
@@ -96,25 +89,34 @@ export class MainLevel extends Phaser.Scene {
 
     public playSFX(marker: string, volume: number = 0.5) {
         try {
-            // Safely try to play sound. If marker doesn't exist, it fails silently instead of crashing.
+            const json = this.cache.json.get('sfx_atlas');
+            if (json && json.spritemap && !json.spritemap[marker]) {
+                // Automatically dumps available audio names into your console so you can copy them!
+                console.warn(`[AUDIO] '${marker}' not found! Available markers:`, Object.keys(json.spritemap));
+                return;
+            }
             this.sound.playAudioSprite('sfx_atlas', marker, { volume });
         } catch (e) {
-            console.warn(`Audio Marker missed: ${marker}`);
+            console.warn("Audio system error:", e);
         }
     }
 
     public spawnHitEffect(x: number, y: number) {
-        const explosion = this.add.sprite(x, y, 'explosion_01').setDepth(y + 10);
-        explosion.setScale(0.5);
+        const explosion = this.add.sprite(x, y, 'explosion_01');
+        explosion.setDepth(9999); // Force above everything
+        explosion.setBlendMode(Phaser.BlendModes.ADD); // Glow effect
+        explosion.setScale(0.6);
+        
         this.tweens.add({
             targets: explosion,
-            scale: 1.2, alpha: 0, duration: 200,
+            scale: 1.5, alpha: 0, duration: 200,
+            ease: 'Quad.easeOut',
             onComplete: () => explosion.destroy()
         });
     }
 
     public dropItem(x: number, y: number) {
-        if (Math.random() > 0.3) return; // 30% chance to drop food
+        if (Math.random() > 0.3) return; 
         const items = ['item-burek', 'item-coffee', 'item-pork', 'item-beer', 'item-sandwich'];
         const randomItem = items[Math.floor(Math.random() * items.length)];
         
@@ -124,7 +126,7 @@ export class MainLevel extends Phaser.Scene {
 
     private collectItem(player: any, item: any) {
         item.destroy();
-        this.playSFX('pickup', 0.8); // Try generic pickup sound
+        this.playSFX('pickup', 0.8); 
         this.player.health = Math.min(this.player.health + 30, this.player.maxHealth || 150);
         
         const healText = this.add.text(this.player.x, this.player.y - 80, '+HP', { font: '900 20px "Space Mono"', color: '#00ff00' }).setOrigin(0.5);
@@ -158,7 +160,6 @@ export class MainLevel extends Phaser.Scene {
                 this.spawnEnemyOffScreen(cam.worldView, randomType);
             }
 
-            // ONLY spawn Sloba in the final sector
             if (isFinalSector && !this.bossSpawned && this.killedThisWave >= currentSector.totalEnemies - 1) {
                 this.spawnEnemyOffScreen(cam.worldView, 'sloba');
                 this.bossSpawned = true;
