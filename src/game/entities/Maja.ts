@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 
 export class Maja extends Phaser.Physics.Arcade.Sprite {
     public health: number = 150;
-    public maxHealth: number = 150; // Added for item healing cap
+    public maxHealth: number = 150;
     public smfMeter: number = 0;
     public characterName: string = 'maja';
     public damageMultiplier: number = 1.5;
@@ -22,7 +22,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         scene.add.existing(this); scene.physics.add.existing(this);
         
         this.setOrigin(0.5, 1);
-        this.setScale(1.7); // SCALING FIX: Match enemy proportions
+        this.setScale(1.7); 
 
         if (this.body) {
             this.body.setSize(60, 30); this.body.setOffset(this.width / 2 - 30, this.height - 30);
@@ -36,7 +36,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
         if (input.space && !this.isJumping && !this.isAttacking) {
             this.isJumping = true;
-            (this.scene as any).playSFX('jump'); // JUMP AUDIO
+            (this.scene as any).playSFX('jump'); 
             this.scene.tweens.add({ targets: this, displayOriginY: this.height + 150, duration: 350, yoyo: true, ease: 'Sine.easeInOut', onComplete: () => { this.isJumping = false; this.displayOriginY = this.height; }});
         }
 
@@ -82,13 +82,19 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         const animToPlay = `${this.characterName}-${action}`;
         if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
 
-        (this.scene as any).playSFX('woosh'); // ATTACK AUDIO
+        (this.scene as any).playSFX('woosh'); 
 
-        const hitZone = this.scene.add.zone(this.x + (this.flipX ? -60 : 60), this.y - 40, 70, 60);
+        const hitZone = this.scene.add.zone(this.x + (this.flipX ? -60 : 60), this.y - 40, 80, 80);
         this.scene.physics.add.existing(hitZone);
+        
         this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
-            const damage = (action.includes('2') ? 15 : 10) * this.damageMultiplier;
-            if (enemy.takeDamage) enemy.takeDamage(damage); hitZone.destroy(); 
+            if (Math.abs(this.y - enemy.y) <= 45) { // 45px vertical leeway
+                const damage = (action.includes('2') ? 15 : 10) * this.damageMultiplier;
+                const hitX = (this.x + enemy.x) / 2;
+                (this.scene as any).spawnHitEffect(hitX, enemy.y - 50);
+                if (enemy.takeDamage) enemy.takeDamage(damage); 
+                hitZone.destroy(); 
+            }
         });
 
         this.once('animationcomplete', () => {
@@ -100,10 +106,13 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
     private executeBalkanSuplex() {
         this.isAttacking = true; this.setVelocity(0, 0);
-        const grabZone = this.scene.add.zone(this.x + (this.flipX ? -50 : 50), this.y - 40, 60, 60);
+        const grabZone = this.scene.add.zone(this.x + (this.flipX ? -50 : 50), this.y - 40, 70, 70);
         this.scene.physics.add.existing(grabZone);
+        
         let grabbedEnemy: any = null;
-        this.scene.physics.overlap(grabZone, (this.scene as any).enemies, (gz, enemy: any) => { if (!grabbedEnemy && !enemy.isDead) grabbedEnemy = enemy; });
+        this.scene.physics.overlap(grabZone, (this.scene as any).enemies, (gz, enemy: any) => { 
+            if (!grabbedEnemy && !enemy.isDead && Math.abs(this.y - enemy.y) <= 45) grabbedEnemy = enemy; 
+        });
         grabZone.destroy(); 
 
         if (grabbedEnemy) {
@@ -114,8 +123,9 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             
             this.scene.time.delayedCall(200, () => { 
                 this.scene.cameras.main.shake(300, 0.02); 
+                (this.scene as any).spawnHitEffect(grabbedEnemy.x, grabbedEnemy.y - 50);
                 grabbedEnemy.takeDamage(40 * this.damageMultiplier); 
-                (this.scene as any).playSFX('hit_heavy'); // SUPLEX IMPACT
+                (this.scene as any).playSFX('hit_heavy'); 
             });
             this.once('animationcomplete', () => { this.isAttacking = false; });
         } else { this.play('maja-idle', true); this.scene.time.delayedCall(300, () => { this.isAttacking = false; }); }
@@ -132,10 +142,16 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.setVelocityX(500 * direction); this.scene.cameras.main.shake(600, 0.01);
         const drillZone = this.scene.add.zone(this.x, this.y, 100, 80);
         this.scene.physics.add.existing(drillZone);
+        
         const drillUpdate = () => {
             if (!drillZone.active) return;
             drillZone.setPosition(this.x + (60 * direction), this.y - 40);
-            this.scene.physics.overlap(drillZone, (this.scene as any).enemies, (dz, enemy: any) => { if (enemy.takeDamage) enemy.takeDamage(5); });
+            this.scene.physics.overlap(drillZone, (this.scene as any).enemies, (dz, enemy: any) => { 
+                if (Math.abs(this.y - enemy.y) <= 50) {
+                    (this.scene as any).spawnHitEffect(enemy.x, enemy.y - 50);
+                    if (enemy.takeDamage) enemy.takeDamage(5); 
+                }
+            });
         };
         this.scene.events.on('update', drillUpdate);
         this.scene.time.delayedCall(600, () => { this.setVelocityX(0); drillZone.destroy(); this.scene.events.off('update', drillUpdate); this.isAttacking = false; });
@@ -144,7 +160,6 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     public takeDamage(amount: number) {
         this.health -= amount; this.queuedAction = null;
 
-        // IMPACT VISUALS & AUDIO
         (this.scene as any).spawnHitEffect(this.x, this.y - 40);
         (this.scene as any).playSFX('hit_heavy');
 
