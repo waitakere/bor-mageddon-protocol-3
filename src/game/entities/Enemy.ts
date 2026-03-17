@@ -8,7 +8,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     public damageMultiplier: number = 1.0;
     
     private speed: number = 80;
-    private attackRange: number = 80; // Slightly bigger for safety
+    private attackRange: number = 80; 
     private attackCooldown: boolean = false;
 
     constructor(scene: Phaser.Scene, x: number, y: number, skinPrefix: string = 'mup') {
@@ -46,7 +46,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const absDistX = Math.abs(distanceX);
         const absDistY = Math.abs(distanceY);
 
-        // Lane Alignment (Only move on Y if they are far away on Z-depth)
         if (absDistY > 20) {
             this.setVelocityY(distanceY > 0 ? this.speed : -this.speed);
         } else {
@@ -58,7 +57,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             this.setFlipX(distanceX < 0);
             if (this.scene.anims.exists(`${this.skinPrefix}-walk`)) this.play(`${this.skinPrefix}-walk`, true);
         } 
-        // 2.5D CHECK: Only swing if close horizontally AND aligned on the lane vertically!
         else if (absDistX <= this.attackRange && absDistY <= 40) { 
             this.setVelocityX(0);
             this.setVelocityY(0);
@@ -75,16 +73,18 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setFlipX(player.x < this.x);
         const attackAnim = `${this.skinPrefix}-punch-1`;
         
-        (this.scene as any).playSFX('woosh');
+        (this.scene as any).playSFX(['melee_1', 'melee_2']);
 
         if (this.scene.anims.exists(attackAnim)) {
             this.play(attackAnim, true);
             this.once('animationcomplete', () => {
                 this.isAttacking = false;
                 this.triggerCooldown();
-                // 2.5D Depth Check on impact
                 if (Math.abs(this.x - player.x) <= this.attackRange + 20 && Math.abs(this.y - player.y) <= 45) {
-                    if (player.takeDamage) player.takeDamage(10 * this.damageMultiplier);
+                    if (player.takeDamage) {
+                        player.takeDamage(10 * this.damageMultiplier);
+                        (this.scene as any).playSFX(['punch_2', 'kick_1']); // Light hit sound for player taking damage
+                    }
                 }
             });
         } else {
@@ -92,7 +92,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 this.isAttacking = false;
                 this.triggerCooldown();
                 if (Math.abs(this.x - player.x) <= this.attackRange + 20 && Math.abs(this.y - player.y) <= 45) {
-                    if (player.takeDamage) player.takeDamage(10 * this.damageMultiplier);
+                    if (player.takeDamage) {
+                        player.takeDamage(10 * this.damageMultiplier);
+                        (this.scene as any).playSFX(['punch_2', 'kick_1']);
+                    }
                 }
             });
         }
@@ -111,13 +114,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setVelocity(0, 0);
         this.setTint(0xff0000);
         
-        // Effects handled by Player attack code already (Hit Spark & Audio)
+        (this.scene as any).playSFX(['agony_m_1', 'agony_m_2', 'agony_m_3']);
 
         if (this.health <= 0) {
             this.isDead = true;
             (this.scene as any).registerEnemyDeath();
             (this.scene as any).dropItem(this.x, this.y); 
             
+            (this.scene as any).playSFX(['Break_1', 'Break_2']);
+
             if (this.scene.anims.exists(`${this.skinPrefix}-dying`)) {
                 this.play(`${this.skinPrefix}-dying`, true);
                 this.once('animationcomplete', () => {
