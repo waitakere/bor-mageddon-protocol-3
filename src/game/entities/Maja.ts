@@ -10,7 +10,6 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     public isDead: boolean = false;
     public isJumping: boolean = false;
 
-    // SPEED BUFFS (Increased to cover more ground)
     private walkSpeed: number = 160;
     private runSpeed: number = 320;
     private lastKey: string = '';
@@ -37,7 +36,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
         if (input.space && !this.isJumping && !this.isAttacking) {
             this.isJumping = true;
-            (this.scene as any).playSFX('jump'); 
+            (this.scene as any).playSFX(['grunt_f_1', 'grunt_f_2']); 
             this.scene.tweens.add({ targets: this, displayOriginY: this.height + 150, duration: 350, yoyo: true, ease: 'Sine.easeInOut', onComplete: () => { this.isJumping = false; this.displayOriginY = this.height; }});
         }
 
@@ -56,7 +55,6 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         else if (input.k2) requestedAction = 'kick-2';
 
         if (requestedAction) {
-            // AERIAL COMBAT TRIGGER
             if (this.isJumping && !this.isAttacking) {
                 if (requestedAction.includes('punch') || requestedAction.includes('kick')) {
                     this.executeJumpAttack(requestedAction);
@@ -83,16 +81,15 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    // NEW: JUMP ATTACKS
     private executeJumpAttack(action: string) {
         this.isAttacking = true;
         const type = action.includes('punch') ? 'jump-punch' : 'jump-kick';
         const animToPlay = `${this.characterName}-${type}`;
         
         if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
-        else this.play(`${this.characterName}-kick-1`, true); // Fallback if sprite missing
+        else this.play(`${this.characterName}-kick-1`, true); 
         
-        (this.scene as any).playSFX('woosh');
+        (this.scene as any).playSFX(['melee_1', 'melee_2']);
 
         const hitZone = this.scene.add.zone(this.x + (this.flipX ? -60 : 60), this.y - 100, 90, 90);
         this.scene.physics.add.existing(hitZone);
@@ -121,9 +118,8 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         const animToPlay = `${this.characterName}-${action}`;
         if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
 
-        (this.scene as any).playSFX('woosh'); 
+        (this.scene as any).playSFX(['melee_1', 'melee_2']); 
 
-        // REACH BUFF: Width increased to 110, X-offset pushed to 80
         const hitZone = this.scene.add.zone(this.x + (this.flipX ? -80 : 80), this.y - 40, 110, 80);
         this.scene.physics.add.existing(hitZone);
         
@@ -165,7 +161,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 this.scene.cameras.main.shake(300, 0.02); 
                 (this.scene as any).spawnHitEffect(grabbedEnemy.x, grabbedEnemy.y - 50);
                 grabbedEnemy.takeDamage(40 * this.damageMultiplier); 
-                (this.scene as any).playSFX('hit_heavy'); 
+                (this.scene as any).playSFX('Break_1'); 
             });
             this.once('animationcomplete', () => { this.isAttacking = false; });
         } else { this.play('maja-idle', true); this.scene.time.delayedCall(300, () => { this.isAttacking = false; }); }
@@ -176,7 +172,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         const anim = this.scene.anims.exists('maja-finisher') ? 'maja-finisher' : 'maja-run';
         this.play(anim, true);
         
-        (this.scene as any).playSFX('special_sound');
+        (this.scene as any).playSFX('Metal-Impact-Shield');
 
         const direction = this.flipX ? -1 : 1;
         this.setVelocityX(500 * direction); this.scene.cameras.main.shake(600, 0.01);
@@ -201,7 +197,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.health -= amount; this.queuedAction = null;
 
         (this.scene as any).spawnHitEffect(this.x, this.y - 40);
-        (this.scene as any).playSFX('hit_heavy');
+        (this.scene as any).playSFX(['agony_f_1', 'agony_f_2']);
 
         if (this.health <= 0) { this.die(); } 
         else {
