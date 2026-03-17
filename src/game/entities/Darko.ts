@@ -10,7 +10,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     public isDead: boolean = false;
     public isJumping: boolean = false;
 
-    // SPEED BUFFS
     private walkSpeed: number = 250;
     private runSpeed: number = 460;
     private lastKey: string = '';
@@ -19,7 +18,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private queuedAction: string | null = null;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
-        // GREEN BOX FIX: If 'darko-idle/frame_000.png' is wrong, it defaults to the first frame available in the atlas!
         const texture = scene.textures.get('darko');
         const firstFrame = texture ? texture.getFrameNames()[0] : 'darko-idle/frame_000.png';
         
@@ -41,7 +39,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
         if (input.space && !this.isJumping && !this.isAttacking) {
             this.isJumping = true;
-            (this.scene as any).playSFX('jump'); 
+            (this.scene as any).playSFX(['grunt_m_3', 'grunt_m_4']); 
             this.scene.tweens.add({ targets: this, displayOriginY: this.height + 150, duration: 350, yoyo: true, ease: 'Sine.easeInOut', onComplete: () => { this.isJumping = false; this.displayOriginY = this.height; }});
         }
 
@@ -60,7 +58,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         else if (input.k2) requestedAction = 'kick-2';
 
         if (requestedAction) {
-            // AERIAL COMBAT TRIGGER
             if (this.isJumping && !this.isAttacking) {
                 if (requestedAction.includes('punch') || requestedAction.includes('kick')) {
                     this.executeJumpAttack(requestedAction);
@@ -95,7 +92,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
         else this.play(`${this.characterName}-kick-1`, true); 
         
-        (this.scene as any).playSFX('woosh');
+        (this.scene as any).playSFX(['melee_1', 'melee_2']);
 
         const hitZone = this.scene.add.zone(this.x + (this.flipX ? -60 : 60), this.y - 100, 90, 90);
         this.scene.physics.add.existing(hitZone);
@@ -124,7 +121,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         const animToPlay = `${this.characterName}-${action}`;
         if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
 
-        (this.scene as any).playSFX('woosh'); 
+        (this.scene as any).playSFX(['melee_1', 'melee_2']);
 
         const hitZone = this.scene.add.zone(this.x + (this.flipX ? -50 : 50), this.y - 40, 80, 80);
         this.scene.physics.add.existing(hitZone);
@@ -151,7 +148,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         const anim = this.scene.anims.exists('darko-special') ? 'darko-special' : 'darko-kick-2';
         this.play(anim, true);
         
-        (this.scene as any).playSFX('woosh'); 
+        (this.scene as any).playSFX('darko_special_1'); 
 
         const spinZone = this.scene.add.circle(this.x, this.y - 40, 100);
         this.scene.physics.add.existing(spinZone);
@@ -170,7 +167,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         const anim = this.scene.anims.exists('darko-finisher') ? 'darko-finisher' : 'darko-punch-2';
         this.play(anim, true);
         
-        (this.scene as any).playSFX('special_sound'); 
+        (this.scene as any).playSFX('forbidden_riff'); 
 
         this.scene.cameras.main.shake(800, 0.015); this.scene.cameras.main.flash(300, 0, 255, 255);
         const enemies = (this.scene as any).enemies.getChildren();
@@ -188,7 +185,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.health -= amount; this.queuedAction = null;
         
         (this.scene as any).spawnHitEffect(this.x, this.y - 40);
-        (this.scene as any).playSFX('hit_light');
+        (this.scene as any).playSFX(['agony_m_3', 'agony_m_4']); 
 
         if (this.health <= 0) { this.die(); } 
         else {
