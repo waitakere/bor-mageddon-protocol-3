@@ -144,4 +144,73 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         });
     }
 
-    // ... [executeBalkanSuplex, executeIndustrialDrill, takeDamage, die remain exactly the same as previous] ...
+    private executeBalkanSuplex() {
+        this.isAttacking = true; this.setVelocity(0, 0);
+        const grabZone = this.scene.add.zone(this.x + (this.flipX ? -50 : 50), this.y - 40, 70, 70);
+        this.scene.physics.add.existing(grabZone);
+        
+        let grabbedEnemy: any = null;
+        this.scene.physics.overlap(grabZone, (this.scene as any).enemies, (gz, enemy: any) => { 
+            if (!grabbedEnemy && !enemy.isDead && Math.abs(this.y - enemy.y) <= 45) grabbedEnemy = enemy; 
+        });
+        grabZone.destroy(); 
+
+        if (grabbedEnemy) {
+            this.smfMeter -= 25; (this.scene as any).updateReactHUD();
+            const anim = this.scene.anims.exists('maja-special') ? 'maja-special' : 'maja-punch-1';
+            this.play(anim, true);
+            grabbedEnemy.setVelocity(0, 0);
+            
+            this.scene.time.delayedCall(200, () => { 
+                this.scene.cameras.main.shake(300, 0.02); 
+                (this.scene as any).spawnHitEffect(grabbedEnemy.x, grabbedEnemy.y - 50);
+                grabbedEnemy.takeDamage(40 * this.damageMultiplier); 
+                (this.scene as any).playSFX('hit_heavy'); 
+            });
+            this.once('animationcomplete', () => { this.isAttacking = false; });
+        } else { this.play('maja-idle', true); this.scene.time.delayedCall(300, () => { this.isAttacking = false; }); }
+    }
+
+    private executeIndustrialDrill() {
+        this.isAttacking = true; this.smfMeter = 0; (this.scene as any).updateReactHUD();
+        const anim = this.scene.anims.exists('maja-finisher') ? 'maja-finisher' : 'maja-run';
+        this.play(anim, true);
+        
+        (this.scene as any).playSFX('special_sound');
+
+        const direction = this.flipX ? -1 : 1;
+        this.setVelocityX(500 * direction); this.scene.cameras.main.shake(600, 0.01);
+        const drillZone = this.scene.add.zone(this.x, this.y, 100, 80);
+        this.scene.physics.add.existing(drillZone);
+        
+        const drillUpdate = () => {
+            if (!drillZone.active) return;
+            drillZone.setPosition(this.x + (60 * direction), this.y - 40);
+            this.scene.physics.overlap(drillZone, (this.scene as any).enemies, (dz, enemy: any) => { 
+                if (Math.abs(this.y - enemy.y) <= 50) {
+                    (this.scene as any).spawnHitEffect(enemy.x, enemy.y - 50);
+                    if (enemy.takeDamage) enemy.takeDamage(5); 
+                }
+            });
+        };
+        this.scene.events.on('update', drillUpdate);
+        this.scene.time.delayedCall(600, () => { this.setVelocityX(0); drillZone.destroy(); this.scene.events.off('update', drillUpdate); this.isAttacking = false; });
+    }
+
+    public takeDamage(amount: number) {
+        this.health -= amount; this.queuedAction = null;
+
+        (this.scene as any).spawnHitEffect(this.x, this.y - 40);
+        (this.scene as any).playSFX('hit_heavy');
+
+        if (this.health <= 0) { this.die(); } 
+        else {
+            const dmgAnim = `${this.characterName}-damage`;
+            if (this.scene.anims.exists(dmgAnim)) { this.isAttacking = true; this.play(dmgAnim, true); this.once('animationcomplete', () => { this.isAttacking = false; }); } 
+            else { this.setTint(0xff0000); this.scene.time.delayedCall(200, () => this.clearTint()); }
+        }
+        (this.scene as any).updateReactHUD();
+    }
+
+    private die() { this.isDead = true; this.setVelocity(0, 0); const dieAnim = `${this.characterName}-die`; if (this.scene.anims.exists(dieAnim)) this.play(dieAnim, true); }
+}
