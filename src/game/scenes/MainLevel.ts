@@ -10,6 +10,7 @@ export class MainLevel extends Phaser.Scene {
     public items!: Phaser.Physics.Arcade.Group;
     private shadows!: Phaser.GameObjects.Graphics;
     
+    // Wave Manager Data
     private sectors = [
         { triggerX: 800, totalEnemies: 4, maxActive: 2 },
         { triggerX: 1600, totalEnemies: 6, maxActive: 3 },
@@ -19,13 +20,18 @@ export class MainLevel extends Phaser.Scene {
     private currentSectorIndex: number = 0;
     private isLocked: boolean = false;
     private spawnedThisWave: number = 0;
-    public killedThisWave: number = 0; 
-    private bossSpawned: boolean = false;
     public score: number = 0;
 
     constructor() { super({ key: 'MainLevel' }); }
 
     create() {
+        // AUDIO FIX: Force AudioContext to wake up on first click/interaction
+        this.input.on('pointerdown', () => {
+            if (this.sound.context.state === 'suspended') {
+                this.sound.context.resume();
+            }
+        });
+
         this.physics.world.setBounds(0, 750, 4000, 330); 
         
         this.add.image(0, 0, 'part1_sky').setOrigin(0, 0).setDisplaySize(4000, 1080).setScrollFactor(0.1);
@@ -44,8 +50,6 @@ export class MainLevel extends Phaser.Scene {
         }
 
         this.player.setScale(1.7);
-        this.enemies.add(new Enemy(this, 1000, 950, 'mup'));
-
         this.physics.add.overlap(this.player, this.items, this.collectItem, undefined, this);
 
         this.cameras.main.setBounds(0, 0, 4000, 1080);
@@ -85,13 +89,10 @@ export class MainLevel extends Phaser.Scene {
         this.children.each((c: any) => { if (c.y && c.type !== 'Image' && c.type !== 'Graphics') c.setDepth(c.y); });
     }
 
-    // --- SYSTEMS ---
-
     public playSFX(marker: string, volume: number = 0.5) {
         try {
             const json = this.cache.json.get('sfx_atlas');
             if (json && json.spritemap && !json.spritemap[marker]) {
-                // Automatically dumps available audio names into your console so you can copy them!
                 console.warn(`[AUDIO] '${marker}' not found! Available markers:`, Object.keys(json.spritemap));
                 return;
             }
@@ -103,8 +104,8 @@ export class MainLevel extends Phaser.Scene {
 
     public spawnHitEffect(x: number, y: number) {
         const explosion = this.add.sprite(x, y, 'explosion_01');
-        explosion.setDepth(9999); // Force above everything
-        explosion.setBlendMode(Phaser.BlendModes.ADD); // Glow effect
+        explosion.setDepth(9999); 
+        explosion.setBlendMode(Phaser.BlendModes.ADD); 
         explosion.setScale(0.6);
         
         this.tweens.add({
@@ -119,7 +120,6 @@ export class MainLevel extends Phaser.Scene {
         if (Math.random() > 0.3) return; 
         const items = ['item-burek', 'item-coffee', 'item-pork', 'item-beer', 'item-sandwich'];
         const randomItem = items[Math.floor(Math.random() * items.length)];
-        
         const drop = this.physics.add.sprite(x, y - 20, randomItem);
         this.items.add(drop);
     }
@@ -133,8 +133,6 @@ export class MainLevel extends Phaser.Scene {
         this.tweens.add({ targets: healText, y: healText.y - 30, alpha: 0, duration: 1000, onComplete: () => healText.destroy() });
         this.updateReactHUD();
     }
-
-    // --- WAVE MANAGER ---
 
     private handleWaveManager() {
         const cam = this.cameras.main;
@@ -154,19 +152,21 @@ export class MainLevel extends Phaser.Scene {
             const activeEnemies = this.enemies.getChildren().filter((e: any) => !e.isDead).length;
             const isFinalSector = this.currentSectorIndex === this.sectors.length - 1;
 
+            // FIX: Stop spawning immediately once the quota is hit
             if (activeEnemies < currentSector.maxActive && this.spawnedThisWave < currentSector.totalEnemies) {
                 const gangTypes = ['mup', 'dizel', 'dizelcic', 'rudar'];
                 const randomType = gangTypes[Math.floor(Math.random() * gangTypes.length)];
                 this.spawnEnemyOffScreen(cam.worldView, randomType);
             }
 
-            if (isFinalSector && !this.bossSpawned && this.killedThisWave >= currentSector.totalEnemies - 1) {
+            if (isFinalSector && this.spawnedThisWave >= currentSector.totalEnemies && activeEnemies === 0 && !this.bossSpawned) {
                 this.spawnEnemyOffScreen(cam.worldView, 'sloba');
                 this.bossSpawned = true;
             }
 
-            const totalToKill = isFinalSector ? currentSector.totalEnemies + 1 : currentSector.totalEnemies;
-            if (this.killedThisWave >= totalToKill) {
+            // FIX: Only unlock if everything that spawned is officially dead
+            if (this.spawnedThisWave >= currentSector.totalEnemies && activeEnemies === 0) {
+                if (isFinalSector && !this.bossSpawned) return; // Wait for boss
                 this.unlockCamera();
             }
         }
@@ -186,7 +186,6 @@ export class MainLevel extends Phaser.Scene {
         this.isLocked = false;
         this.currentSectorIndex++; 
         this.spawnedThisWave = 0;
-        this.killedThisWave = 0;
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
         this.physics.world.setBounds(0, 750, 4000, 330);
         this.updateReactHUD();
@@ -199,7 +198,6 @@ export class MainLevel extends Phaser.Scene {
 
     public registerEnemyDeath() {
         this.score += 100;
-        this.killedThisWave++;
         this.updateReactHUD();
     }
 
