@@ -1,212 +1,202 @@
 import Phaser from 'phaser';
-import { Marko } from '../entities/Marko';
-import { Maja } from '../entities/Maja';
-import { Darko } from '../entities/Darko';
-import { Enemy } from '../entities/Enemy';
 
-export class MainLevel extends Phaser.Scene {
-    public player!: any; 
-    public enemies!: Phaser.Physics.Arcade.Group;
-    public items!: Phaser.Physics.Arcade.Group;
-    private shadows!: Phaser.GameObjects.Graphics;
-    
-    private sectors = [
-        { triggerX: 800, totalEnemies: 4, maxActive: 2 },
-        { triggerX: 1600, totalEnemies: 6, maxActive: 3 },
-        { triggerX: 2400, totalEnemies: 8, maxActive: 3 },
-        { triggerX: 3200, totalEnemies: 5, maxActive: 4 } 
-    ];
-    private currentSectorIndex: number = 0;
-    private isLocked: boolean = false;
-    private spawnedThisWave: number = 0;
-    public killedThisWave: number = 0; 
-    private bossSpawned: boolean = false;
-    public score: number = 0;
+export class Marko extends Phaser.Physics.Arcade.Sprite {
+    public health: number = 100;
+    public maxHealth: number = 100;
+    public smfMeter: number = 0;
+    public characterName: string = 'marko';
+    public damageMultiplier: number = 1.0;
+    public isAttacking: boolean = false;
+    public isDead: boolean = false;
+    public isJumping: boolean = false;
 
-    constructor() { super({ key: 'MainLevel' }); }
+    private walkSpeed: number = 200;
+    private runSpeed: number = 380;
+    private lastKey: string = '';
+    private lastKeyTime: number = 0;
+    private isRunning: boolean = false;
+    private queuedAction: string | null = null;
 
-    create() {
-        this.input.on('pointerdown', () => {
-            if (this.sound.context.state === 'suspended') {
-                this.sound.context.resume();
+    constructor(scene: Phaser.Scene, x: number, y: number) {
+        super(scene, x, y, 'marko', 'marko-idle/frame_000.png');
+        scene.add.existing(this); scene.physics.add.existing(this);
+        
+        this.setOrigin(0.5, 1);
+        this.setScale(1.7); 
+
+        if (this.body) {
+            this.body.setSize(80, 30); this.body.setOffset(this.width / 2 - 40, this.height - 30);
+            (this.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
+        }
+    }
+
+    public update(input: any) {
+        if (this.isDead) return;
+        this.setAngle(0);
+
+        if (input.space && !this.isJumping && !this.isAttacking) {
+            this.isJumping = true;
+            (this.scene as any).playSFX(['grunt_m_1', 'grunt_m_2']); 
+            this.scene.tweens.add({ targets: this, displayOriginY: this.height + 150, duration: 350, yoyo: true, ease: 'Sine.easeInOut', onComplete: () => { this.isJumping = false; this.displayOriginY = this.height; }});
+        }
+
+        const now = this.scene.time.now;
+        if (input.left || input.right) {
+            const dir = input.left ? 'left' : 'right';
+            if (this.lastKey !== dir) { if (now - this.lastKeyTime < 250) this.isRunning = true; this.lastKey = dir; this.lastKeyTime = now; }
+        } else { this.isRunning = false; this.lastKey = ''; }
+
+        let requestedAction: string | null = null;
+        if (input.special) requestedAction = 'special';
+        else if (input.finisher) requestedAction = 'finisher';
+        else if (input.p1) requestedAction = 'punch-1';
+        else if (input.p2) requestedAction = 'punch-2';
+        else if (input.k1) requestedAction = 'kick-1';
+        else if (input.k2) requestedAction = 'kick-2';
+
+        if (requestedAction) {
+            if (this.isJumping && !this.isAttacking) {
+                if (requestedAction.includes('punch') || requestedAction.includes('kick')) {
+                    this.executeJumpAttack(requestedAction);
+                }
+            } else if (!this.isJumping && !this.isAttacking) {
+                this.executeAction(requestedAction);
+            } else {
+                this.queuedAction = requestedAction;
+            }
+            return; 
+        }
+
+        if (!this.isAttacking) {
+            const speed = this.isRunning ? this.runSpeed : this.walkSpeed;
+            let vx = input.left ? -speed : (input.right ? speed : 0);
+            let vy = 0;
+            if (!this.isJumping) vy = input.up ? -speed * 0.6 : (input.down ? speed * 0.6 : 0);
+            this.setVelocity(vx, vy);
+            if (vx !== 0) this.setFlipX(vx < 0);
+            if (vx !== 0 || vy !== 0) {
+                const anim = this.isRunning ? `${this.characterName}-run` : `${this.characterName}-walk`;
+                this.play(this.scene.anims.exists(anim) ? anim : `${this.characterName}-walk`, true);
+            } else { if (!this.isJumping) this.play(`${this.characterName}-idle`, true); }
+        }
+    }
+
+    private executeJumpAttack(action: string) {
+        this.isAttacking = true;
+        const type = action.includes('punch') ? 'jump-punch' : 'jump-kick';
+        const animToPlay = `${this.characterName}-${type}`;
+        
+        if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
+        else this.play(`${this.characterName}-kick-1`, true); 
+        
+        (this.scene as any).playSFX(['melee_1', 'melee_2']); 
+
+        const hitZone = this.scene.add.zone(this.x + (this.flipX ? -60 : 60), this.y - 100, 90, 90);
+        this.scene.physics.add.existing(hitZone);
+        
+        this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
+            if (Math.abs(this.y - enemy.y) <= 45) { 
+                const damage = 15 * this.damageMultiplier;
+                const hitX = (this.x + enemy.x) / 2;
+                (this.scene as any).spawnHitEffect(hitX, enemy.y - 80);
+                if (enemy.takeDamage) enemy.takeDamage(damage); 
+                hitZone.destroy(); 
             }
         });
 
-        this.physics.world.setBounds(0, 750, 4000, 330); 
-        
-        this.add.image(0, 0, 'part1_sky').setOrigin(0, 0).setDisplaySize(4000, 1080).setScrollFactor(0.1);
-        this.add.image(0, 750, 'part1_mid').setOrigin(0, 1).setDisplaySize(4000, 650).setScrollFactor(0.5);
-        this.add.image(0, 1080, 'part1_floor').setOrigin(0, 1).setDisplaySize(4000, 330).setScrollFactor(1);
-
-        this.shadows = this.add.graphics().setAlpha(0.4);
-        this.items = this.physics.add.group();
-        this.enemies = this.physics.add.group();
-
-        const charKey = this.registry.get('selectedCharacter') || 'marko';
-        switch(charKey) {
-            case 'maja': this.player = new Maja(this, 200, 950); break;
-            case 'darko': this.player = new Darko(this, 200, 950); break;
-            default: this.player = new Marko(this, 200, 950); break;
-        }
-
-        this.player.setScale(1.7);
-        this.enemies.add(new Enemy(this, 1000, 950, 'mup'));
-
-        this.physics.add.overlap(this.player, this.items, this.collectItem, undefined, this);
-
-        this.cameras.main.setBounds(0, 0, 4000, 1080);
-        this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
-        this.updateReactHUD();
-    }
-
-    update() {
-        if (!this.player || this.player.isDead) return;
-
-        this.handleWaveManager();
-
-        this.children.each((child: any) => {
-            if (child.body && child.type === 'Sprite') { child.setAngle(0); child.rotation = 0; }
-        });
-
-        this.shadows.clear().fillStyle(0x000000, 0.5);
-        this.shadows.fillEllipse(this.player.x, this.player.y, 70 * this.player.scale, 20);
-        this.enemies.getChildren().forEach((e: any) => { if (!e.isDead) this.shadows.fillEllipse(e.x, e.y, e.width * 0.6, 20); });
-
-        const cursors = this.input.keyboard!.createCursorKeys();
-        const kb = this.input.keyboard!;
-        const q = kb.addKey('Q'); const w = kb.addKey('W'); const a = kb.addKey('A'); const s = kb.addKey('S');
-
-        const keys = {
-            up: cursors.up.isDown, down: cursors.down.isDown, left: cursors.left.isDown, right: cursors.right.isDown,
-            space: Phaser.Input.Keyboard.JustDown(kb.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)),
-            p1: Phaser.Input.Keyboard.JustDown(q), p2: Phaser.Input.Keyboard.JustDown(w),
-            k1: Phaser.Input.Keyboard.JustDown(a), k2: Phaser.Input.Keyboard.JustDown(s),
-            special: (Phaser.Input.Keyboard.JustDown(q) && w.isDown) || (Phaser.Input.Keyboard.JustDown(w) && q.isDown),
-            finisher: (Phaser.Input.Keyboard.JustDown(a) && s.isDown) || (Phaser.Input.Keyboard.JustDown(s) && a.isDown)
-        };
-
-        this.player.update(keys);
-        
-        this.enemies.getChildren().forEach((e: any) => { if (e.updateAI && !e.isDead) e.updateAI(this.player); });
-        this.children.each((c: any) => { if (c.y && c.type !== 'Image' && c.type !== 'Graphics') c.setDepth(c.y); });
-    }
-
-    // UPDATED AUDIO ENGINE: Now accepts arrays to randomly pick sound variations
-    public playSFX(marker: string | string[], volume: number = 0.5) {
-        try {
-            const finalMarker = Array.isArray(marker) ? marker[Math.floor(Math.random() * marker.length)] : marker;
-            const json = this.cache.json.get('sfx_atlas');
-            
-            if (json && json.spritemap && !json.spritemap[finalMarker]) {
-                console.warn(`[AUDIO] '${finalMarker}' not found! Available markers:`, Object.keys(json.spritemap));
-                return;
-            }
-            this.sound.playAudioSprite('sfx_atlas', finalMarker, { volume });
-        } catch (e) {
-            console.warn("Audio system error:", e);
-        }
-    }
-
-    public spawnHitEffect(x: number, y: number) {
-        const explosion = this.add.sprite(x, y, 'explosion_01');
-        explosion.setDepth(9999); 
-        explosion.setBlendMode(Phaser.BlendModes.ADD); 
-        explosion.setScale(0.6);
-        
-        this.tweens.add({
-            targets: explosion,
-            scale: 1.5, alpha: 0, duration: 200,
-            ease: 'Quad.easeOut',
-            onComplete: () => explosion.destroy()
+        this.once('animationcomplete', () => {
+            if (hitZone.active) hitZone.destroy();
+            this.isAttacking = false;
         });
     }
 
-    public dropItem(x: number, y: number) {
-        if (Math.random() > 0.3) return; 
-        const items = ['item-burek', 'item-coffee', 'item-pork', 'item-beer', 'item-sandwich'];
-        const randomItem = items[Math.floor(Math.random() * items.length)];
-        const drop = this.physics.add.sprite(x, y - 20, randomItem);
-        this.items.add(drop);
-    }
+    private executeAction(action: string) {
+        if (action === 'special') { if (this.smfMeter >= 25) { this.executeMegaphoneScream(); return; } action = 'punch-1'; }
+        if (action === 'finisher') { if (this.smfMeter >= 100) { this.executeChainWhip(); return; } action = 'kick-2'; }
 
-    private collectItem(player: any, item: any) {
-        item.destroy();
-        this.playSFX(['melee_1', 'melee_2'], 0.8); // Uses melee since pickup doesn't exist
-        this.player.health = Math.min(this.player.health + 30, this.player.maxHealth || 150);
+        this.isAttacking = true; this.setVelocity(0, 0);
+        const animToPlay = `${this.characterName}-${action}`;
+        if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
         
-        const healText = this.add.text(this.player.x, this.player.y - 80, '+HP', { font: '900 20px "Space Mono"', color: '#00ff00' }).setOrigin(0.5);
-        this.tweens.add({ targets: healText, y: healText.y - 30, alpha: 0, duration: 1000, onComplete: () => healText.destroy() });
-        this.updateReactHUD();
-    }
+        (this.scene as any).playSFX(['melee_1', 'melee_2']);
 
-    private handleWaveManager() {
-        const cam = this.cameras.main;
-
-        if (!this.isLocked && this.currentSectorIndex < this.sectors.length) {
-            const nextSector = this.sectors[this.currentSectorIndex];
-            if (this.player.x > nextSector.triggerX) {
-                this.isLocked = true;
-                cam.stopFollow();
-                this.physics.world.setBounds(cam.worldView.left, 750, cam.width, 330);
-                this.updateReactHUD();
-            }
-        }
-
-        if (this.isLocked) {
-            const currentSector = this.sectors[this.currentSectorIndex];
-            const activeEnemies = this.enemies.getChildren().filter((e: any) => !e.isDead).length;
-            const isFinalSector = this.currentSectorIndex === this.sectors.length - 1;
-
-            if (activeEnemies < currentSector.maxActive && this.spawnedThisWave < currentSector.totalEnemies) {
-                const gangTypes = ['mup', 'dizel', 'dizelcic', 'rudar'];
-                const randomType = gangTypes[Math.floor(Math.random() * gangTypes.length)];
-                this.spawnEnemyOffScreen(cam.worldView, randomType);
-            }
-
-            if (isFinalSector && this.spawnedThisWave >= currentSector.totalEnemies && activeEnemies === 0 && !this.bossSpawned) {
-                this.spawnEnemyOffScreen(cam.worldView, 'sloba');
-                this.bossSpawned = true;
-            }
-
-            if (this.spawnedThisWave >= currentSector.totalEnemies && activeEnemies === 0) {
-                if (isFinalSector && !this.bossSpawned) return; 
-                this.unlockCamera();
-            }
-        }
-    }
-
-    private spawnEnemyOffScreen(view: Phaser.Geom.Rectangle, type: string) {
-        const spawnOnLeft = Math.random() > 0.5;
-        const spawnX = spawnOnLeft ? view.left - 80 : view.right + 80;
-        const spawnY = Phaser.Math.Between(800, 1050);
+        const hitZone = this.scene.add.zone(this.x + (this.flipX ? -60 : 60), this.y - 40, 80, 80);
+        this.scene.physics.add.existing(hitZone);
         
-        const enemy = new Enemy(this, spawnX, spawnY, type); 
-        this.enemies.add(enemy);
-        this.spawnedThisWave++;
+        this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
+            if (Math.abs(this.y - enemy.y) <= 45) { 
+                const damage = (action.includes('2') ? 15 : 10) * this.damageMultiplier;
+                const hitX = (this.x + enemy.x) / 2;
+                (this.scene as any).spawnHitEffect(hitX, enemy.y - 50);
+                if (enemy.takeDamage) enemy.takeDamage(damage); 
+                hitZone.destroy(); 
+            }
+        });
+
+        this.once('animationcomplete', () => {
+            if (hitZone.active) hitZone.destroy();
+            if (this.queuedAction) { const next = this.queuedAction; this.queuedAction = null; this.executeAction(next); } 
+            else { this.isAttacking = false; this.smfMeter = Math.min(this.smfMeter + 5, 100); (this.scene as any).updateReactHUD(); }
+        });
     }
 
-    private unlockCamera() {
-        this.isLocked = false;
-        this.currentSectorIndex++; 
-        this.spawnedThisWave = 0;
-        this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
-        this.physics.world.setBounds(0, 750, 4000, 330);
-        this.updateReactHUD();
+    private executeMegaphoneScream() {
+        this.isAttacking = true; this.setVelocity(0, 0); this.smfMeter -= 25; (this.scene as any).updateReactHUD();
+        const anim = this.scene.anims.exists('marko-special') ? 'marko-special' : 'marko-punch-2';
+        this.play(anim, true);
         
-        if (this.currentSectorIndex < this.sectors.length) {
-            const goText = this.add.text(this.player.x, this.player.y - 150, 'GO! ➡', { font: '900 64px "Metal Mania"', color: '#39ff14', stroke: '#000', strokeThickness: 8 }).setOrigin(0.5);
-            this.tweens.add({ targets: goText, x: goText.x + 100, alpha: 0, duration: 1500, onComplete: () => goText.destroy() });
+        (this.scene as any).playSFX('marko_special_1'); // EXACT AUDIO
+        
+        this.scene.cameras.main.shake(300, 0.01);
+        const direction = this.flipX ? -1 : 1;
+        const waveZone = this.scene.add.zone(this.x + (100 * direction), this.y - 40, 200, 100);
+        this.scene.physics.add.existing(waveZone);
+        
+        this.scene.physics.add.overlap(waveZone, (this.scene as any).enemies, (wz, enemy: any) => {
+            if (Math.abs(this.y - enemy.y) <= 60) { 
+                if (enemy.takeDamage) { enemy.takeDamage(20 * this.damageMultiplier); if (enemy.body) enemy.setVelocityX(200 * direction); }
+                (this.scene as any).spawnHitEffect(enemy.x, enemy.y - 50);
+            }
+        });
+        this.scene.time.delayedCall(250, () => { if (waveZone.active) waveZone.destroy(); });
+        this.once('animationcomplete', () => { this.isAttacking = false; });
+    }
+
+    private executeChainWhip() {
+        this.isAttacking = true; this.smfMeter = 0; (this.scene as any).updateReactHUD();
+        const anim = this.scene.anims.exists('marko-finisher') ? 'marko-finisher' : 'marko-kick-2';
+        this.play(anim, true);
+        
+        (this.scene as any).playSFX('marko_special_2'); // EXACT AUDIO
+
+        this.scene.cameras.main.shake(600, 0.02);
+        const spinZone = this.scene.add.circle(this.x, this.y - 40, 150);
+        this.scene.physics.add.existing(spinZone);
+        
+        this.scene.physics.overlap(spinZone, (this.scene as any).enemies, (sz, enemy: any) => {
+            if (Math.abs(this.y - enemy.y) <= 80) { 
+                if (enemy.takeDamage) { enemy.takeDamage(90 * this.damageMultiplier); if (enemy.body) enemy.setVelocityY(-200); }
+                (this.scene as any).spawnHitEffect(enemy.x, enemy.y - 50);
+            }
+        });
+        this.scene.time.delayedCall(200, () => { if (spinZone.active) spinZone.destroy(); });
+        this.once('animationcomplete', () => { this.isAttacking = false; });
+    }
+
+    public takeDamage(amount: number) {
+        this.health -= amount; this.queuedAction = null;
+        
+        (this.scene as any).spawnHitEffect(this.x, this.y - 40);
+        (this.scene as any).playSFX(['agony_m_1', 'agony_m_2']); 
+
+        if (this.health <= 0) { this.die(); } 
+        else {
+            const dmgAnim = `${this.characterName}-damage`;
+            if (this.scene.anims.exists(dmgAnim)) { this.isAttacking = true; this.play(dmgAnim, true); this.once('animationcomplete', () => { this.isAttacking = false; }); } 
+            else { this.setTint(0xff0000); this.scene.time.delayedCall(200, () => this.clearTint()); }
         }
+        (this.scene as any).updateReactHUD();
     }
 
-    public registerEnemyDeath() {
-        this.score += 100;
-        this.updateReactHUD();
-    }
-
-    public updateReactHUD() {
-        window.dispatchEvent(new CustomEvent('update-phaser-hud', {
-            detail: { health: this.player?.health, smf: this.player?.smfMeter, score: this.score, showGo: false }
-        }));
-    }
+    private die() { this.isDead = true; this.setVelocity(0, 0); const dieAnim = `${this.characterName}-die`; if (this.scene.anims.exists(dieAnim)) this.play(dieAnim, true); }
 }
