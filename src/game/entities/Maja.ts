@@ -91,11 +91,12 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         
         (this.scene as any).playSFX(['melee_1', 'melee_2']);
 
-        const hitZone = this.scene.add.zone(this.x + (this.flipX ? -60 : 60), this.y - 100, 90, 90);
+        // WIDER HITBOX
+        const hitZone = this.scene.add.zone(this.x + (this.flipX ? -60 : 60), this.y - 100, 140, 90);
         this.scene.physics.add.existing(hitZone);
         
         this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
-            if (Math.abs(this.y - enemy.y) <= 45) { 
+            if (Math.abs(this.y - enemy.y) <= 60) { 
                 const damage = 15 * this.damageMultiplier;
                 const hitX = (this.x + enemy.x) / 2;
                 (this.scene as any).spawnHitEffect(hitX, enemy.y - 80);
@@ -120,11 +121,13 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
         (this.scene as any).playSFX(['melee_1', 'melee_2']); 
 
-        const hitZone = this.scene.add.zone(this.x + (this.flipX ? -80 : 80), this.y - 40, 110, 80);
+        // HITBOX BUFF: Increased width to 140 so it extends well past her fist
+        const hitZone = this.scene.add.zone(this.x + (this.flipX ? -80 : 80), this.y - 40, 140, 80);
         this.scene.physics.add.existing(hitZone);
         
         this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
-            if (Math.abs(this.y - enemy.y) <= 45) { 
+            // DEPTH BUFF: Increased tolerance to 60px so she connects easier vertically
+            if (Math.abs(this.y - enemy.y) <= 60) { 
                 const damage = (action.includes('2') ? 15 : 10) * this.damageMultiplier;
                 const hitX = (this.x + enemy.x) / 2;
                 (this.scene as any).spawnHitEffect(hitX, enemy.y - 50);
@@ -147,7 +150,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         
         let grabbedEnemy: any = null;
         this.scene.physics.overlap(grabZone, (this.scene as any).enemies, (gz, enemy: any) => { 
-            if (!grabbedEnemy && !enemy.isDead && Math.abs(this.y - enemy.y) <= 45) grabbedEnemy = enemy; 
+            if (!grabbedEnemy && !enemy.isDead && Math.abs(this.y - enemy.y) <= 60) grabbedEnemy = enemy; 
         });
         grabZone.destroy(); 
 
@@ -183,7 +186,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             if (!drillZone.active) return;
             drillZone.setPosition(this.x + (60 * direction), this.y - 40);
             this.scene.physics.overlap(drillZone, (this.scene as any).enemies, (dz, enemy: any) => { 
-                if (Math.abs(this.y - enemy.y) <= 50) {
+                if (Math.abs(this.y - enemy.y) <= 60) {
                     (this.scene as any).spawnHitEffect(enemy.x, enemy.y - 50);
                     if (enemy.takeDamage) enemy.takeDamage(5); 
                 }
