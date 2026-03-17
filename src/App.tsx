@@ -4,7 +4,7 @@ import { GameContainer } from './components/GameContainer';
 import { SettingsMenu, ControlsHUD } from './components/SettingsMenu';
 import { WorldMap } from './components/WorldMap';
 import { GameHUD } from './components/GameHUD';
-import { PauseMenu } from './components/PauseMenu'; // <-- 1. IMPORT PAUSE MENU
+import { PauseMenu } from './components/PauseMenu'; 
 
 export default function App() {
   const [gameState, setGameState] = useState<'MENU' | 'PLAYING'>('MENU');
