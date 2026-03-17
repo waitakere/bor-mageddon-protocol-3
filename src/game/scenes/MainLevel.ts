@@ -26,7 +26,6 @@ export class MainLevel extends Phaser.Scene {
     constructor() { super({ key: 'MainLevel' }); }
 
     create() {
-        // AUDIO FIX: Unlock audio on ANY keyboard press or mouse click!
         const unlockAudio = () => {
             if (this.sound.context.state === 'suspended') {
                 this.sound.context.resume();
@@ -94,25 +93,33 @@ export class MainLevel extends Phaser.Scene {
         this.children.each((c: any) => { if (c.y && c.type !== 'Image' && c.type !== 'Graphics') c.setDepth(c.y); });
     }
 
+    // AUDIO UPDATE: Returns the sound object so characters can stop it if needed
     public playSFX(marker: string | string[], volume: number = 0.8) {
         try {
+            if (this.sound.context.state === 'suspended') {
+                this.sound.context.resume();
+            }
+
             const finalMarker = Array.isArray(marker) ? marker[Math.floor(Math.random() * marker.length)] : marker;
             const json = this.cache.json.get('sfx_atlas');
             
             if (json && json.spritemap && !json.spritemap[finalMarker]) {
                 console.warn(`[AUDIO] '${finalMarker}' not found!`);
-                return;
+                return null;
             }
-            this.sound.playAudioSprite('sfx_atlas', finalMarker, { volume });
+            // Add sound directly so we can return it
+            const sound = this.sound.addAudioSprite('sfx_atlas');
+            sound.play(finalMarker, { volume });
+            return sound;
         } catch (e) {
             console.warn("Audio system error:", e);
+            return null;
         }
     }
 
     public spawnHitEffect(x: number, y: number) {
         const explosion = this.add.sprite(x, y, 'explosion_01');
         explosion.setDepth(9999); 
-        // EXPLOSION FIX: Removed BlendMode and increased scale so it isn't transparent!
         explosion.setScale(1.5); 
         
         this.tweens.add({
