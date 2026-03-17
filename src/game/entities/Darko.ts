@@ -116,4 +116,88 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         });
     }
 
-    // ... [executeAction, takeDamage, etc. remain the exact same as previously updated] ...
+    private executeAction(action: string) {
+        if (action === 'special') { if (this.smfMeter >= 25) { this.executeRoundhouseSpin(); return; } action = 'kick-1'; }
+        if (action === 'finisher') { if (this.smfMeter >= 100) { this.executeGuitarRiff(); return; } action = 'punch-2'; }
+
+        this.isAttacking = true; this.setVelocity(0, 0);
+        const animToPlay = `${this.characterName}-${action}`;
+        if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
+
+        (this.scene as any).playSFX('woosh'); 
+
+        const hitZone = this.scene.add.zone(this.x + (this.flipX ? -50 : 50), this.y - 40, 80, 80);
+        this.scene.physics.add.existing(hitZone);
+        
+        this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
+            if (Math.abs(this.y - enemy.y) <= 45) { 
+                const damage = (action.includes('2') ? 15 : 10) * this.damageMultiplier;
+                const hitX = (this.x + enemy.x) / 2;
+                (this.scene as any).spawnHitEffect(hitX, enemy.y - 50);
+                if (enemy.takeDamage) enemy.takeDamage(damage); 
+                hitZone.destroy(); 
+            }
+        });
+
+        this.once('animationcomplete', () => {
+            if (hitZone.active) hitZone.destroy();
+            if (this.queuedAction) { const next = this.queuedAction; this.queuedAction = null; this.executeAction(next); } 
+            else { this.isAttacking = false; this.smfMeter = Math.min(this.smfMeter + 5, 100); (this.scene as any).updateReactHUD(); }
+        });
+    }
+
+    private executeRoundhouseSpin() {
+        this.isAttacking = true; this.setVelocity(0, 0); this.smfMeter -= 25; (this.scene as any).updateReactHUD();
+        const anim = this.scene.anims.exists('darko-special') ? 'darko-special' : 'darko-kick-2';
+        this.play(anim, true);
+        
+        (this.scene as any).playSFX('woosh'); 
+
+        const spinZone = this.scene.add.circle(this.x, this.y - 40, 100);
+        this.scene.physics.add.existing(spinZone);
+        this.scene.physics.add.overlap(spinZone, (this.scene as any).enemies, (sz, enemy: any) => {
+            if (Math.abs(this.y - enemy.y) <= 50) {
+                if (enemy.takeDamage) { enemy.takeDamage(20 * this.damageMultiplier); const pushDir = enemy.x > this.x ? 1 : -1; if (enemy.body) enemy.setVelocityX(300 * pushDir); }
+                (this.scene as any).spawnHitEffect(enemy.x, enemy.y - 50);
+            }
+        });
+        this.scene.time.delayedCall(200, () => { if (spinZone.active) spinZone.destroy(); });
+        this.once('animationcomplete', () => { this.isAttacking = false; });
+    }
+
+    private executeGuitarRiff() {
+        this.isAttacking = true; this.smfMeter = 0; (this.scene as any).updateReactHUD();
+        const anim = this.scene.anims.exists('darko-finisher') ? 'darko-finisher' : 'darko-punch-2';
+        this.play(anim, true);
+        
+        (this.scene as any).playSFX('special_sound'); 
+
+        this.scene.cameras.main.shake(800, 0.015); this.scene.cameras.main.flash(300, 0, 255, 255);
+        const enemies = (this.scene as any).enemies.getChildren();
+        enemies.forEach((enemy: any) => {
+            if (!enemy.isDead && Math.abs(this.y - enemy.y) <= 100) { 
+                if (enemy.takeDamage) enemy.takeDamage(100); 
+                enemy.setTint(0x00ffff); this.scene.time.delayedCall(200, () => enemy.clearTint());
+                (this.scene as any).spawnHitEffect(enemy.x, enemy.y - 50);
+            }
+        });
+        this.once('animationcomplete', () => { this.isAttacking = false; });
+    }
+
+    public takeDamage(amount: number) {
+        this.health -= amount; this.queuedAction = null;
+        
+        (this.scene as any).spawnHitEffect(this.x, this.y - 40);
+        (this.scene as any).playSFX('hit_light');
+
+        if (this.health <= 0) { this.die(); } 
+        else {
+            const dmgAnim = `${this.characterName}-damage`;
+            if (this.scene.anims.exists(dmgAnim)) { this.isAttacking = true; this.play(dmgAnim, true); this.once('animationcomplete', () => { this.isAttacking = false; }); } 
+            else { this.setTint(0xff0000); this.scene.time.delayedCall(200, () => this.clearTint()); }
+        }
+        (this.scene as any).updateReactHUD();
+    }
+
+    private die() { this.isDead = true; this.setVelocity(0, 0); const dieAnim = `${this.characterName}-die`; if (this.scene.anims.exists(dieAnim)) this.play(dieAnim, true); }
+}
