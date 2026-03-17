@@ -18,7 +18,12 @@ export const GameContainer: React.FC<GameContainerProps> = ({ selectedCharacter 
     };
 
     // Create the game instance
-    gameRef.current = new Phaser.Game(config);
+    const game = new Phaser.Game(config);
+    gameRef.current = game;
+
+    // --- CRITICAL FIX: EXPORT ENGINE TO WINDOW ---
+    // This allows React (PauseMenu, SettingsMenu) to pause/resume and change volume!
+    (window as any).phaserGame = game;
 
     // 2. Cleanup on unmount
     // This is critical to prevent multiple canvases spawning when you go back to the menu
@@ -26,6 +31,7 @@ export const GameContainer: React.FC<GameContainerProps> = ({ selectedCharacter 
       if (gameRef.current) {
         gameRef.current.destroy(true);
         gameRef.current = null;
+        (window as any).phaserGame = undefined; // Clean up global reference
       }
     };
   }, []); // Only runs once on mount
