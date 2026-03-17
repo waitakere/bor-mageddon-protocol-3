@@ -19,6 +19,9 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     private isRunning: boolean = false;
     private queuedAction: string | null = null;
 
+    private punchImpacts = ['punch_1', 'punch_2', 'punch_3', 'punch_4', 'punch_5', 'punch_6', 'punch_7', 'punch_8'];
+    private kickImpacts = ['kick_1', 'kick_2', 'kick_3', 'kick_4'];
+
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'maja', 'maja-idle/frame_000.png');
         scene.add.existing(this); scene.physics.add.existing(this);
@@ -105,7 +108,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
             if (Math.abs(this.y - enemy.y) <= 60) { 
                 if (!hasHit) {
-                    (this.scene as any).playSFX(action.includes('punch') ? 'punch_2' : ['kick_1', 'kick_4']);
+                    (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     hasHit = true;
                 }
                 const damage = 15 * this.damageMultiplier;
@@ -139,7 +142,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
             if (Math.abs(this.y - enemy.y) <= 60) { 
                 if (!hasHit) {
-                    (this.scene as any).playSFX(action.includes('punch') ? 'punch_2' : ['kick_1', 'kick_4']);
+                    (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     hasHit = true;
                 }
                 const damage = (action.includes('2') ? 15 : 10) * this.damageMultiplier;

@@ -10,7 +10,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     public isDead: boolean = false;
     public isJumping: boolean = false;
     
-    // Track active voice to prevent overlap
     private currentVoice: any = null;
 
     private walkSpeed: number = 200;
@@ -19,6 +18,10 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     private lastKeyTime: number = 0;
     private isRunning: boolean = false;
     private queuedAction: string | null = null;
+
+    // The full arrays of impact sounds based on your audio folder
+    private punchImpacts = ['punch_1', 'punch_2', 'punch_3', 'punch_4', 'punch_5', 'punch_6', 'punch_7', 'punch_8'];
+    private kickImpacts = ['kick_1', 'kick_2', 'kick_3', 'kick_4'];
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'marko', 'marko-idle/frame_000.png');
@@ -106,7 +109,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
             if (Math.abs(this.y - enemy.y) <= 60) { 
                 if (!hasHit) {
-                    (this.scene as any).playSFX(action.includes('punch') ? 'punch_2' : ['kick_1', 'kick_4']);
+                    // RANDOMIZE FROM ALL AUDIO FILES
+                    (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     hasHit = true;
                 }
                 const damage = 15 * this.damageMultiplier;
@@ -133,15 +137,15 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         
         this.playVoice(['melee_1', 'melee_2']);
 
-        // HITBOX BUFF: 140 width, 80 offset
         const hitZone = this.scene.add.zone(this.x + (this.flipX ? -80 : 80), this.y - 40, 140, 80);
         this.scene.physics.add.existing(hitZone);
         
         let hasHit = false;
         this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
-            if (Math.abs(this.y - enemy.y) <= 60) { // DEPTH BUFF
+            if (Math.abs(this.y - enemy.y) <= 60) { 
                 if (!hasHit) {
-                    (this.scene as any).playSFX(action.includes('punch') ? 'punch_2' : ['kick_1', 'kick_4']);
+                    // RANDOMIZE FROM ALL AUDIO FILES
+                    (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     hasHit = true;
                 }
 

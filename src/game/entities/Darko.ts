@@ -19,6 +19,9 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private isRunning: boolean = false;
     private queuedAction: string | null = null;
 
+    private punchImpacts = ['punch_1', 'punch_2', 'punch_3', 'punch_4', 'punch_5', 'punch_6', 'punch_7', 'punch_8'];
+    private kickImpacts = ['kick_1', 'kick_2', 'kick_3', 'kick_4'];
+
     constructor(scene: Phaser.Scene, x: number, y: number) {
         const texture = scene.textures.get('darko');
         const firstFrame = texture ? texture.getFrameNames()[0] : 'darko-idle/frame_000.png';
@@ -108,7 +111,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
             if (Math.abs(this.y - enemy.y) <= 60) { 
                 if (!hasHit) {
-                    (this.scene as any).playSFX(action.includes('punch') ? 'punch_2' : ['kick_1', 'kick_4']);
+                    (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     hasHit = true;
                 }
                 const damage = 15 * this.damageMultiplier;
@@ -135,7 +138,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
         this.playVoice(['melee_1', 'melee_2']);
 
-        // HITBOX BUFF
         const hitZone = this.scene.add.zone(this.x + (this.flipX ? -80 : 80), this.y - 40, 140, 80);
         this.scene.physics.add.existing(hitZone);
         
@@ -143,7 +145,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
             if (Math.abs(this.y - enemy.y) <= 60) { 
                 if (!hasHit) {
-                    (this.scene as any).playSFX(action.includes('punch') ? 'punch_2' : ['kick_1', 'kick_4']);
+                    (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     hasHit = true;
                 }
                 const damage = (action.includes('2') ? 15 : 10) * this.damageMultiplier;
