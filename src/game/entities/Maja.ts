@@ -10,6 +10,8 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     public isDead: boolean = false;
     public isJumping: boolean = false;
 
+    private currentVoice: any = null;
+
     private walkSpeed: number = 160;
     private runSpeed: number = 320;
     private lastKey: string = '';
@@ -30,13 +32,18 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
+    private playVoice(marker: string | string[]) {
+        if (this.currentVoice && this.currentVoice.isPlaying) this.currentVoice.stop();
+        this.currentVoice = (this.scene as any).playSFX(marker);
+    }
+
     public update(input: any) {
         if (this.isDead) return;
         this.setAngle(0);
 
         if (input.space && !this.isJumping && !this.isAttacking) {
             this.isJumping = true;
-            (this.scene as any).playSFX(['grunt_f_1', 'grunt_f_2']); 
+            this.playVoice(['grunt_f_1', 'grunt_f_2']); 
             this.scene.tweens.add({ targets: this, displayOriginY: this.height + 150, duration: 350, yoyo: true, ease: 'Sine.easeInOut', onComplete: () => { this.isJumping = false; this.displayOriginY = this.height; }});
         }
 
@@ -89,14 +96,18 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
         else this.play(`${this.characterName}-kick-1`, true); 
         
-        (this.scene as any).playSFX(['melee_1', 'melee_2']);
+        this.playVoice(['melee_1', 'melee_2']);
 
-        // WIDER HITBOX
         const hitZone = this.scene.add.zone(this.x + (this.flipX ? -60 : 60), this.y - 100, 140, 90);
         this.scene.physics.add.existing(hitZone);
         
+        let hasHit = false;
         this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
             if (Math.abs(this.y - enemy.y) <= 60) { 
+                if (!hasHit) {
+                    (this.scene as any).playSFX(action.includes('punch') ? 'punch_2' : ['kick_1', 'kick_4']);
+                    hasHit = true;
+                }
                 const damage = 15 * this.damageMultiplier;
                 const hitX = (this.x + enemy.x) / 2;
                 (this.scene as any).spawnHitEffect(hitX, enemy.y - 80);
@@ -119,15 +130,18 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         const animToPlay = `${this.characterName}-${action}`;
         if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
 
-        (this.scene as any).playSFX(['melee_1', 'melee_2']); 
+        this.playVoice(['melee_1', 'melee_2']); 
 
-        // HITBOX BUFF: Increased width to 140 so it extends well past her fist
         const hitZone = this.scene.add.zone(this.x + (this.flipX ? -80 : 80), this.y - 40, 140, 80);
         this.scene.physics.add.existing(hitZone);
         
+        let hasHit = false;
         this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
-            // DEPTH BUFF: Increased tolerance to 60px so she connects easier vertically
             if (Math.abs(this.y - enemy.y) <= 60) { 
+                if (!hasHit) {
+                    (this.scene as any).playSFX(action.includes('punch') ? 'punch_2' : ['kick_1', 'kick_4']);
+                    hasHit = true;
+                }
                 const damage = (action.includes('2') ? 15 : 10) * this.damageMultiplier;
                 const hitX = (this.x + enemy.x) / 2;
                 (this.scene as any).spawnHitEffect(hitX, enemy.y - 50);
@@ -175,7 +189,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         const anim = this.scene.anims.exists('maja-finisher') ? 'maja-finisher' : 'maja-run';
         this.play(anim, true);
         
-        (this.scene as any).playSFX('Metal-Impact-Shield');
+        this.playVoice('Metal-Impact-Shield');
 
         const direction = this.flipX ? -1 : 1;
         this.setVelocityX(500 * direction); this.scene.cameras.main.shake(600, 0.01);
@@ -200,7 +214,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.health -= amount; this.queuedAction = null;
 
         (this.scene as any).spawnHitEffect(this.x, this.y - 40);
-        (this.scene as any).playSFX(['agony_f_1', 'agony_f_2']);
+        this.playVoice(['agony_f_1', 'agony_f_2']);
 
         if (this.health <= 0) { this.die(); } 
         else {
@@ -211,5 +225,14 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         (this.scene as any).updateReactHUD();
     }
 
-    private die() { this.isDead = true; this.setVelocity(0, 0); const dieAnim = `${this.characterName}-die`; if (this.scene.anims.exists(dieAnim)) this.play(dieAnim, true); }
+    private die() { 
+        this.isDead = true; 
+        this.setVelocity(0, 0); 
+        const dieAnim = `${this.characterName}-dying`; 
+        if (this.scene.anims.exists(dieAnim)) {
+            this.play(dieAnim, true); 
+        } else {
+            this.setTint(0xff0000);
+        }
+    }
 }
