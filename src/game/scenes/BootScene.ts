@@ -39,14 +39,14 @@ export class BootScene extends Phaser.Scene {
             'punch-1': 'punch-1', 'punch-2': 'punch-2', 'kick-1': 'kick-1', 'kick-2': 'kick-2', 
             'jump-punch': 'jump-punch', 'jump-kick': 'jump-kick',
             'damage': 'damage', 'dying': 'dying', 'special': 'special', 'finisher': 'finisher',
-            'pickup': 'pickup' // NEW: Reads the pickup frames if they exist!
+            'pick-up': 'pick-up' // EXACT MATCH FOR YOUR FOLDER
         };
 
         characters.forEach(char => {
             Object.entries(actionMap).forEach(([actionKey, folderName]) => {
                 const animKey = `${char}-${actionKey}`; 
                 const framePrefix = `${char}-${folderName}/frame_`;
-                const fps = ['punch-1', 'punch-2', 'kick-1', 'kick-2', 'jump-punch', 'jump-kick', 'special', 'finisher', 'pickup'].includes(actionKey) ? 15 : 10;
+                const fps = ['punch-1', 'punch-2', 'kick-1', 'kick-2', 'jump-punch', 'jump-kick', 'special', 'finisher', 'pick-up'].includes(actionKey) ? 15 : 10;
                 const isLoop = ['idle', 'walk', 'run'].includes(actionKey);
                 this.createAutoAnimation(char, animKey, framePrefix, isLoop, fps);
             });

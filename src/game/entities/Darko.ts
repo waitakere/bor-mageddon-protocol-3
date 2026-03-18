@@ -43,6 +43,27 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.currentVoice = (this.scene as any).playSFX(marker);
     }
 
+    public playPickupAnim() {
+        if (this.isDead || this.isJumping || this.isAttacking) return;
+        
+        this.isAttacking = true;
+        this.setVelocity(0, 0);
+
+        const animKey = `${this.characterName}-pick-up`;
+        
+        if (this.scene.anims.exists(animKey)) {
+            this.play(animKey, true);
+            this.once('animationcomplete', () => {
+                this.isAttacking = false;
+            });
+        } else {
+            this.play(`${this.characterName}-idle`, true);
+            this.scene.time.delayedCall(300, () => {
+                this.isAttacking = false;
+            });
+        }
+    }
+
     public update(input: any) {
         if (this.isDead) return;
         this.setAngle(0);
@@ -206,6 +227,9 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         
         (this.scene as any).spawnHitEffect(this.x, this.y - 40);
         this.playVoice(['agony_m_3', 'agony_m_4']); 
+
+        // RED FLASH TRIGGER
+        (this.scene as any).lastPlayerHitTime = Date.now();
 
         if (this.health <= 0) { this.die(); } 
         else {

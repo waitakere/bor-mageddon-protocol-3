@@ -19,7 +19,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     private isRunning: boolean = false;
     private queuedAction: string | null = null;
 
-    // The full arrays of impact sounds based on your audio folder
     private punchImpacts = ['punch_1', 'punch_2', 'punch_3', 'punch_4', 'punch_5', 'punch_6', 'punch_7', 'punch_8'];
     private kickImpacts = ['kick_1', 'kick_2', 'kick_3', 'kick_4'];
 
@@ -39,6 +38,27 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     private playVoice(marker: string | string[]) {
         if (this.currentVoice && this.currentVoice.isPlaying) this.currentVoice.stop();
         this.currentVoice = (this.scene as any).playSFX(marker);
+    }
+
+    public playPickupAnim() {
+        if (this.isDead || this.isJumping || this.isAttacking) return;
+        
+        this.isAttacking = true;
+        this.setVelocity(0, 0);
+
+        const animKey = `${this.characterName}-pick-up`;
+        
+        if (this.scene.anims.exists(animKey)) {
+            this.play(animKey, true);
+            this.once('animationcomplete', () => {
+                this.isAttacking = false;
+            });
+        } else {
+            this.play(`${this.characterName}-idle`, true);
+            this.scene.time.delayedCall(300, () => {
+                this.isAttacking = false;
+            });
+        }
     }
 
     public update(input: any) {
@@ -109,7 +129,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
             if (Math.abs(this.y - enemy.y) <= 60) { 
                 if (!hasHit) {
-                    // RANDOMIZE FROM ALL AUDIO FILES
                     (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     hasHit = true;
                 }
@@ -144,7 +163,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
             if (Math.abs(this.y - enemy.y) <= 60) { 
                 if (!hasHit) {
-                    // RANDOMIZE FROM ALL AUDIO FILES
                     (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     hasHit = true;
                 }
@@ -213,6 +231,9 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         
         (this.scene as any).spawnHitEffect(this.x, this.y - 40);
         this.playVoice(['agony_m_1', 'agony_m_2']); 
+
+        // RED FLASH TRIGGER
+        (this.scene as any).lastPlayerHitTime = Date.now();
 
         if (this.health <= 0) { this.die(); } 
         else {
