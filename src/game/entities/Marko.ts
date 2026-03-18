@@ -136,7 +136,9 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 const hitX = (this.x + enemy.x) / 2;
                 (this.scene as any).spawnHitEffect(hitX, enemy.y - 80);
                 if (enemy.takeDamage) enemy.takeDamage(damage); 
-                hitZone.destroy(); 
+                
+                // FIX: Disable body safely instead of destroying it mid-physics step
+                if (hitZone.body) hitZone.body.enable = false; 
             }
         });
 
@@ -172,7 +174,9 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 (this.scene as any).spawnHitEffect(hitX, enemy.y - 50);
                 
                 if (enemy.takeDamage) enemy.takeDamage(damage); 
-                hitZone.destroy(); 
+                
+                // FIX: Disable body safely instead of destroying it mid-physics step
+                if (hitZone.body) hitZone.body.enable = false; 
             }
         });
 
