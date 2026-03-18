@@ -2,105 +2,135 @@ import React, { useEffect, useState } from 'react';
 
 export const GameHUD: React.FC = () => {
   const [health, setHealth] = useState(100);
+  const [maxHealth, setMaxHealth] = useState(100);
   const [smf, setSmf] = useState(0);
   const [score, setScore] = useState(0);
-  const [showGo, setShowGo] = useState(false);
-  const [weapon, setWeapon] = useState<{ type: string; durability: number } | null>(null);
+  
+  const [playerName, setPlayerName] = useState('marko');
+  const [playerFlash, setPlayerFlash] = useState(false);
+
+  const [enemyName, setEnemyName] = useState<string | null>(null);
+  const [enemyHealth, setEnemyHealth] = useState(0);
+  const [enemyMaxHealth, setEnemyMaxHealth] = useState(100);
+  const [enemyFlash, setEnemyFlash] = useState(false);
 
   useEffect(() => {
-    // Listen for custom events from the Phaser MainLevel scene
-    const handleUpdateHUD = (e: any) => {
-      if (e.detail.health !== undefined) setHealth(e.detail.health);
-      if (e.detail.smf !== undefined) setSmf(e.detail.smf);
-      if (e.detail.score !== undefined) setScore(e.detail.score);
-      if (e.detail.weapon !== undefined) setWeapon(e.detail.weapon);
-      if (e.detail.showGo !== undefined) setShowGo(e.detail.showGo);
+    const handleHUDUpdate = (e: any) => {
+      const data = e.detail;
+      if (data.health !== undefined) setHealth(data.health);
+      if (data.maxHealth !== undefined) setMaxHealth(data.maxHealth);
+      if (data.smf !== undefined) setSmf(data.smf);
+      if (data.score !== undefined) setScore(data.score);
+      if (data.playerName !== undefined) setPlayerName(data.playerName);
+      
+      setEnemyName(data.enemyName);
+      setEnemyHealth(data.enemyHealth || 0);
+      setEnemyMaxHealth(data.enemyMaxHealth || 100);
+
+      // Trigger Red Flashes based on timestamps sent from Phaser
+      if (data.playerHitStamp && data.playerHitStamp !== (window as any)._lastPlayerHit) {
+        (window as any)._lastPlayerHit = data.playerHitStamp;
+        setPlayerFlash(true);
+        setTimeout(() => setPlayerFlash(false), 150);
+      }
+
+      if (data.enemyHitStamp && data.enemyHitStamp !== (window as any)._lastEnemyHit) {
+        (window as any)._lastEnemyHit = data.enemyHitStamp;
+        setEnemyFlash(true);
+        setTimeout(() => setEnemyFlash(false), 150);
+      }
     };
 
-    window.addEventListener('update-phaser-hud', handleUpdateHUD);
-    return () => window.removeEventListener('update-phaser-hud', handleUpdateHUD);
+    window.addEventListener('update-phaser-hud', handleHUDUpdate);
+    return () => window.removeEventListener('update-phaser-hud', handleHUDUpdate);
   }, []);
 
+  const healthPct = Math.max(0, Math.min(100, (health / maxHealth) * 100));
+  const enemyHealthPct = Math.max(0, Math.min(100, (enemyHealth / enemyMaxHealth) * 100));
+
   return (
-    <div className="absolute inset-0 pointer-events-none p-6 font-mono text-white z-50 select-none">
+    <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-start z-40 pointer-events-none select-none">
       
-      {/* --- TOP LEFT: STATUS PANEL --- */}
-      <div className="flex flex-col gap-4">
-        {/* SCORE BOX */}
-        <div className="bg-black/80 border-2 border-red-900 p-4 w-48 shadow-[4px_4px_0px_#660000]">
-          <div className="text-[10px] text-red-500 font-bold tracking-widest mb-1">SCORE</div>
-          <div className="text-3xl font-bold italic tabular-nums">{score.toString().padStart(6, '0')}</div>
+      {/* LEFT: PLAYER STATS */}
+      <div className="flex gap-4 items-start w-[35%]">
+        {/* Portrait Box */}
+        <div className="relative border-4 border-zinc-500 bg-zinc-900 w-24 h-24 overflow-hidden shadow-[4px_4px_0_rgba(0,0,0,0.5)]">
+          <img 
+            src={`assets/images/portraits/${playerName}.png`} 
+            alt={playerName} 
+            className="w-full h-full object-cover object-top pixelated"
+            onError={(e) => (e.currentTarget.src = 'assets/images/portraits/marko.png')} // Fallback
+          />
+          {/* Red Flash Overlay */}
+          <div className={`absolute inset-0 bg-red-600 mix-blend-overlay transition-opacity duration-75 ${playerFlash ? 'opacity-80' : 'opacity-0'}`} />
         </div>
 
-        {/* BARS BOX (Health & Special) */}
-        <div className="bg-black/80 border-2 border-red-900 p-4 w-72 shadow-[4px_4px_0px_#660000]">
-          {/* INTEGRITY / HEALTH */}
-          <div className="text-[10px] text-red-500 font-bold tracking-widest mb-2 flex justify-between">
-            <span>INTEGRITY</span>
-            <span>{health}%</span>
-          </div>
-          <div className="flex gap-1 mb-3">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <div 
-                key={i} 
-                className={`h-4 w-full transition-all duration-300 ${i < health / 10 ? 'bg-red-600 shadow-[0_0_10px_#ff0000]' : 'bg-zinc-900'}`}
-              />
-            ))}
+        {/* Bars */}
+        <div className="flex flex-col flex-grow mt-1 gap-2">
+          <h2 className="text-white font-mono text-xl font-bold uppercase tracking-widest drop-shadow-[2px_2px_0_rgba(0,0,0,1)] m-0 leading-none">
+            {playerName}
+          </h2>
+          
+          {/* 16-bit segmented style Health Bar */}
+          <div className="h-6 w-full border-2 border-white bg-black p-[2px] shadow-[4px_4px_0_rgba(0,0,0,0.5)]">
+            <div 
+              className="h-full bg-gradient-to-b from-yellow-300 to-yellow-600 transition-all duration-200" 
+              style={{ width: `${healthPct}%` }} 
+            />
           </div>
 
-          {/* SMF / SPECIAL METER */}
-          <div className="text-[10px] text-cyan-500 font-bold tracking-widest mb-1 flex justify-between">
-            <span>SMF METER</span>
-            <span className={smf >= 100 ? "animate-pulse" : ""}>{smf >= 100 ? "READY" : `${smf}%`}</span>
-          </div>
-          <div className="h-2 w-full bg-zinc-900 border border-cyan-900 overflow-hidden">
-             <div 
-               className="h-full bg-cyan-500 transition-all duration-500 shadow-[0_0_8px_#06b6d4]"
-               style={{ width: `${smf}%` }}
-             />
+          {/* SMF Bar */}
+          <div className="h-3 w-3/4 border-2 border-blue-400 bg-black p-[1px] mt-1 shadow-[2px_2px_0_rgba(0,0,0,0.5)]">
+            <div 
+              className="h-full bg-gradient-to-b from-cyan-300 to-cyan-500 transition-all duration-300" 
+              style={{ width: `${smf}%` }} 
+            />
           </div>
         </div>
       </div>
 
-      {/* --- CENTER RIGHT: CLASSIC "GO!" ARROW --- */}
-      {showGo && (
-        <div className="absolute right-12 top-1/2 -translate-y-1/2 flex flex-col items-center">
-            <div className="bg-yellow-500 text-black font-black text-5xl px-8 py-2 italic tracking-tighter shadow-[6px_6px_0px_#000] border-4 border-black animate-pulse">
-                GO!
-            </div>
-            <div className="text-yellow-500 text-8xl mt-4 drop-shadow-[6px_6px_0px_#000] animate-bounce">
-                ➔
-            </div>
-        </div>
-      )}
-
-      {/* --- BOTTOM LEFT: WEAPON STATUS --- */}
-      {weapon && weapon.durability > 0 && (
-        <div className="absolute bottom-10 left-6">
-           <div className="bg-black/95 border-2 border-[#b87333] p-3 flex items-center gap-4 shadow-[4px_4px_0px_#442200]">
-              <div className="flex flex-col">
-                <div className="text-[9px] text-[#b87333] font-bold tracking-tighter">EQUIPPED_WPN</div>
-                <div className="text-xl font-bold uppercase text-white italic">{weapon.type.replace('-', ' ')}</div>
-              </div>
-              <div className="h-10 w-[2px] bg-[#b87333]/40" />
-              <div className="flex flex-col items-center">
-                <div className="text-[9px] text-[#b87333] font-bold">USES</div>
-                <div className={`text-3xl font-bold ${weapon.durability === 1 ? 'text-red-500 animate-pulse' : 'text-[#ff9900]'}`}>
-                    {weapon.durability === 1 ? "THROW!" : weapon.durability}
-                </div>
-              </div>
-           </div>
-        </div>
-      )}
-
-      {/* --- TOP RIGHT: LEVEL INFO --- */}
-      <div className="absolute top-6 right-6 text-right">
-        <div className="bg-black/80 border-2 border-red-900 p-4 shadow-[4px_4px_0px_#660000]">
-          <div className="text-[10px] text-red-500 font-bold tracking-widest">LEVEL</div>
-          <div className="text-4xl font-bold">1</div>
-          <div className="text-[10px] text-zinc-500 mt-2 font-bold tracking-widest">STREETS OF BOR</div>
+      {/* CENTER: SCORE */}
+      <div className="flex flex-col items-center mt-2 w-[30%]">
+        <h3 className="text-yellow-400 font-mono text-sm font-bold m-0 tracking-[4px] drop-shadow-[2px_2px_0_rgba(0,0,0,1)]">
+          SCORE
+        </h3>
+        <div className="text-white font-mono text-4xl font-bold tracking-widest drop-shadow-[4px_4px_0_rgba(0,0,0,1)]">
+          {score.toString().padStart(6, '0')}
         </div>
       </div>
+
+      {/* RIGHT: ENEMY STATS (Only shows when engaged) */}
+      <div className="flex gap-4 items-start justify-end w-[35%] transition-opacity duration-300" style={{ opacity: enemyName ? 1 : 0 }}>
+        
+        {/* Enemy Bars (Mirrored) */}
+        <div className="flex flex-col flex-grow mt-1 gap-2 items-end">
+          <h2 className="text-white font-mono text-xl font-bold uppercase tracking-widest drop-shadow-[2px_2px_0_rgba(0,0,0,1)] m-0 leading-none text-right">
+            {enemyName || 'ENEMY'}
+          </h2>
+          
+          <div className="h-6 w-full border-2 border-white bg-black p-[2px] shadow-[4px_4px_0_rgba(0,0,0,0.5)] flex justify-end">
+            <div 
+              className="h-full bg-gradient-to-b from-red-400 to-red-700 transition-all duration-100" 
+              style={{ width: `${enemyHealthPct}%` }} 
+            />
+          </div>
+        </div>
+
+        {/* Enemy Portrait Box */}
+        <div className="relative border-4 border-zinc-500 bg-zinc-900 w-24 h-24 overflow-hidden shadow-[4px_4px_0_rgba(0,0,0,0.5)]">
+          {enemyName && (
+            <img 
+              src={`assets/images/portraits/${enemyName}.png`} 
+              alt={enemyName} 
+              className="w-full h-full object-cover object-top pixelated"
+              onError={(e) => (e.currentTarget.src = 'assets/images/portraits/mup.png')} // Fallback
+            />
+          )}
+          {/* Enemy Red Flash Overlay */}
+          <div className={`absolute inset-0 bg-red-500 mix-blend-overlay transition-opacity duration-75 ${enemyFlash ? 'opacity-80' : 'opacity-0'}`} />
+        </div>
+      </div>
+
     </div>
   );
 };
