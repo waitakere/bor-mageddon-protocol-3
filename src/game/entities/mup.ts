@@ -4,6 +4,9 @@ export class MUP extends Phaser.Physics.Arcade.Sprite {
     public health: number = 100;
     public isDead: boolean = false;
     public isAttacking: boolean = false;
+    public isHurt: boolean = false; // Stun-lock flag
+    public skinPrefix: string = 'mup'; // For HUD portrait
+    
     private speed: number = 80;
     private attackRange: number = 70;
     private attackCooldown: boolean = false;
@@ -14,8 +17,6 @@ export class MUP extends Phaser.Physics.Arcade.Sprite {
         scene.physics.add.existing(this);
 
         this.setOrigin(0.5, 1);
-        
-        // UPGRADED SCALE: Makes the enemy physically imposing
         this.setScale(1.7);
         
         if (this.body) {
@@ -26,20 +27,18 @@ export class MUP extends Phaser.Physics.Arcade.Sprite {
     }
 
     public updateAI(player: any) {
-        if (this.isDead || this.isAttacking || player.isDead) return;
+        if (this.isDead || this.isHurt || this.isAttacking || player.isDead) return;
         this.setAngle(0);
 
         const dist = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
 
         if (dist > this.attackRange) {
-            // Chase the player
             this.scene.physics.moveToObject(this, player, this.speed);
             this.setFlipX(player.x < this.x);
             if (this.scene.anims.exists('mup-walk')) {
                 this.play('mup-walk', true);
             }
         } else {
-            // In Range: Stop and Attack
             this.setVelocity(0, 0);
             if (!this.attackCooldown) {
                 this.executeAttack(player);
@@ -54,27 +53,25 @@ export class MUP extends Phaser.Physics.Arcade.Sprite {
         this.setFlipX(player.x < this.x);
 
         const attackAnim = 'mup-punch-1';
+        (this.scene as any).playSFX(['melee_1', 'melee_2']);
+
+        const hitCheck = () => {
+            this.isAttacking = false;
+            this.triggerCooldown();
+            if (Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y) <= this.attackRange + 20) {
+                if (player.takeDamage) {
+                    (this.scene as any).lastEngagedEnemy = this; // Lock to HUD
+                    player.takeDamage(10);
+                    (this.scene as any).playSFX(['punch_2', 'kick_1']);
+                }
+            }
+        };
 
         if (this.scene.anims.exists(attackAnim)) {
             this.play(attackAnim, true);
-            this.once('animationcomplete', () => {
-                this.isAttacking = false;
-                this.triggerCooldown();
-                
-                // If player is still in range, deal damage
-                if (Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y) <= this.attackRange + 20) {
-                    if (player.takeDamage) player.takeDamage(10);
-                }
-            });
+            this.once('animationcomplete', hitCheck);
         } else {
-            // Failsafe if enemy animation is missing
-            this.scene.time.delayedCall(400, () => {
-                this.isAttacking = false;
-                this.triggerCooldown();
-                if (Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y) <= this.attackRange + 20) {
-                    if (player.takeDamage) player.takeDamage(10);
-                }
-            });
+            this.scene.time.delayedCall(400, hitCheck);
         }
     }
 
@@ -87,19 +84,35 @@ export class MUP extends Phaser.Physics.Arcade.Sprite {
         if (this.isDead) return;
         
         this.health -= amount;
-        this.isAttacking = false; // Interrupt their attack
+        this.isAttacking = false; 
+        this.isHurt = true; // Trigger stun-lock
         this.setVelocity(0, 0);
+
+        // --- HUD FLASH TRIGGER ---
+        (this.scene as any).lastEngagedEnemy = this;
+        (this.scene as any).lastEnemyHitTime = Date.now();
+        (this.scene as any).updateReactHUD();
+
+        (this.scene as any).spawnHitEffect(this.x, this.y - 50);
+        (this.scene as any).playSFX(['agony_m_1', 'agony_m_2', 'agony_m_3']);
 
         if (this.health <= 0) {
             this.isDead = true;
+            this.isHurt = false;
+            (this.scene as any).registerEnemyDeath();
+            (this.scene as any).dropItem(this.x, this.y);
+
+            (this.scene as any).playSFX(['Break_1', 'Break_2']);
+
             if (this.scene.anims.exists('mup-dying')) {
                 this.play('mup-dying', true);
-                this.once('animationcomplete', () => this.destroy());
+                this.once('animationcomplete', () => {
+                    this.scene.tweens.add({ targets: this, alpha: 0, y: this.y + 20, duration: 800, onComplete: () => this.destroy() });
+                });
             } else {
                 this.setTint(0xff0000);
                 this.scene.time.delayedCall(300, () => this.destroy());
             }
-            (this.scene as any).score += 100;
         } else {
             if (this.scene.anims.exists('mup-damage')) {
                 this.play('mup-damage', true);
@@ -107,7 +120,11 @@ export class MUP extends Phaser.Physics.Arcade.Sprite {
                 this.setTint(0xff0000);
                 this.scene.time.delayedCall(150, () => this.clearTint());
             }
+            
+            // Release stun-lock after 400ms
+            this.scene.time.delayedCall(400, () => {
+                if (!this.isDead) this.isHurt = false;
+            });
         }
-        (this.scene as any).updateReactHUD();
     }
 }

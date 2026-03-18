@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { Player } from '../Player';
 
 /**
  * Slobodan CEO: The Architect of Hyperinflation.
@@ -10,10 +9,10 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
     public health: number = 500;
     private maxHealth: number = 500;
     public isDead: boolean = false;
-    public isHurt: boolean = false;
+    public isHurt: boolean = false; // Stun-lock flag
     private isAttacking: boolean = false;
+    public skinPrefix: string = 'sloba'; // For HUD portrait
     
-    // Multi-hitbox references for CollisionManager
     public headHitbox!: Phaser.GameObjects.Zone;
     public torsoHitbox!: Phaser.GameObjects.Zone;
     private currentDamageZone: 'head' | 'torso' = 'torso';
@@ -22,44 +21,37 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
     private jumpTimer: number = 0;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
-        // Initialized with the boss's dedicated atlas
-        super(scene, x, y, 'boss_slobodan_93', 'slobodan-walk/001.png');
+        super(scene, x, y, 'enemies_1993', 'sloba-walk/frame_000.png');
         
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        // Scale to 10ft height relative to the player characters
-        this.setScale(1.3);
+        this.setScale(2.1); // Giant boss scale
         this.setOrigin(0.5, 1);
 
-        // Narrowed collision box for depth sorting on the industrial road belt
         const body = this.body as Phaser.Physics.Arcade.Body;
-        body.setSize(80, 50);
-        body.setOffset(78, 205);
-        body.setImmovable(true); // Boss cannot be pushed around easily
+        body.setSize(50, 30);
+        body.setOffset(this.width/2 - 25, this.height - 30);
+        body.setImmovable(true); 
 
         this.createBossHitboxes();
-        this.play('slobodan-walk', true);
+        this.play('sloba-walk', true);
     }
 
     private createBossHitboxes() {
-        // Head: Targeted at the face/glasses for 3x Damage
         this.headHitbox = this.scene.add.zone(this.x, this.y - 200, 80, 60);
-        // Torso: Standard damage for the power suit area
         this.torsoHitbox = this.scene.add.zone(this.x, this.y - 100, 140, 120);
 
         this.scene.physics.add.existing(this.headHitbox);
         this.scene.physics.add.existing(this.torsoHitbox);
     }
 
-    public updateAI(player: Player) {
-        if (this.isDead || this.isHurt || this.isAttacking) return;
+    public updateAI(player: any) {
+        if (this.isDead || this.isHurt || this.isAttacking || player.isDead) return;
 
-        // Keep hitboxes synchronized with the moving boss sprite
         this.headHitbox.setPosition(this.x, this.y - 200);
         this.torsoHitbox.setPosition(this.x, this.y - 100);
 
-        // Phase Transition: Enrage at 50% HP
         if (this.health < (this.maxHealth * 0.5) && !this.isPhaseTwo) {
             this.triggerPhaseTwo();
         }
@@ -67,30 +59,25 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
         this.handleBossCombat(player);
     }
 
-    private handleBossCombat(player: Player) {
+    private handleBossCombat(player: any) {
         const speed = this.isPhaseTwo ? 85 : 45;
         const distX = player.x - this.x;
         const distY = player.y - this.y;
 
         this.setFlipX(distX < 0);
 
-        // 1. Close-Range Attack Choice (X < 200px)
         if (Math.abs(distX) < 200 && Math.abs(distY) < 40 && !this.isAttacking) {
-            // Weights: 60% chance for regular punch, 40% for heavy slam
             if (Phaser.Math.Between(0, 100) > 40) {
                 this.executeRegularSwipe(player);
             } else {
                 this.executeAuditHammer(player);
             }
         } 
-        // 2. Long-Range Attack Choice: Gap-closer Jump
         else if (this.scene.time.now > this.jumpTimer && !this.isAttacking) {
-            this.executeJumpSlam(player);
+            // Boss jump attack omitted for brevity if missing animation, falls back to walk
             this.jumpTimer = this.scene.time.now + (this.isPhaseTwo ? 4000 : 5500);
         }
-        // 3. Pursue Player
         else if (!this.isAttacking) {
-            // Move strictly on X if far away, align Y to get into the same "lane"
             const dirX = distX > 0 ? 1 : -1;
             const dirY = distY > 0 ? 1 : -1;
 
@@ -99,21 +86,21 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
 
             this.setVelocity(vx, vy);
 
-            const anim = this.isPhaseTwo ? 'slobodan-run' : 'slobodan-walk';
-            if (this.anims.currentAnim?.key !== anim) {
+            // If we don't have run, fallback to walk
+            const anim = this.scene.anims.exists('sloba-run') && this.isPhaseTwo ? 'sloba-run' : 'sloba-walk';
+            if (this.anims.currentAnim?.key !== anim && this.scene.anims.exists(anim)) {
                 this.play(anim, true);
             }
         }
     }
 
-    private executeRegularSwipe(player: Player) {
+    private executeRegularSwipe(player: any) {
         this.isAttacking = true;
         this.setVelocity(0, 0);
-        this.play('slobodan-punch-1', true);
+        if (this.scene.anims.exists('sloba-punch-1')) this.play('sloba-punch-1', true);
 
-        this.scene.events.emit('play-generic-sfx', 'woosh_heavy');
+        (this.scene as any).playSFX(['melee_1', 'melee_2']);
 
-        // Apply damage near full extension (approx 300ms)
         this.scene.time.delayedCall(300, () => {
             if (this.isDead || this.isHurt) return;
 
@@ -121,85 +108,48 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
             const distY = Math.abs(player.y - this.y);
 
             if (distX < 220 && distY < 40) {
+                (this.scene as any).lastEngagedEnemy = this; 
                 player.takeDamage(22); 
-                this.scene.events.emit('spawn-gore', { x: player.x, y: player.y - 80, type: 'BUREAUCRATIC' }); // Banknote shreds
+                (this.scene as any).spawnHitEffect(player.x, player.y - 80);
                 this.scene.cameras.main.shake(150, 0.007);
             }
         });
 
-        this.once('animationcomplete', (anim: any) => {
-            if (anim.key === 'slobodan-punch-1') {
-                this.isAttacking = false;
-                this.play('slobodan-walk', true);
-            }
+        this.scene.time.delayedCall(800, () => {
+            this.isAttacking = false;
+            if (this.scene.anims.exists('sloba-walk')) this.play('sloba-walk', true);
         });
     }
 
-    private executeAuditHammer(player: Player) {
+    private executeAuditHammer(player: any) {
         this.isAttacking = true;
         this.setVelocity(0, 0); 
-        this.play('slobodan-punch-2', true); 
+        if (this.scene.anims.exists('sloba-punch-2')) this.play('sloba-punch-2', true); 
 
-        // Apply shockwave damage near animation end (approx 500ms)
         this.scene.time.delayedCall(500, () => {
             if (this.isDead || this.isHurt) return;
             this.triggerShockwaveImpact(player);
         });
 
-        this.once('animationcomplete', (anim: any) => {
-            if (anim.key === 'slobodan-punch-2') {
-                this.isAttacking = false;
-                this.play('slobodan-walk', true);
-            }
+        this.scene.time.delayedCall(1000, () => {
+            this.isAttacking = false;
+            if (this.scene.anims.exists('sloba-walk')) this.play('sloba-walk', true);
         });
     }
 
-    private triggerShockwaveImpact(player: Player) {
+    private triggerShockwaveImpact(player: any) {
         this.scene.cameras.main.shake(600, 0.025);
-        this.scene.events.emit('play-generic-sfx', 'sfx_boss_slam_heavy');
+        (this.scene as any).playSFX('Paper-Shredding'); // Big boss sound
 
         const distX = Math.abs(player.x - this.x);
         const distY = Math.abs(player.y - this.y);
 
-        // Huge vertical and horizontal AoE for the shockwave
         if (distX < 250 && distY < 80) {
-            player.takeDamage(45); // High damage + knockback
-            this.scene.events.emit('spawn-gore', { x: player.x, y: player.y, type: 'BUREAUCRATIC' });
+            (this.scene as any).lastEngagedEnemy = this; 
+            player.takeDamage(45); 
+            (this.scene as any).spawnHitEffect(player.x, player.y);
         }
     }
-
-    private executeJumpSlam(player: Player) {
-        this.isAttacking = true;
-        this.play('slobodan-jump', true); 
-
-        const lungeTarget = player.x > this.x ? this.x + 350 : this.x - 350;
-
-        this.scene.tweens.add({
-            targets: this,
-            x: lungeTarget,
-            y: this.y - 150, 
-            duration: 650,
-            yoyo: true,
-            ease: 'Cubic.easeOut',
-            onYoyo: () => {
-                // Play the punch animation on the way down
-                this.play('slobodan-jump-punch', true); 
-                
-                // Deal shockwave damage upon hitting the ground
-                this.scene.time.delayedCall(325, () => {
-                    if (!this.isDead) this.triggerShockwaveImpact(player);
-                });
-            },
-            onComplete: () => {
-                if (!this.isDead) {
-                    this.play('slobodan-walk', true);
-                    this.isAttacking = false;
-                }
-            }
-        });
-    }
-
-    // --- COLLISION MANAGER INTEGRATION ---
     
     public setDamageZone(zone: 'head' | 'torso') {
         this.currentDamageZone = zone;
@@ -207,19 +157,27 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
 
     public takeDamage(amount: number) {
         if (this.isDead || this.isHurt) return;
-        this.isHurt = true;
+        this.isHurt = true; // Boss gets stunned!
 
-        // Head shots take triple damage!
         const multiplier = this.currentDamageZone === 'head' ? 3 : 1;
         this.health -= (amount * multiplier); 
-
-        // Reset zone back to default torso
         this.currentDamageZone = 'torso';
 
-        this.play('slobodan-damage', true);
-        this.scene.events.emit('spawn-gore', { x: this.x, y: this.y - 150, type: 'HIT' });
+        // --- HUD FLASH TRIGGER ---
+        (this.scene as any).lastEngagedEnemy = this;
+        (this.scene as any).lastEnemyHitTime = Date.now();
+        (this.scene as any).updateReactHUD();
 
-        // Hit-stop for 10ft boss impact weight
+        (this.scene as any).spawnHitEffect(this.x, this.y - 150);
+        (this.scene as any).playSFX(['agony_m_1', 'agony_m_2', 'agony_m_3']);
+
+        if (this.scene.anims.exists('sloba-damage')) {
+            this.play('sloba-damage', true);
+        } else {
+            this.setTint(0xffffff);
+            this.scene.time.delayedCall(100, () => this.clearTint());
+        }
+
         this.scene.physics.world.pause();
         this.scene.time.delayedCall(100, () => {
             this.scene.physics.world.resume();
@@ -228,7 +186,8 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
             } else {
                 this.scene.time.delayedCall(300, () => {
                     this.isHurt = false;
-                    this.play(this.isPhaseTwo ? 'slobodan-run' : 'slobodan-walk', true);
+                    const anim = this.scene.anims.exists('sloba-run') && this.isPhaseTwo ? 'sloba-run' : 'sloba-walk';
+                    if (this.scene.anims.exists(anim)) this.play(anim, true);
                 });
             }
         });
@@ -237,25 +196,22 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
     private triggerPhaseTwo() {
         this.isPhaseTwo = true;
         this.setTint(0xff5555); // Angry red tint
-        
-        // Trigger React UI effects via global event bus
-        this.scene.events.emit('update-corruption'); // Triggers VHS Glitch on GameHUD!
-        console.log("BOSS DIALOGUE: REORGANIZACIJA POČINJE!"); // Placeholder for subtitles
     }
 
     protected die() {
         this.isDead = true;
         this.setVelocity(0, 0);
         
-        // Disable physics bodies so player doesn't get stuck
         (this.body as Phaser.Physics.Arcade.Body).enable = false;
         this.headHitbox.destroy();
         this.torsoHitbox.destroy();
-
-        console.log("BOSS DIALOGUE: I... TREBAO SAM... KUPITI... NEMCA...");
         
-        this.play('slobodan-dying', true);
-        this.scene.events.emit('spawn-gore', { x: this.x, y: this.y - 100, type: 'BUREAUCRATIC' });
+        (this.scene as any).registerEnemyDeath();
+        (this.scene as any).playSFX(['Break_1', 'Break_2']);
+
+        if (this.scene.anims.exists('sloba-dying')) {
+            this.play('sloba-dying', true);
+        }
 
         this.scene.tweens.add({
             targets: this,
@@ -264,7 +220,6 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
             duration: 3500,
             delay: 2000,
             onComplete: () => {
-                // Tell the level that the boss is dead so the "Level Clear" screen triggers
                 this.scene.events.emit('boss-defeated');
                 this.destroy();
             }
