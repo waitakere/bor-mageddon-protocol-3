@@ -56,7 +56,6 @@ export class MainLevel extends Phaser.Scene {
         this.player.setScale(1.7);
         this.enemies.add(new Enemy(this, 1000, 950, 'mup'));
 
-        // PHYSICAL BASELINE COLLIDERS (Prevents Overlapping)
         this.physics.add.collider(this.player, this.enemies);
         this.physics.add.collider(this.enemies, this.enemies);
 
@@ -66,11 +65,7 @@ export class MainLevel extends Phaser.Scene {
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
         this.updateReactHUD();
 
-        // --- LOADING SCREEN SYNC ---
-        // Pause the scene immediately so enemies don't attack while the loading screen is up
         this.scene.pause();
-        
-        // Tell the React LoadingScreen that the level is fully built and ready!
         window.dispatchEvent(new CustomEvent('phaser-ready'));
     }
 
@@ -104,7 +99,6 @@ export class MainLevel extends Phaser.Scene {
         
         this.enemies.getChildren().forEach((e: any) => { if (e.updateAI && !e.isDead) e.updateAI(this.player); });
         
-        // Z-Depth Sorting (Draws lower characters in front of higher ones)
         this.children.each((c: any) => { if (c.y && c.type !== 'Image' && c.type !== 'Graphics') c.setDepth(c.y); });
         
         if (this.lastEngagedEnemy && (!this.lastEngagedEnemy.active || this.lastEngagedEnemy.isDead)) {
@@ -150,13 +144,53 @@ export class MainLevel extends Phaser.Scene {
         if (Math.random() > 0.3) return; 
         const items = ['item-burek', 'item-coffee', 'item-pork', 'item-beer', 'item-sandwich'];
         const randomItem = items[Math.floor(Math.random() * items.length)];
-        const drop = this.physics.add.sprite(x, y - 20, randomItem);
+        
+        // Spawn slightly in the air so it can bounce down to the floor
+        const drop = this.physics.add.sprite(x, y - 40, randomItem);
+        drop.setOrigin(0.5, 1); // VERY IMPORTANT FOR Z-DEPTH CHECK!
         this.items.add(drop);
+
+        // ITEM FIX 1: Make it 50% smaller!
+        drop.setScale(0.5);
+
+        // Resize the hitbox to the tiny base of the item
+        const body = drop.body as Phaser.Physics.Arcade.Body;
+        if (body) {
+            body.setSize(drop.width, 20);
+            body.setOffset(0, drop.height - 20);
+        }
+
+        // ITEM FIX 2: Flash when it spawns!
+        this.tweens.add({
+            targets: drop,
+            alpha: 0.2,
+            duration: 100,
+            yoyo: true,
+            repeat: 5, // Flashes 5 times rapidly
+            ease: 'Linear'
+        });
+
+        // ITEM FIX 3: Little bounce animation when dropping
+        this.tweens.add({
+            targets: drop,
+            y: y, // Bounces down to the actual floor coordinate
+            duration: 350,
+            ease: 'Bounce.easeOut'
+        });
     }
 
     private collectItem(player: any, item: any) {
+        // DEPTH CHECK: Ensure player is standing in the exact same Y-lane as the item
+        if (Math.abs(player.y - item.y) > 30) return;
+
         item.destroy();
         this.playSFX(['melee_1', 'melee_2'], 0.8); 
+        
+        // TRIGGER PLAYER PICKUP ANIMATION
+        if (player.playPickupAnim) {
+            player.playPickupAnim();
+        }
+
         this.player.health = Math.min(this.player.health + 30, this.player.maxHealth || 150);
         
         const healText = this.add.text(this.player.x, this.player.y - 80, '+HP', { font: '900 20px "Space Mono"', color: '#00ff00' }).setOrigin(0.5);
