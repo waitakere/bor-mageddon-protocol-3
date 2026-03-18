@@ -136,7 +136,9 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 const hitX = (this.x + enemy.x) / 2;
                 (this.scene as any).spawnHitEffect(hitX, enemy.y - 80);
                 if (enemy.takeDamage) enemy.takeDamage(damage); 
-                hitZone.destroy(); 
+                
+                // FIX: Disable body safely instead of destroying it mid-physics step
+                if (hitZone.body) hitZone.body.enable = false; 
             }
         });
 
@@ -170,7 +172,9 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 const hitX = (this.x + enemy.x) / 2;
                 (this.scene as any).spawnHitEffect(hitX, enemy.y - 50);
                 if (enemy.takeDamage) enemy.takeDamage(damage); 
-                hitZone.destroy(); 
+                
+                // FIX: Disable body safely instead of destroying it mid-physics step
+                if (hitZone.body) hitZone.body.enable = false; 
             }
         });
 
@@ -240,7 +244,6 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         (this.scene as any).spawnHitEffect(this.x, this.y - 40);
         this.playVoice(['agony_f_1', 'agony_f_2']);
 
-        // RED FLASH TRIGGER
         (this.scene as any).lastPlayerHitTime = Date.now();
 
         if (this.health <= 0) { this.die(); } 
