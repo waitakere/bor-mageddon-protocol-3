@@ -23,13 +23,16 @@ export class MainLevel extends Phaser.Scene {
     private bossSpawned: boolean = false;
     public score: number = 0;
 
+    // --- HUD TRACKING DATA ---
+    public lastEngagedEnemy: any = null;
+    public lastPlayerHitTime: number = 0;
+    public lastEnemyHitTime: number = 0;
+
     constructor() { super({ key: 'MainLevel' }); }
 
     create() {
         const unlockAudio = () => {
-            if (this.sound.context.state === 'suspended') {
-                this.sound.context.resume();
-            }
+            if (this.sound.context.state === 'suspended') this.sound.context.resume();
         };
         this.input.on('pointerdown', unlockAudio);
         this.input.keyboard?.on('keydown', unlockAudio);
@@ -91,14 +94,17 @@ export class MainLevel extends Phaser.Scene {
         
         this.enemies.getChildren().forEach((e: any) => { if (e.updateAI && !e.isDead) e.updateAI(this.player); });
         this.children.each((c: any) => { if (c.y && c.type !== 'Image' && c.type !== 'Graphics') c.setDepth(c.y); });
+        
+        // Auto-clear enemy HUD if they vanish/die
+        if (this.lastEngagedEnemy && (!this.lastEngagedEnemy.active || this.lastEngagedEnemy.isDead)) {
+            this.lastEngagedEnemy = null;
+            this.updateReactHUD();
+        }
     }
 
-    // AUDIO UPDATE: Returns the sound object so characters can stop it if needed
     public playSFX(marker: string | string[], volume: number = 0.8) {
         try {
-            if (this.sound.context.state === 'suspended') {
-                this.sound.context.resume();
-            }
+            if (this.sound.context.state === 'suspended') this.sound.context.resume();
 
             const finalMarker = Array.isArray(marker) ? marker[Math.floor(Math.random() * marker.length)] : marker;
             const json = this.cache.json.get('sfx_atlas');
@@ -107,7 +113,6 @@ export class MainLevel extends Phaser.Scene {
                 console.warn(`[AUDIO] '${finalMarker}' not found!`);
                 return null;
             }
-            // Add sound directly so we can return it
             const sound = this.sound.addAudioSprite('sfx_atlas');
             sound.play(finalMarker, { volume });
             return sound;
@@ -213,9 +218,26 @@ export class MainLevel extends Phaser.Scene {
         this.updateReactHUD();
     }
 
+    // BROADCASTS ALL COMBAT DATA TO THE NEW REACT HUD
     public updateReactHUD() {
+        let eMaxHealth = 100;
+        if (this.lastEngagedEnemy) {
+            eMaxHealth = this.lastEngagedEnemy.skinPrefix === 'sloba' ? 600 : 100;
+        }
+
         window.dispatchEvent(new CustomEvent('update-phaser-hud', {
-            detail: { health: this.player?.health, smf: this.player?.smfMeter, score: this.score, showGo: false }
+            detail: { 
+                health: this.player?.health, 
+                maxHealth: this.player?.maxHealth,
+                smf: this.player?.smfMeter, 
+                score: this.score,
+                playerName: this.player?.characterName,
+                enemyName: this.lastEngagedEnemy && !this.lastEngagedEnemy.isDead ? this.lastEngagedEnemy.skinPrefix : null,
+                enemyHealth: this.lastEngagedEnemy ? this.lastEngagedEnemy.health : 0,
+                enemyMaxHealth: eMaxHealth,
+                playerHitStamp: this.lastPlayerHitTime,
+                enemyHitStamp: this.lastEnemyHitTime
+            }
         }));
     }
 }
