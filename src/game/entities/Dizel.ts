@@ -5,7 +5,7 @@ import Phaser from 'phaser';
  * Focused on high-speed approach, butterfly knife area denial, and weighted physics.
  */
 export class Dizel extends Phaser.Physics.Arcade.Sprite {
-    public health: number = 120; // Fast scout health profile
+    public health: number = 120; 
     public isDead: boolean = false;
     public isHurt: boolean = false; // STUN LOCK FLAG
     public skinPrefix: string = 'dizel'; // For HUD
@@ -15,7 +15,7 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
     private isKnockedDown: boolean = false;
     public isInvulnerable: boolean = false;
 
-    private speed: number = 140; // Faster than the heavily armored MUP
+    private speed: number = 140; 
     private attackRange: number = 100;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
@@ -24,10 +24,13 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
+        // FIX: Added missing scale so his hitbox aligns with the players!
+        this.setScale(1.7); 
+        this.setOrigin(0.5, 1);
+
         const body = this.body as Phaser.Physics.Arcade.Body;
         body.setSize(50, 30);
         body.setOffset(this.width / 2 - 25, this.height - 30); 
-        this.setOrigin(0.5, 1);
         
         body.setCollideWorldBounds(true);
         body.setAllowGravity(false); 
@@ -36,7 +39,6 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
     }
 
     public updateAI(player: any) {
-        // Halt AI logic if dazed, dead, attacking, or knocked down
         if (this.isDead || this.isHurt || this.isSlashing || this.isKnockedDown || player.isDead) {
             this.setVelocity(0, 0);
             return;
@@ -47,11 +49,9 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
 
         this.setFlipX(player.x < this.x);
 
-        // Attack Trigger: Within reach on X, and in the same Y lane
         if (distX <= this.attackRange && distY <= 20 && !this.slashCooldown) {
             this.executeKnifeSlash(player);
         } else {
-            // Standard "Stalker" approach
             const dirX = player.x > this.x ? 1 : -1;
             const dirY = player.y > this.y ? 1 : -1;
 
@@ -71,7 +71,7 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
         this.setVelocity(0, 0);
 
         this.play('dizel-punch-1', true);
-        (this.scene as any).playSFX(['melee_1', 'melee_2']); // NEW AUDIO
+        (this.scene as any).playSFX(['melee_1', 'melee_2']); 
 
         this.scene.time.delayedCall(200, () => {
             if (this.isDead || this.isHurt || this.isKnockedDown) return;
@@ -80,13 +80,12 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
             const distY = Math.abs(player.y - this.y);
 
             if (distX <= this.attackRange + 20 && distY <= 30) {
-                (this.scene as any).lastEngagedEnemy = this; // Lock to HUD
+                (this.scene as any).lastEngagedEnemy = this; 
                 player.takeDamage(25); 
                 
                 (this.scene as any).spawnHitEffect(player.x, player.y - 80);
-                (this.scene as any).playSFX('dizel_stab_1'); // NEW AUDIO
+                (this.scene as any).playSFX('dizel_stab_1'); 
                 
-                // Hit Stop
                 this.scene.physics.world.pause();
                 this.scene.time.delayedCall(50, () => this.scene.physics.world.resume());
             }
@@ -107,12 +106,11 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
 
         this.health -= amount;
         this.isSlashing = false;
-        this.isHurt = true; // Trigger Stun-lock
+        this.isHurt = true; 
         this.setVelocity(0, 0);
         this.setTintFill(0xffffff);
         this.scene.time.delayedCall(50, () => this.clearTint());
 
-        // --- NEW: HUD FLASH TRIGGER ---
         (this.scene as any).lastEngagedEnemy = this;
         (this.scene as any).lastEnemyHitTime = Date.now();
         (this.scene as any).updateReactHUD();
@@ -123,15 +121,12 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
         if (this.health <= 0) {
             this.takeKnockdown();
         } else {
-            // Play damage frame
             if (this.scene.anims.exists('dizel-damage')) {
                 this.play('dizel-damage', true);
             }
             
-            // Pushback
             this.x += this.flipX ? 15 : -15;
 
-            // Clear stun-lock after 400ms
             this.scene.time.delayedCall(400, () => {
                 if (!this.isDead && !this.isKnockedDown) {
                     this.isHurt = false;
@@ -149,7 +144,6 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
         
         this.x += this.flipX ? 40 : -40; 
         
-        // Fallback check if knockdown animation exists
         if (this.scene.anims.exists('dizel-knockdown-get-up')) {
              this.play('dizel-knockdown-get-up', true);
         } else {
@@ -168,12 +162,10 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
                     this.play('dizel-dying', true);
                 }
                 
-                // Loot drop chance
                 if (Phaser.Math.Between(1, 100) <= 40) {
                     (this.scene as any).dropItem(this.x, this.y);
                 }
 
-                // Fade out
                 this.scene.tweens.add({ targets: this, alpha: 0, y: this.y + 20, duration: 800, delay: 500, onComplete: () => this.destroy() });
 
             } else {
