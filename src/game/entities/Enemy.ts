@@ -4,7 +4,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     public health: number = 100;
     public isDead: boolean = false;
     public isAttacking: boolean = false;
-    public isHurt: boolean = false; // NEW: Stun-lock flag
+    public isHurt: boolean = false; // STUN-LOCK FLAG
     public skinPrefix: string; 
     public damageMultiplier: number = 1.0;
     
@@ -32,7 +32,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         
         this.setCollideWorldBounds(true);
         if (this.body) {
-            // Keep the narrow "feet" hitbox so they still look correct in 3D space
             this.body.setSize(50, 30);
             this.body.setOffset(this.width/2 - 25, this.height - 30);
             (this.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
@@ -79,31 +78,23 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         
         (this.scene as any).playSFX(['melee_1', 'melee_2']);
 
+        const hitCheck = () => {
+            this.isAttacking = false;
+            this.triggerCooldown();
+            if (Math.abs(this.x - player.x) <= this.attackRange + 20 && Math.abs(this.y - player.y) <= 45) {
+                if (player.takeDamage) {
+                    (this.scene as any).lastEngagedEnemy = this; 
+                    player.takeDamage(10 * this.damageMultiplier);
+                    (this.scene as any).playSFX(['punch_2', 'kick_1']); 
+                }
+            }
+        };
+
         if (this.scene.anims.exists(attackAnim)) {
             this.play(attackAnim, true);
-            this.once('animationcomplete', () => {
-                this.isAttacking = false;
-                this.triggerCooldown();
-                if (Math.abs(this.x - player.x) <= this.attackRange + 20 && Math.abs(this.y - player.y) <= 45) {
-                    if (player.takeDamage) {
-                        (this.scene as any).lastEngagedEnemy = this; 
-                        player.takeDamage(10 * this.damageMultiplier);
-                        (this.scene as any).playSFX(['punch_2', 'kick_1']); 
-                    }
-                }
-            });
+            this.once('animationcomplete', hitCheck);
         } else {
-            this.scene.time.delayedCall(400, () => {
-                this.isAttacking = false;
-                this.triggerCooldown();
-                if (Math.abs(this.x - player.x) <= this.attackRange + 20 && Math.abs(this.y - player.y) <= 45) {
-                    if (player.takeDamage) {
-                        (this.scene as any).lastEngagedEnemy = this; 
-                        player.takeDamage(10 * this.damageMultiplier);
-                        (this.scene as any).playSFX(['punch_2', 'kick_1']);
-                    }
-                }
-            });
+            this.scene.time.delayedCall(400, hitCheck);
         }
     }
 
@@ -123,6 +114,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setVelocity(0, 0);
         this.setTint(0xff0000);
         
+        // --- TRIGGERS THE RED FLASH IN THE REACT HUD ---
         (this.scene as any).lastEngagedEnemy = this;
         (this.scene as any).lastEnemyHitTime = Date.now();
         (this.scene as any).updateReactHUD();
@@ -141,10 +133,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 this.play(`${this.skinPrefix}-dying`, true);
                 this.once('animationcomplete', () => {
                     this.scene.tweens.add({
-                        targets: this, alpha: 0, duration: 150, repeat: 3, yoyo: true,
-                        onComplete: () => {
-                            this.scene.tweens.add({ targets: this, alpha: 0, y: this.y + 20, duration: 800, onComplete: () => this.destroy() });
-                        }
+                        targets: this, alpha: 0, y: this.y + 20, duration: 800, delay: 500, onComplete: () => this.destroy()
                     });
                 });
             } else {
