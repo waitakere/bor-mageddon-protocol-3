@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { Player } from '../Player';
 
 /**
  * Dizel: The "Stabbing Brute" / Tracksuit Thug of Bor 1993.
@@ -8,7 +7,8 @@ import { Player } from '../Player';
 export class Dizel extends Phaser.Physics.Arcade.Sprite {
     public health: number = 120; // Fast scout health profile
     public isDead: boolean = false;
-    public isHurt: boolean = false;
+    public isHurt: boolean = false; // STUN LOCK FLAG
+    public skinPrefix: string = 'dizel'; // For HUD
     
     private isSlashing: boolean = false;
     private slashCooldown: boolean = false;
@@ -19,27 +19,25 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
     private attackRange: number = 100;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
-        // Initialised from the 1993 Mega-Atlas we set up in BootScene
-        super(scene, x, y, 'enemies_1993', 'dizel-walk/001.png');
+        super(scene, x, y, 'enemies_1993', 'dizel-walk/frame_000.png');
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
         const body = this.body as Phaser.Physics.Arcade.Body;
         body.setSize(50, 30);
-        body.setOffset(25, 150); 
+        body.setOffset(this.width / 2 - 25, this.height - 30); 
         this.setOrigin(0.5, 1);
         
         body.setCollideWorldBounds(true);
-        body.setAllowGravity(false); // Belt-scroller depth physics
+        body.setAllowGravity(false); 
 
-        // Note: CSV didn't have an idle animation for Dizelaš, so we default to walk
         this.play('dizel-walk', true); 
     }
 
-    public updateAI(player: Player) {
+    public updateAI(player: any) {
         // Halt AI logic if dazed, dead, attacking, or knocked down
-        if (this.isDead || this.isHurt || this.isSlashing || this.isKnockedDown) {
+        if (this.isDead || this.isHurt || this.isSlashing || this.isKnockedDown || player.isDead) {
             this.setVelocity(0, 0);
             return;
         }
@@ -53,7 +51,7 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
         if (distX <= this.attackRange && distY <= 20 && !this.slashCooldown) {
             this.executeKnifeSlash(player);
         } else {
-            // Standard "Stalker" approach: align with Y-lane then approach X
+            // Standard "Stalker" approach
             const dirX = player.x > this.x ? 1 : -1;
             const dirY = player.y > this.y ? 1 : -1;
 
@@ -68,31 +66,27 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    /**
-     * Butterfly Knife Slash: Fast attack using the CSV's dizel-punch-1
-     */
-    private executeKnifeSlash(player: Player) {
+    private executeKnifeSlash(player: any) {
         this.isSlashing = true;
         this.setVelocity(0, 0);
 
         this.play('dizel-punch-1', true);
+        (this.scene as any).playSFX(['melee_1', 'melee_2']); // NEW AUDIO
 
-        // Frame-specific timing for the damage application (around 200ms into the animation)
         this.scene.time.delayedCall(200, () => {
             if (this.isDead || this.isHurt || this.isKnockedDown) return;
 
             const distX = Math.abs(player.x - this.x);
             const distY = Math.abs(player.y - this.y);
 
-            // Re-check distance to see if player dodged out of the way
             if (distX <= this.attackRange + 20 && distY <= 30) {
-                player.takeDamage(25); // Standard stab damage
+                (this.scene as any).lastEngagedEnemy = this; // Lock to HUD
+                player.takeDamage(25); 
                 
-                // Visual & Audio Feedback via Global Event Bus
-                this.scene.events.emit('spawn-gore', { x: player.x, y: player.y - 80, type: 'CLASSIC' });
-                this.scene.events.emit('play-generic-sfx', 'sfx_knife_stab');
+                (this.scene as any).spawnHitEffect(player.x, player.y - 80);
+                (this.scene as any).playSFX('dizel_stab_1'); // NEW AUDIO
                 
-                // Hit Stop for impact weight (Freezes game for 50ms)
+                // Hit Stop
                 this.scene.physics.world.pause();
                 this.scene.time.delayedCall(50, () => this.scene.physics.world.resume());
             }
@@ -102,45 +96,42 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
             if (anim.key === 'dizel-punch-1') {
                 this.isSlashing = false;
                 this.slashCooldown = true;
-                
-                // 1.5s recovery window for the scout class
                 this.scene.time.delayedCall(1500, () => (this.slashCooldown = false));
                 this.play('dizel-walk', true);
             }
         });
     }
 
-    /**
-     * Standard Damage routing
-     */
     public takeDamage(amount: number) {
         if (this.isDead || this.isInvulnerable) return;
 
         this.health -= amount;
-        
-        // Interrupt attacks
         this.isSlashing = false;
-        
-        // Flash white
+        this.isHurt = true; // Trigger Stun-lock
+        this.setVelocity(0, 0);
         this.setTintFill(0xffffff);
         this.scene.time.delayedCall(50, () => this.clearTint());
 
-        // Blood Splatter
-        this.scene.events.emit('spawn-gore', { x: this.x, y: this.y - 90, type: 'CLASSIC' });
-        
-        // Audio
-        this.scene.events.emit('play-sfx', { character: 'dizelas', action: 'damage' });
+        // --- NEW: HUD FLASH TRIGGER ---
+        (this.scene as any).lastEngagedEnemy = this;
+        (this.scene as any).lastEnemyHitTime = Date.now();
+        (this.scene as any).updateReactHUD();
+
+        (this.scene as any).spawnHitEffect(this.x, this.y - 50);
+        (this.scene as any).playSFX(['agony_m_1', 'agony_m_2', 'agony_m_3']);
 
         if (this.health <= 0) {
-            // Trigger the dramatic knockdown death
             this.takeKnockdown();
         } else {
-            this.isHurt = true;
-            this.play('dizel-damage', true);
+            // Play damage frame
+            if (this.scene.anims.exists('dizel-damage')) {
+                this.play('dizel-damage', true);
+            }
             
             // Pushback
             this.x += this.flipX ? 15 : -15;
 
+            // Clear stun-lock after 400ms
             this.scene.time.delayedCall(400, () => {
                 if (!this.isDead && !this.isKnockedDown) {
                     this.isHurt = false;
@@ -150,33 +141,42 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    /**
-     * Knockdown Logic: Jerked violently back with i-frames until get-up completes, or dies.
-     */
     public takeKnockdown() {
         if (this.isDead || this.isKnockedDown) return;
 
         this.isKnockedDown = true;
         this.isInvulnerable = true; 
         
-        // Flight path: push backward
         this.x += this.flipX ? 40 : -40; 
-        this.play('dizel-knockdown-get-up', true);
+        
+        // Fallback check if knockdown animation exists
+        if (this.scene.anims.exists('dizel-knockdown-get-up')) {
+             this.play('dizel-knockdown-get-up', true);
+        } else {
+             this.play('dizel-dying', true);
+        }
 
         this.once('animationcomplete', () => {
             if (this.health <= 0) {
-                // If health is 0, he dies after hitting the floor
                 this.isDead = true;
                 (this.body as Phaser.Physics.Arcade.Body).enable = false;
-                this.scene.events.emit('play-sfx', { character: 'dizelas', action: 'dying' });
-                this.play('dizel-dying', true);
+                
+                (this.scene as any).playSFX(['Break_1', 'Break_2']);
+                (this.scene as any).registerEnemyDeath();
+                
+                if (this.scene.anims.exists('dizel-dying')) {
+                    this.play('dizel-dying', true);
+                }
                 
                 // Loot drop chance
                 if (Phaser.Math.Between(1, 100) <= 40) {
-                    this.scene.events.emit('spawn-loot', { x: this.x, y: this.y });
+                    (this.scene as any).dropItem(this.x, this.y);
                 }
+
+                // Fade out
+                this.scene.tweens.add({ targets: this, alpha: 0, y: this.y + 20, duration: 800, delay: 500, onComplete: () => this.destroy() });
+
             } else {
-                // Recover and keep fighting
                 this.isKnockedDown = false;
                 this.isInvulnerable = false;
                 this.isHurt = false;
