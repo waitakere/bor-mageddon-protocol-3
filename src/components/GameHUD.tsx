@@ -1,22 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
 export const GameHUD: React.FC = () => {
+  // Player Stats
   const [health, setHealth] = useState(100);
   const [maxHealth, setMaxHealth] = useState(100);
   const [smf, setSmf] = useState(0);
   const [score, setScore] = useState(0);
-  
   const [playerName, setPlayerName] = useState('marko');
   const [playerFlash, setPlayerFlash] = useState(false);
 
+  // Enemy Stats
   const [enemyName, setEnemyName] = useState<string | null>(null);
   const [enemyHealth, setEnemyHealth] = useState(0);
   const [enemyMaxHealth, setEnemyMaxHealth] = useState(100);
   const [enemyFlash, setEnemyFlash] = useState(false);
 
+  // Refs for timeouts to prevent memory leaks
+  const playerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const enemyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     const handleHUDUpdate = (e: any) => {
       const data = e.detail;
+      
+      // Update Core Stats
       if (data.health !== undefined) setHealth(data.health);
       if (data.maxHealth !== undefined) setMaxHealth(data.maxHealth);
       if (data.smf !== undefined) setSmf(data.smf);
@@ -27,17 +34,20 @@ export const GameHUD: React.FC = () => {
       setEnemyHealth(data.enemyHealth || 0);
       setEnemyMaxHealth(data.enemyMaxHealth || 100);
 
-      // Trigger Red Flashes based on timestamps sent from Phaser
+      // Trigger Player Red Flash
       if (data.playerHitStamp && data.playerHitStamp !== (window as any)._lastPlayerHit) {
         (window as any)._lastPlayerHit = data.playerHitStamp;
         setPlayerFlash(true);
-        setTimeout(() => setPlayerFlash(false), 150);
+        if (playerTimeoutRef.current) clearTimeout(playerTimeoutRef.current);
+        playerTimeoutRef.current = setTimeout(() => setPlayerFlash(false), 150);
       }
 
+      // Trigger Enemy Red Flash
       if (data.enemyHitStamp && data.enemyHitStamp !== (window as any)._lastEnemyHit) {
         (window as any)._lastEnemyHit = data.enemyHitStamp;
         setEnemyFlash(true);
-        setTimeout(() => setEnemyFlash(false), 150);
+        if (enemyTimeoutRef.current) clearTimeout(enemyTimeoutRef.current);
+        enemyTimeoutRef.current = setTimeout(() => setEnemyFlash(false), 150);
       }
     };
 
@@ -49,49 +59,54 @@ export const GameHUD: React.FC = () => {
   const enemyHealthPct = Math.max(0, Math.min(100, (enemyHealth / enemyMaxHealth) * 100));
 
   return (
-    <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-start z-40 pointer-events-none select-none">
+    <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-40 pointer-events-none select-none">
       
-      {/* LEFT: PLAYER STATS */}
+      {/* ========================================= */}
+      {/* LEFT SIDE: PLAYER STATS                   */}
+      {/* ========================================= */}
       <div className="flex gap-4 items-start w-[35%]">
         {/* Portrait Box */}
-        <div className="relative border-4 border-zinc-500 bg-zinc-900 w-24 h-24 overflow-hidden shadow-[4px_4px_0_rgba(0,0,0,0.5)]">
+        <div className="relative border-[4px] border-zinc-400 bg-zinc-800 w-24 h-24 overflow-hidden shadow-[4px_4px_0_rgba(0,0,0,0.8)] shrink-0">
           <img 
             src={`assets/images/portraits/${playerName}.png`} 
             alt={playerName} 
-            className="w-full h-full object-cover object-top pixelated"
-            onError={(e) => (e.currentTarget.src = 'assets/images/portraits/marko.png')} // Fallback
+            className="w-full h-full object-cover object-top"
+            style={{ imageRendering: 'pixelated' }}
+            onError={(e) => { e.currentTarget.style.display = 'none'; }} // Hides broken image icon if missing
           />
           {/* Red Flash Overlay */}
-          <div className={`absolute inset-0 bg-red-600 mix-blend-overlay transition-opacity duration-75 ${playerFlash ? 'opacity-80' : 'opacity-0'}`} />
+          <div className={`absolute inset-0 bg-red-600 mix-blend-overlay transition-opacity duration-75 ${playerFlash ? 'opacity-90' : 'opacity-0'}`} />
         </div>
 
-        {/* Bars */}
-        <div className="flex flex-col flex-grow mt-1 gap-2">
+        {/* Status Bars */}
+        <div className="flex flex-col flex-grow gap-1 mt-1">
           <h2 className="text-white font-mono text-xl font-bold uppercase tracking-widest drop-shadow-[2px_2px_0_rgba(0,0,0,1)] m-0 leading-none">
             {playerName}
           </h2>
           
-          {/* 16-bit segmented style Health Bar */}
-          <div className="h-6 w-full border-2 border-white bg-black p-[2px] shadow-[4px_4px_0_rgba(0,0,0,0.5)]">
+          {/* Health Bar (Yellow) */}
+          <div className="h-6 w-full border-[3px] border-zinc-300 bg-black p-[2px] shadow-[4px_4px_0_rgba(0,0,0,0.8)]">
             <div 
-              className="h-full bg-gradient-to-b from-yellow-300 to-yellow-600 transition-all duration-200" 
+              className="h-full bg-[#fde047] transition-all duration-200" 
               style={{ width: `${healthPct}%` }} 
             />
           </div>
 
-          {/* SMF Bar */}
-          <div className="h-3 w-3/4 border-2 border-blue-400 bg-black p-[1px] mt-1 shadow-[2px_2px_0_rgba(0,0,0,0.5)]">
+          {/* SMF Bar (Blue) */}
+          <div className="h-3 w-3/4 border-2 border-blue-400 bg-black p-[1px] mt-1 shadow-[2px_2px_0_rgba(0,0,0,0.8)]">
             <div 
-              className="h-full bg-gradient-to-b from-cyan-300 to-cyan-500 transition-all duration-300" 
+              className="h-full bg-[#38bdf8] transition-all duration-300" 
               style={{ width: `${smf}%` }} 
             />
           </div>
         </div>
       </div>
 
-      {/* CENTER: SCORE */}
-      <div className="flex flex-col items-center mt-2 w-[30%]">
-        <h3 className="text-yellow-400 font-mono text-sm font-bold m-0 tracking-[4px] drop-shadow-[2px_2px_0_rgba(0,0,0,1)]">
+      {/* ========================================= */}
+      {/* CENTER: SCORE                             */}
+      {/* ========================================= */}
+      <div className="flex flex-col items-center mt-2 w-[20%]">
+        <h3 className="text-[#fde047] font-mono text-sm font-bold m-0 tracking-[4px] drop-shadow-[2px_2px_0_rgba(0,0,0,1)]">
           SCORE
         </h3>
         <div className="text-white font-mono text-4xl font-bold tracking-widest drop-shadow-[4px_4px_0_rgba(0,0,0,1)]">
@@ -99,35 +114,39 @@ export const GameHUD: React.FC = () => {
         </div>
       </div>
 
-      {/* RIGHT: ENEMY STATS (Only shows when engaged) */}
-      <div className="flex gap-4 items-start justify-end w-[35%] transition-opacity duration-300" style={{ opacity: enemyName ? 1 : 0 }}>
+      {/* ========================================= */}
+      {/* RIGHT SIDE: ENEMY STATS                   */}
+      {/* ========================================= */}
+      <div className={`flex gap-4 items-start justify-end w-[35%] transition-opacity duration-300 ${enemyName ? 'opacity-100' : 'opacity-0'}`}>
         
-        {/* Enemy Bars (Mirrored) */}
-        <div className="flex flex-col flex-grow mt-1 gap-2 items-end">
+        {/* Enemy Bars (Mirrored Layout) */}
+        <div className="flex flex-col flex-grow gap-1 mt-1 items-end">
           <h2 className="text-white font-mono text-xl font-bold uppercase tracking-widest drop-shadow-[2px_2px_0_rgba(0,0,0,1)] m-0 leading-none text-right">
             {enemyName || 'ENEMY'}
           </h2>
           
-          <div className="h-6 w-full border-2 border-white bg-black p-[2px] shadow-[4px_4px_0_rgba(0,0,0,0.5)] flex justify-end">
+          {/* Enemy Health Bar (Red) */}
+          <div className="h-6 w-full border-[3px] border-zinc-300 bg-black p-[2px] shadow-[4px_4px_0_rgba(0,0,0,0.8)] flex justify-end">
             <div 
-              className="h-full bg-gradient-to-b from-red-400 to-red-700 transition-all duration-100" 
+              className="h-full bg-[#ef4444] transition-all duration-100" 
               style={{ width: `${enemyHealthPct}%` }} 
             />
           </div>
         </div>
 
         {/* Enemy Portrait Box */}
-        <div className="relative border-4 border-zinc-500 bg-zinc-900 w-24 h-24 overflow-hidden shadow-[4px_4px_0_rgba(0,0,0,0.5)]">
+        <div className="relative border-[4px] border-zinc-400 bg-zinc-800 w-24 h-24 overflow-hidden shadow-[4px_4px_0_rgba(0,0,0,0.8)] shrink-0">
           {enemyName && (
             <img 
               src={`assets/images/portraits/${enemyName}.png`} 
               alt={enemyName} 
-              className="w-full h-full object-cover object-top pixelated"
-              onError={(e) => (e.currentTarget.src = 'assets/images/portraits/mup.png')} // Fallback
+              className="w-full h-full object-cover object-top"
+              style={{ imageRendering: 'pixelated' }}
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
             />
           )}
           {/* Enemy Red Flash Overlay */}
-          <div className={`absolute inset-0 bg-red-500 mix-blend-overlay transition-opacity duration-75 ${enemyFlash ? 'opacity-80' : 'opacity-0'}`} />
+          <div className={`absolute inset-0 bg-red-600 mix-blend-overlay transition-opacity duration-75 ${enemyFlash ? 'opacity-90' : 'opacity-0'}`} />
         </div>
       </div>
 
