@@ -23,7 +23,6 @@ export class MainLevel extends Phaser.Scene {
     private bossSpawned: boolean = false;
     public score: number = 0;
 
-    // --- HUD TRACKING DATA ---
     public lastEngagedEnemy: any = null;
     public lastPlayerHitTime: number = 0;
     public lastEnemyHitTime: number = 0;
@@ -57,11 +56,22 @@ export class MainLevel extends Phaser.Scene {
         this.player.setScale(1.7);
         this.enemies.add(new Enemy(this, 1000, 950, 'mup'));
 
+        // PHYSICAL BASELINE COLLIDERS (Prevents Overlapping)
+        this.physics.add.collider(this.player, this.enemies);
+        this.physics.add.collider(this.enemies, this.enemies);
+
         this.physics.add.overlap(this.player, this.items, this.collectItem, undefined, this);
 
         this.cameras.main.setBounds(0, 0, 4000, 1080);
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
         this.updateReactHUD();
+
+        // --- LOADING SCREEN SYNC ---
+        // Pause the scene immediately so enemies don't attack while the loading screen is up
+        this.scene.pause();
+        
+        // Tell the React LoadingScreen that the level is fully built and ready!
+        window.dispatchEvent(new CustomEvent('phaser-ready'));
     }
 
     update() {
@@ -93,9 +103,10 @@ export class MainLevel extends Phaser.Scene {
         this.player.update(keys);
         
         this.enemies.getChildren().forEach((e: any) => { if (e.updateAI && !e.isDead) e.updateAI(this.player); });
+        
+        // Z-Depth Sorting (Draws lower characters in front of higher ones)
         this.children.each((c: any) => { if (c.y && c.type !== 'Image' && c.type !== 'Graphics') c.setDepth(c.y); });
         
-        // Auto-clear enemy HUD if they vanish/die
         if (this.lastEngagedEnemy && (!this.lastEngagedEnemy.active || this.lastEngagedEnemy.isDead)) {
             this.lastEngagedEnemy = null;
             this.updateReactHUD();
@@ -218,7 +229,6 @@ export class MainLevel extends Phaser.Scene {
         this.updateReactHUD();
     }
 
-    // BROADCASTS ALL COMBAT DATA TO THE NEW REACT HUD
     public updateReactHUD() {
         let eMaxHealth = 100;
         if (this.lastEngagedEnemy) {
