@@ -4,6 +4,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     public health: number = 100;
     public isDead: boolean = false;
     public isAttacking: boolean = false;
+    public isHurt: boolean = false; // NEW: Stun-lock flag
     public skinPrefix: string; 
     public damageMultiplier: number = 1.0;
     
@@ -31,6 +32,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         
         this.setCollideWorldBounds(true);
         if (this.body) {
+            // Keep the narrow "feet" hitbox so they still look correct in 3D space
             this.body.setSize(50, 30);
             this.body.setOffset(this.width/2 - 25, this.height - 30);
             (this.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
@@ -38,7 +40,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     public updateAI(player: any) {
-        if (this.isDead || this.isAttacking || player.isDead) return;
+        // ENEMY FIX: Prevent AI from walking/idling if they are currently stunned by a punch!
+        if (this.isDead || this.isAttacking || this.isHurt || player.isDead) return;
+        
         this.setAngle(0);
 
         const distanceX = player.x - this.x;
@@ -82,7 +86,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 this.triggerCooldown();
                 if (Math.abs(this.x - player.x) <= this.attackRange + 20 && Math.abs(this.y - player.y) <= 45) {
                     if (player.takeDamage) {
-                        (this.scene as any).lastEngagedEnemy = this; // Lock enemy to HUD
+                        (this.scene as any).lastEngagedEnemy = this; 
                         player.takeDamage(10 * this.damageMultiplier);
                         (this.scene as any).playSFX(['punch_2', 'kick_1']); 
                     }
@@ -94,7 +98,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 this.triggerCooldown();
                 if (Math.abs(this.x - player.x) <= this.attackRange + 20 && Math.abs(this.y - player.y) <= 45) {
                     if (player.takeDamage) {
-                        (this.scene as any).lastEngagedEnemy = this; // Lock enemy to HUD
+                        (this.scene as any).lastEngagedEnemy = this; 
                         player.takeDamage(10 * this.damageMultiplier);
                         (this.scene as any).playSFX(['punch_2', 'kick_1']);
                     }
@@ -111,12 +115,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     public takeDamage(amount: number) {
         if (this.isDead) return;
+        
         this.health -= amount;
         this.isAttacking = false; 
+        this.isHurt = true; // TRIGGER STUN LOCK
+        
         this.setVelocity(0, 0);
         this.setTint(0xff0000);
         
-        // TRIGGER REACT HUD FLASH FOR ENEMY
         (this.scene as any).lastEngagedEnemy = this;
         (this.scene as any).lastEnemyHitTime = Date.now();
         (this.scene as any).updateReactHUD();
@@ -125,6 +131,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         if (this.health <= 0) {
             this.isDead = true;
+            this.isHurt = false;
             (this.scene as any).registerEnemyDeath();
             (this.scene as any).dropItem(this.x, this.y); 
             
@@ -144,8 +151,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 this.scene.time.delayedCall(300, () => this.destroy());
             }
         } else {
-            if (this.scene.anims.exists(`${this.skinPrefix}-damage`)) this.play(`${this.skinPrefix}-damage`, true);
+            // PLAY DAMAGE ANIMATION
+            if (this.scene.anims.exists(`${this.skinPrefix}-damage`)) {
+                this.play(`${this.skinPrefix}-damage`, true);
+            }
             this.scene.time.delayedCall(150, () => this.clearTint());
+            
+            // CLEAR STUN LOCK AFTER 400MS SO THEY CAN MOVE AGAIN
+            this.scene.time.delayedCall(400, () => {
+                if (!this.isDead) this.isHurt = false;
+            });
         }
     }
 }
