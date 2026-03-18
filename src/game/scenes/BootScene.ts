@@ -38,20 +38,21 @@ export class BootScene extends Phaser.Scene {
             'idle': 'idle', 'walk': 'walk', 'run': 'run', 
             'punch-1': 'punch-1', 'punch-2': 'punch-2', 'kick-1': 'kick-1', 'kick-2': 'kick-2', 
             'jump-punch': 'jump-punch', 'jump-kick': 'jump-kick',
-            'damage': 'damage', 'dying': 'dying', 'special': 'special', 'finisher': 'finisher' // FIX: Looking for dying
+            'damage': 'damage', 'dying': 'dying', 'special': 'special', 'finisher': 'finisher',
+            'pickup': 'pickup' // NEW: Reads the pickup frames if they exist!
         };
 
         characters.forEach(char => {
             Object.entries(actionMap).forEach(([actionKey, folderName]) => {
                 const animKey = `${char}-${actionKey}`; 
                 const framePrefix = `${char}-${folderName}/frame_`;
-                const fps = ['punch-1', 'punch-2', 'kick-1', 'kick-2', 'jump-punch', 'jump-kick', 'special', 'finisher'].includes(actionKey) ? 15 : 10;
+                const fps = ['punch-1', 'punch-2', 'kick-1', 'kick-2', 'jump-punch', 'jump-kick', 'special', 'finisher', 'pickup'].includes(actionKey) ? 15 : 10;
                 const isLoop = ['idle', 'walk', 'run'].includes(actionKey);
                 this.createAutoAnimation(char, animKey, framePrefix, isLoop, fps);
             });
             this.createFallbackAnimation(`${char}-special`, `${char}-special_attack`);
             this.createFallbackAnimation(`${char}-finisher`, `${char}-finish_move`);
-            this.createFallbackAnimation(`${char}-dying`, `${char}-knockdown`); // Fallback if dying doesn't exist
+            this.createFallbackAnimation(`${char}-dying`, `${char}-knockdown`);
         });
     }
 
