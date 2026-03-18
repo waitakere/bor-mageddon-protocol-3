@@ -82,8 +82,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 this.triggerCooldown();
                 if (Math.abs(this.x - player.x) <= this.attackRange + 20 && Math.abs(this.y - player.y) <= 45) {
                     if (player.takeDamage) {
+                        (this.scene as any).lastEngagedEnemy = this; // Lock enemy to HUD
                         player.takeDamage(10 * this.damageMultiplier);
-                        (this.scene as any).playSFX(['punch_2', 'kick_1']); // Light hit sound for player taking damage
+                        (this.scene as any).playSFX(['punch_2', 'kick_1']); 
                     }
                 }
             });
@@ -93,6 +94,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 this.triggerCooldown();
                 if (Math.abs(this.x - player.x) <= this.attackRange + 20 && Math.abs(this.y - player.y) <= 45) {
                     if (player.takeDamage) {
+                        (this.scene as any).lastEngagedEnemy = this; // Lock enemy to HUD
                         player.takeDamage(10 * this.damageMultiplier);
                         (this.scene as any).playSFX(['punch_2', 'kick_1']);
                     }
@@ -114,6 +116,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setVelocity(0, 0);
         this.setTint(0xff0000);
         
+        // TRIGGER REACT HUD FLASH FOR ENEMY
+        (this.scene as any).lastEngagedEnemy = this;
+        (this.scene as any).lastEnemyHitTime = Date.now();
+        (this.scene as any).updateReactHUD();
+
         (this.scene as any).playSFX(['agony_m_1', 'agony_m_2', 'agony_m_3']);
 
         if (this.health <= 0) {
