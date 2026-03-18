@@ -1,248 +1,155 @@
-import Phaser from 'phaser';
-import { Marko } from '../entities/Marko';
-import { Maja } from '../entities/Maja';
-import { Darko } from '../entities/Darko';
-import { Enemy } from '../entities/Enemy';
+import React, { useEffect, useState, useRef } from 'react';
 
-export class MainLevel extends Phaser.Scene {
-    public player!: any; 
-    public enemies!: Phaser.Physics.Arcade.Group;
-    public items!: Phaser.Physics.Arcade.Group;
-    private shadows!: Phaser.GameObjects.Graphics;
-    
-    private sectors = [
-        { triggerX: 800, totalEnemies: 4, maxActive: 2 },
-        { triggerX: 1600, totalEnemies: 6, maxActive: 3 },
-        { triggerX: 2400, totalEnemies: 8, maxActive: 3 },
-        { triggerX: 3200, totalEnemies: 5, maxActive: 4 } 
-    ];
-    private currentSectorIndex: number = 0;
-    private isLocked: boolean = false;
-    private spawnedThisWave: number = 0;
-    public killedThisWave: number = 0; 
-    private bossSpawned: boolean = false;
-    public score: number = 0;
+export const GameHUD: React.FC = () => {
+  // Player Stats
+  const [health, setHealth] = useState(100);
+  const [maxHealth, setMaxHealth] = useState(100);
+  const [smf, setSmf] = useState(0);
+  const [score, setScore] = useState(0);
+  const [playerName, setPlayerName] = useState('marko');
+  const [playerFlash, setPlayerFlash] = useState(false);
 
-    public lastEngagedEnemy: any = null;
-    public lastPlayerHitTime: number = 0;
-    public lastEnemyHitTime: number = 0;
+  // Enemy Stats
+  const [enemyName, setEnemyName] = useState<string | null>(null);
+  const [enemyHealth, setEnemyHealth] = useState(0);
+  const [enemyMaxHealth, setEnemyMaxHealth] = useState(100);
+  const [enemyFlash, setEnemyFlash] = useState(false);
 
-    constructor() { super({ key: 'MainLevel' }); }
+  // Refs for timeouts to prevent memory leaks
+  const playerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const enemyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    create() {
-        const unlockAudio = () => {
-            if (this.sound.context.state === 'suspended') this.sound.context.resume();
-        };
-        this.input.on('pointerdown', unlockAudio);
-        this.input.keyboard?.on('keydown', unlockAudio);
+  useEffect(() => {
+    const handleHUDUpdate = (e: any) => {
+      const data = e.detail;
+      
+      // Update Core Stats
+      if (data.health !== undefined) setHealth(data.health);
+      if (data.maxHealth !== undefined) setMaxHealth(data.maxHealth);
+      if (data.smf !== undefined) setSmf(data.smf);
+      if (data.score !== undefined) setScore(data.score);
+      if (data.playerName !== undefined) setPlayerName(data.playerName);
+      
+      setEnemyName(data.enemyName);
+      setEnemyHealth(data.enemyHealth || 0);
+      setEnemyMaxHealth(data.enemyMaxHealth || 100);
 
-        this.physics.world.setBounds(0, 750, 4000, 330); 
+      // Trigger Player Red Flash
+      if (data.playerHitStamp && data.playerHitStamp !== (window as any)._lastPlayerHit) {
+        (window as any)._lastPlayerHit = data.playerHitStamp;
+        setPlayerFlash(true);
+        if (playerTimeoutRef.current) clearTimeout(playerTimeoutRef.current);
+        playerTimeoutRef.current = setTimeout(() => setPlayerFlash(false), 150);
+      }
+
+      // Trigger Enemy Red Flash
+      if (data.enemyHitStamp && data.enemyHitStamp !== (window as any)._lastEnemyHit) {
+        (window as any)._lastEnemyHit = data.enemyHitStamp;
+        setEnemyFlash(true);
+        if (enemyTimeoutRef.current) clearTimeout(enemyTimeoutRef.current);
+        enemyTimeoutRef.current = setTimeout(() => setEnemyFlash(false), 150);
+      }
+    };
+
+    window.addEventListener('update-phaser-hud', handleHUDUpdate);
+    return () => window.removeEventListener('update-phaser-hud', handleHUDUpdate);
+  }, []);
+
+  const healthPct = Math.max(0, Math.min(100, (health / maxHealth) * 100));
+  const enemyHealthPct = Math.max(0, Math.min(100, (enemyHealth / enemyMaxHealth) * 100));
+
+  return (
+    <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-40 pointer-events-none select-none">
+      
+      {/* ========================================= */}
+      {/* LEFT SIDE: PLAYER STATS                   */}
+      {/* ========================================= */}
+      <div className="flex gap-4 items-start w-[35%]">
+        {/* Portrait Box */}
+        <div className="relative border-[4px] border-zinc-400 bg-zinc-800 w-24 h-24 overflow-hidden shadow-[4px_4px_0_rgba(0,0,0,0.8)] shrink-0">
+          <img 
+            src={`assets/images/portraits/${playerName}.png`} 
+            alt={playerName} 
+            className="w-full h-full object-cover object-top"
+            style={{ imageRendering: 'pixelated' }}
+            onError={(e) => { e.currentTarget.style.display = 'none'; }} // Hides broken image icon if missing
+          />
+          {/* Red Flash Overlay */}
+          <div className={`absolute inset-0 bg-red-600 mix-blend-overlay transition-opacity duration-75 ${playerFlash ? 'opacity-90' : 'opacity-0'}`} />
+        </div>
+
+        {/* Status Bars */}
+        <div className="flex flex-col flex-grow gap-1 mt-1">
+          <h2 className="text-white font-mono text-xl font-bold uppercase tracking-widest drop-shadow-[2px_2px_0_rgba(0,0,0,1)] m-0 leading-none">
+            {playerName}
+          </h2>
+          
+          {/* Health Bar (Yellow) */}
+          <div className="h-6 w-full border-[3px] border-zinc-300 bg-black p-[2px] shadow-[4px_4px_0_rgba(0,0,0,0.8)]">
+            <div 
+              className="h-full bg-[#fde047] transition-all duration-200" 
+              style={{ width: `${healthPct}%` }} 
+            />
+          </div>
+
+          {/* SMF Bar (Blue) */}
+          <div className="h-3 w-3/4 border-2 border-blue-400 bg-black p-[1px] mt-1 shadow-[2px_2px_0_rgba(0,0,0,0.8)]">
+            <div 
+              className="h-full bg-[#38bdf8] transition-all duration-300" 
+              style={{ width: `${smf}%` }} 
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================= */}
+      {/* CENTER: SCORE                             */}
+      {/* ========================================= */}
+      <div className="flex flex-col items-center mt-2 w-[20%]">
+        <h3 className="text-[#fde047] font-mono text-sm font-bold m-0 tracking-[4px] drop-shadow-[2px_2px_0_rgba(0,0,0,1)]">
+          SCORE
+        </h3>
+        <div className="text-white font-mono text-4xl font-bold tracking-widest drop-shadow-[4px_4px_0_rgba(0,0,0,1)]">
+          {score.toString().padStart(6, '0')}
+        </div>
+      </div>
+
+      {/* ========================================= */}
+      {/* RIGHT SIDE: ENEMY STATS                   */}
+      {/* ========================================= */}
+      <div className={`flex gap-4 items-start justify-end w-[35%] transition-opacity duration-300 ${enemyName ? 'opacity-100' : 'opacity-0'}`}>
         
-        this.add.image(0, 0, 'part1_sky').setOrigin(0, 0).setDisplaySize(4000, 1080).setScrollFactor(0.1);
-        this.add.image(0, 750, 'part1_mid').setOrigin(0, 1).setDisplaySize(4000, 650).setScrollFactor(0.5);
-        this.add.image(0, 1080, 'part1_floor').setOrigin(0, 1).setDisplaySize(4000, 330).setScrollFactor(1);
+        {/* Enemy Bars (Mirrored Layout) */}
+        <div className="flex flex-col flex-grow gap-1 mt-1 items-end">
+          <h2 className="text-white font-mono text-xl font-bold uppercase tracking-widest drop-shadow-[2px_2px_0_rgba(0,0,0,1)] m-0 leading-none text-right">
+            {enemyName || 'ENEMY'}
+          </h2>
+          
+          {/* Enemy Health Bar (Red) */}
+          <div className="h-6 w-full border-[3px] border-zinc-300 bg-black p-[2px] shadow-[4px_4px_0_rgba(0,0,0,0.8)] flex justify-end">
+            <div 
+              className="h-full bg-[#ef4444] transition-all duration-100" 
+              style={{ width: `${enemyHealthPct}%` }} 
+            />
+          </div>
+        </div>
 
-        this.shadows = this.add.graphics().setAlpha(0.4);
-        this.items = this.physics.add.group();
-        this.enemies = this.physics.add.group();
+        {/* Enemy Portrait Box */}
+        <div className="relative border-[4px] border-zinc-400 bg-zinc-800 w-24 h-24 overflow-hidden shadow-[4px_4px_0_rgba(0,0,0,0.8)] shrink-0">
+          {enemyName && (
+            <img 
+              src={`assets/images/portraits/${enemyName}.png`} 
+              alt={enemyName} 
+              className="w-full h-full object-cover object-top"
+              style={{ imageRendering: 'pixelated' }}
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+          )}
+          {/* Enemy Red Flash Overlay */}
+          <div className={`absolute inset-0 bg-red-600 mix-blend-overlay transition-opacity duration-75 ${enemyFlash ? 'opacity-90' : 'opacity-0'}`} />
+        </div>
+      </div>
 
-        const charKey = this.registry.get('selectedCharacter') || 'marko';
-        switch(charKey) {
-            case 'maja': this.player = new Maja(this, 200, 950); break;
-            case 'darko': this.player = new Darko(this, 200, 950); break;
-            default: this.player = new Marko(this, 200, 950); break;
-        }
-
-        this.player.setScale(1.7);
-        this.enemies.add(new Enemy(this, 1000, 950, 'mup'));
-
-        // --- PHYSICAL BASELINE COLLIDERS (Prevents Overlapping) ---
-        // This ensures characters bump into each other instead of merging into one blob
-        this.physics.add.collider(this.player, this.enemies);
-        this.physics.add.collider(this.enemies, this.enemies);
-
-        // This allows items to be picked up without blocking movement
-        this.physics.add.overlap(this.player, this.items, this.collectItem, undefined, this);
-
-        this.cameras.main.setBounds(0, 0, 4000, 1080);
-        this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
-        this.updateReactHUD();
-    }
-
-    update() {
-        if (!this.player || this.player.isDead) return;
-
-        this.handleWaveManager();
-
-        this.children.each((child: any) => {
-            if (child.body && child.type === 'Sprite') { child.setAngle(0); child.rotation = 0; }
-        });
-
-        this.shadows.clear().fillStyle(0x000000, 0.5);
-        this.shadows.fillEllipse(this.player.x, this.player.y, 70 * this.player.scale, 20);
-        this.enemies.getChildren().forEach((e: any) => { if (!e.isDead) this.shadows.fillEllipse(e.x, e.y, e.width * 0.6, 20); });
-
-        const cursors = this.input.keyboard!.createCursorKeys();
-        const kb = this.input.keyboard!;
-        const q = kb.addKey('Q'); const w = kb.addKey('W'); const a = kb.addKey('A'); const s = kb.addKey('S');
-
-        const keys = {
-            up: cursors.up.isDown, down: cursors.down.isDown, left: cursors.left.isDown, right: cursors.right.isDown,
-            space: Phaser.Input.Keyboard.JustDown(kb.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)),
-            p1: Phaser.Input.Keyboard.JustDown(q), p2: Phaser.Input.Keyboard.JustDown(w),
-            k1: Phaser.Input.Keyboard.JustDown(a), k2: Phaser.Input.Keyboard.JustDown(s),
-            special: (Phaser.Input.Keyboard.JustDown(q) && w.isDown) || (Phaser.Input.Keyboard.JustDown(w) && q.isDown),
-            finisher: (Phaser.Input.Keyboard.JustDown(a) && s.isDown) || (Phaser.Input.Keyboard.JustDown(s) && a.isDown)
-        };
-
-        this.player.update(keys);
-        
-        this.enemies.getChildren().forEach((e: any) => { if (e.updateAI && !e.isDead) e.updateAI(this.player); });
-        
-        // Z-Depth Sorting (Draws lower characters in front of higher ones)
-        this.children.each((c: any) => { if (c.y && c.type !== 'Image' && c.type !== 'Graphics') c.setDepth(c.y); });
-        
-        if (this.lastEngagedEnemy && (!this.lastEngagedEnemy.active || this.lastEngagedEnemy.isDead)) {
-            this.lastEngagedEnemy = null;
-            this.updateReactHUD();
-        }
-    }
-
-    public playSFX(marker: string | string[], volume: number = 0.8) {
-        try {
-            if (this.sound.context.state === 'suspended') this.sound.context.resume();
-
-            const finalMarker = Array.isArray(marker) ? marker[Math.floor(Math.random() * marker.length)] : marker;
-            const json = this.cache.json.get('sfx_atlas');
-            
-            if (json && json.spritemap && !json.spritemap[finalMarker]) {
-                console.warn(`[AUDIO] '${finalMarker}' not found!`);
-                return null;
-            }
-            const sound = this.sound.addAudioSprite('sfx_atlas');
-            sound.play(finalMarker, { volume });
-            return sound;
-        } catch (e) {
-            console.warn("Audio system error:", e);
-            return null;
-        }
-    }
-
-    public spawnHitEffect(x: number, y: number) {
-        const explosion = this.add.sprite(x, y, 'explosion_01');
-        explosion.setDepth(9999); 
-        explosion.setScale(1.5); 
-        
-        this.tweens.add({
-            targets: explosion,
-            scale: 2.0, alpha: 0, duration: 250,
-            ease: 'Quad.easeOut',
-            onComplete: () => explosion.destroy()
-        });
-    }
-
-    public dropItem(x: number, y: number) {
-        if (Math.random() > 0.3) return; 
-        const items = ['item-burek', 'item-coffee', 'item-pork', 'item-beer', 'item-sandwich'];
-        const randomItem = items[Math.floor(Math.random() * items.length)];
-        const drop = this.physics.add.sprite(x, y - 20, randomItem);
-        this.items.add(drop);
-    }
-
-    private collectItem(player: any, item: any) {
-        item.destroy();
-        this.playSFX(['melee_1', 'melee_2'], 0.8); 
-        this.player.health = Math.min(this.player.health + 30, this.player.maxHealth || 150);
-        
-        const healText = this.add.text(this.player.x, this.player.y - 80, '+HP', { font: '900 20px "Space Mono"', color: '#00ff00' }).setOrigin(0.5);
-        this.tweens.add({ targets: healText, y: healText.y - 30, alpha: 0, duration: 1000, onComplete: () => healText.destroy() });
-        this.updateReactHUD();
-    }
-
-    private handleWaveManager() {
-        const cam = this.cameras.main;
-
-        if (!this.isLocked && this.currentSectorIndex < this.sectors.length) {
-            const nextSector = this.sectors[this.currentSectorIndex];
-            if (this.player.x > nextSector.triggerX) {
-                this.isLocked = true;
-                cam.stopFollow();
-                this.physics.world.setBounds(cam.worldView.left, 750, cam.width, 330);
-                this.updateReactHUD();
-            }
-        }
-
-        if (this.isLocked) {
-            const currentSector = this.sectors[this.currentSectorIndex];
-            const activeEnemies = this.enemies.getChildren().filter((e: any) => !e.isDead).length;
-            const isFinalSector = this.currentSectorIndex === this.sectors.length - 1;
-
-            if (activeEnemies < currentSector.maxActive && this.spawnedThisWave < currentSector.totalEnemies) {
-                const gangTypes = ['mup', 'dizel', 'dizelcic', 'rudar'];
-                const randomType = gangTypes[Math.floor(Math.random() * gangTypes.length)];
-                this.spawnEnemyOffScreen(cam.worldView, randomType);
-            }
-
-            if (isFinalSector && this.spawnedThisWave >= currentSector.totalEnemies && activeEnemies === 0 && !this.bossSpawned) {
-                this.spawnEnemyOffScreen(cam.worldView, 'sloba');
-                this.bossSpawned = true;
-            }
-
-            if (this.spawnedThisWave >= currentSector.totalEnemies && activeEnemies === 0) {
-                if (isFinalSector && !this.bossSpawned) return; 
-                this.unlockCamera();
-            }
-        }
-    }
-
-    private spawnEnemyOffScreen(view: Phaser.Geom.Rectangle, type: string) {
-        const spawnOnLeft = Math.random() > 0.5;
-        const spawnX = spawnOnLeft ? view.left - 80 : view.right + 80;
-        const spawnY = Phaser.Math.Between(800, 1050);
-        
-        const enemy = new Enemy(this, spawnX, spawnY, type); 
-        this.enemies.add(enemy);
-        this.spawnedThisWave++;
-    }
-
-    private unlockCamera() {
-        this.isLocked = false;
-        this.currentSectorIndex++; 
-        this.spawnedThisWave = 0;
-        this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
-        this.physics.world.setBounds(0, 750, 4000, 330);
-        this.updateReactHUD();
-        
-        if (this.currentSectorIndex < this.sectors.length) {
-            const goText = this.add.text(this.player.x, this.player.y - 150, 'GO! ➡', { font: '900 64px "Metal Mania"', color: '#39ff14', stroke: '#000', strokeThickness: 8 }).setOrigin(0.5);
-            this.tweens.add({ targets: goText, x: goText.x + 100, alpha: 0, duration: 1500, onComplete: () => goText.destroy() });
-        }
-    }
-
-    public registerEnemyDeath() {
-        this.score += 100;
-        this.updateReactHUD();
-    }
-
-    public updateReactHUD() {
-        let eMaxHealth = 100;
-        if (this.lastEngagedEnemy) {
-            eMaxHealth = this.lastEngagedEnemy.skinPrefix === 'sloba' ? 600 : 100;
-        }
-
-        window.dispatchEvent(new CustomEvent('update-phaser-hud', {
-            detail: { 
-                health: this.player?.health, 
-                maxHealth: this.player?.maxHealth,
-                smf: this.player?.smfMeter, 
-                score: this.score,
-                playerName: this.player?.characterName,
-                enemyName: this.lastEngagedEnemy && !this.lastEngagedEnemy.isDead ? this.lastEngagedEnemy.skinPrefix : null,
-                enemyHealth: this.lastEngagedEnemy ? this.lastEngagedEnemy.health : 0,
-                enemyMaxHealth: eMaxHealth,
-                playerHitStamp: this.lastPlayerHitTime,
-                enemyHitStamp: this.lastEnemyHitTime
-            }
-        }));
-    }
-}
+    </div>
+  );
+};
