@@ -6,15 +6,22 @@ export class BootScene extends Phaser.Scene {
     }
 
     preload() {
+        // =========================================================
+        // THE CODESPACES PROXY FIX
+        // Forces Phaser to use standard browser <img> tags instead of XHR.
+        // Bypasses the GitHub "206 Partial Content" chunking issue.
+        // =========================================================
+        this.load.imageLoadType = 'HTMLImageElement';
+
         this.createLoadingBar();
 
         // ==========================================
-        // 1. STRICTLY RELATIVE AUDIO PATH
+        // 1. STRICTLY RELATIVE AUDIO PATH (MP3 Update)
         // ==========================================
-        this.load.audio('1993_ambient', './assets/audio/audio-1993-1.wav');
+        this.load.audio('1993_ambient', './assets/audio/bor_streets_93.mp3');
         
         // ==========================================
-        // 2. STRICTLY RELATIVE SPRITE PATHS
+        // 2. STRICTLY RELATIVE SPRITE PATHS (Atlases)
         // ==========================================
         this.load.atlas('marko', './assets/sprites/marko.png', './assets/sprites/marko.json');
         this.load.atlas('darko', './assets/sprites/darko.png', './assets/sprites/darko.json');
@@ -22,7 +29,7 @@ export class BootScene extends Phaser.Scene {
         this.load.atlas('enemies_1993', './assets/sprites/enemies_1993.png', './assets/sprites/enemies_1993.json');
 
         // ==========================================
-        // 3. STRICTLY RELATIVE ENVIRONMENT PATHS
+        // 3. STRICTLY RELATIVE ENVIRONMENT & VFX PATHS
         // ==========================================
         this.load.image('part1_sky', './assets/images/environments/part1_sky.png');
         this.load.image('part1_mid', './assets/images/environments/part1_mid.png');
@@ -38,7 +45,10 @@ export class BootScene extends Phaser.Scene {
     }
 
     create() {
+        // Signal the React layer that the engine is fully primed
         window.dispatchEvent(new CustomEvent('phaser-ready'));
+        
+        // Start the main level
         this.scene.start('MainLevel');
     }
 
