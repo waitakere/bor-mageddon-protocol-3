@@ -6,42 +6,35 @@ export class BootScene extends Phaser.Scene {
     }
 
     preload() {
-        // Tells Phaser to use Vite's dynamic base URL for cloud environments
-        this.load.setBaseURL(import.meta.env.BASE_URL);
-
         this.createLoadingBar();
 
         // ==========================================
-        // 1. PRELOAD AUDIO 
+        // 1. STRICTLY RELATIVE AUDIO PATH
         // ==========================================
-        // Using the exact .wav file name you mentioned. 
-        this.load.audio('1993_ambient', 'assets/audio/audio-1993-1.wav');
+        this.load.audio('1993_ambient', './assets/audio/audio-1993-1.wav');
         
         // ==========================================
-        // 2. PRELOAD SPRITES (Atlases)
+        // 2. STRICTLY RELATIVE SPRITE PATHS
         // ==========================================
-        this.load.atlas('marko', 'assets/sprites/marko.png', 'assets/sprites/marko.json');
-        this.load.atlas('darko', 'assets/sprites/darko.png', 'assets/sprites/darko.json');
-        this.load.atlas('maja', 'assets/sprites/maja.png', 'assets/sprites/maja.json');
-        this.load.atlas('enemies_1993', 'assets/sprites/enemies_1993.png', 'assets/sprites/enemies_1993.json');
+        this.load.atlas('marko', './assets/sprites/marko.png', './assets/sprites/marko.json');
+        this.load.atlas('darko', './assets/sprites/darko.png', './assets/sprites/darko.json');
+        this.load.atlas('maja', './assets/sprites/maja.png', './assets/sprites/maja.json');
+        this.load.atlas('enemies_1993', './assets/sprites/enemies_1993.png', './assets/sprites/enemies_1993.json');
 
         // ==========================================
-        // 3. PRELOAD BACKGROUNDS & VFX
+        // 3. STRICTLY RELATIVE ENVIRONMENT PATHS
         // ==========================================
-        // Adjust these to match exactly where you placed them inside the public folder!
-        this.load.image('part1_sky', 'assets/images/environments/part1_sky.png');
-        this.load.image('part1_mid', 'assets/images/environments/part1_mid.png');
-        this.load.image('part1_floor', 'assets/images/environments/part1_floor.png');
+        this.load.image('part1_sky', './assets/images/environments/part1_sky.png');
+        this.load.image('part1_mid', './assets/images/environments/part1_mid.png');
+        this.load.image('part1_floor', './assets/images/environments/part1_floor.png');
         
-        // Corrected to your 'fx' folder
-        this.load.image('explosion_01', 'assets/fx/explosion_01.png');
+        this.load.image('explosion_01', './assets/fx/explosion_01.png');
 
-        // Note: Make sure these items actually exist in this path, or Phaser will get mad again!
-        this.load.image('item-burek', 'assets/images/environments/item-burek.png');
-        this.load.image('item-coffee', 'assets/images/environments/item-coffee.png');
-        this.load.image('item-pork', 'assets/images/environments/item-pork.png');
-        this.load.image('item-beer', 'assets/images/environments/item-beer.png');
-        this.load.image('item-sandwich', 'assets/images/environments/item-sandwich.png');
+        this.load.image('item-burek', './assets/images/environments/item-burek.png');
+        this.load.image('item-coffee', './assets/images/environments/item-coffee.png');
+        this.load.image('item-pork', './assets/images/environments/item-pork.png');
+        this.load.image('item-beer', './assets/images/environments/item-beer.png');
+        this.load.image('item-sandwich', './assets/images/environments/item-sandwich.png');
     }
 
     create() {
