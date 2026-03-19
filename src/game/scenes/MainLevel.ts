@@ -16,20 +16,48 @@ export class MainLevel extends Phaser.Scene {
         { triggerX: 2400, totalEnemies: 8, maxActive: 3 },
         { triggerX: 3200, totalEnemies: 5, maxActive: 4 } 
     ];
-    private currentSectorIndex: number = 0;
-    private isLocked: boolean = false;
-    private spawnedThisWave: number = 0;
-    public killedThisWave: number = 0; 
-    private bossSpawned: boolean = false;
-    public score: number = 0;
+    
+    // These will be reset in init()
+    private currentSectorIndex!: number;
+    private isLocked!: boolean;
+    private spawnedThisWave!: number;
+    public killedThisWave!: number; 
+    private bossSpawned!: boolean;
+    public score!: number;
+    public lastEngagedEnemy: any;
+    public lastPlayerHitTime!: number;
+    public lastEnemyHitTime!: number;
 
-    public lastEngagedEnemy: any = null;
-    public lastPlayerHitTime: number = 0;
-    public lastEnemyHitTime: number = 0;
+    constructor() { 
+        super({ key: 'MainLevel' }); 
+    }
 
-    constructor() { super({ key: 'MainLevel' }); }
+    /**
+     * init() runs every time the scene starts or restarts.
+     * Because Phaser reuses the Scene instance, we MUST reset our tracking variables here.
+     */
+    init() {
+        this.currentSectorIndex = 0;
+        this.isLocked = false;
+        this.spawnedThisWave = 0;
+        this.killedThisWave = 0;
+        this.bossSpawned = false;
+        this.score = 0;
+        this.lastEngagedEnemy = null;
+        this.lastPlayerHitTime = 0;
+        this.lastEnemyHitTime = 0;
+    }
 
     create() {
+        // --- REACT HUD INTEGRATION ---
+        // Listen for the restart button click from GameHUD.tsx
+        window.addEventListener('request-scene-restart', this.handleRestart);
+        
+        // Clean up the event listener if the scene shuts down to prevent memory leaks
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+            window.removeEventListener('request-scene-restart', this.handleRestart);
+        });
+
         const unlockAudio = () => {
             if (this.sound.context.state === 'suspended') this.sound.context.resume();
         };
@@ -63,11 +91,21 @@ export class MainLevel extends Phaser.Scene {
 
         this.cameras.main.setBounds(0, 0, 4000, 1080);
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+        
+        // Initial HUD broadcast
         this.updateReactHUD();
 
         this.scene.pause();
         window.dispatchEvent(new CustomEvent('phaser-ready'));
     }
+
+    /**
+     * Handled via the React 'request-scene-restart' event
+     */
+    private handleRestart = () => {
+        // This stops the current scene and restarts it from init() -> preload() -> create()
+        this.scene.restart();
+    };
 
     update() {
         if (!this.player || this.player.isDead) return;
@@ -145,48 +183,41 @@ export class MainLevel extends Phaser.Scene {
         const items = ['item-burek', 'item-coffee', 'item-pork', 'item-beer', 'item-sandwich'];
         const randomItem = items[Math.floor(Math.random() * items.length)];
         
-        // Spawn slightly in the air so it can bounce down to the floor
         const drop = this.physics.add.sprite(x, y - 40, randomItem);
-        drop.setOrigin(0.5, 1); // VERY IMPORTANT FOR Z-DEPTH CHECK!
+        drop.setOrigin(0.5, 1); 
         this.items.add(drop);
 
-        // ITEM FIX 1: Make it 50% smaller!
         drop.setScale(0.5);
 
-        // Resize the hitbox to the tiny base of the item
         const body = drop.body as Phaser.Physics.Arcade.Body;
         if (body) {
             body.setSize(drop.width, 20);
             body.setOffset(0, drop.height - 20);
         }
 
-        // ITEM FIX 2: Flash when it spawns!
         this.tweens.add({
             targets: drop,
             alpha: 0.2,
             duration: 100,
             yoyo: true,
-            repeat: 5, // Flashes 5 times rapidly
+            repeat: 5, 
             ease: 'Linear'
         });
 
-        // ITEM FIX 3: Little bounce animation when dropping
         this.tweens.add({
             targets: drop,
-            y: y, // Bounces down to the actual floor coordinate
+            y: y, 
             duration: 350,
             ease: 'Bounce.easeOut'
         });
     }
 
     private collectItem(player: any, item: any) {
-        // DEPTH CHECK: Ensure player is standing in the exact same Y-lane as the item
         if (Math.abs(player.y - item.y) > 30) return;
 
         item.destroy();
         this.playSFX(['melee_1', 'melee_2'], 0.8); 
         
-        // TRIGGER PLAYER PICKUP ANIMATION
         if (player.playPickupAnim) {
             player.playPickupAnim();
         }
