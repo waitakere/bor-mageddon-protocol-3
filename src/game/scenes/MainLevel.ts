@@ -17,14 +17,14 @@ export class MainLevel extends Phaser.Scene {
         { triggerX: 3200, totalEnemies: 5, maxActive: 4 } 
     ];
     
-    // These will be reset in init()
     private currentSectorIndex!: number;
     private isLocked!: boolean;
     private spawnedThisWave!: number;
     public killedThisWave!: number; 
     private bossSpawned!: boolean;
     public score!: number;
-    public lastEngagedEnemy: any;
+
+    public lastEngagedEnemy: any = null;
     public lastPlayerHitTime!: number;
     public lastEnemyHitTime!: number;
 
@@ -34,7 +34,7 @@ export class MainLevel extends Phaser.Scene {
 
     /**
      * init() runs every time the scene starts or restarts.
-     * Because Phaser reuses the Scene instance, we MUST reset our tracking variables here.
+     * Prevents variables carrying over and instantly triggering bosses.
      */
     init() {
         this.currentSectorIndex = 0;
@@ -50,10 +50,8 @@ export class MainLevel extends Phaser.Scene {
 
     create() {
         // --- REACT HUD INTEGRATION ---
-        // Listen for the restart button click from GameHUD.tsx
         window.addEventListener('request-scene-restart', this.handleRestart);
         
-        // Clean up the event listener if the scene shuts down to prevent memory leaks
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
             window.removeEventListener('request-scene-restart', this.handleRestart);
         });
@@ -64,6 +62,11 @@ export class MainLevel extends Phaser.Scene {
         this.input.on('pointerdown', unlockAudio);
         this.input.keyboard?.on('keydown', unlockAudio);
 
+        // --- AMBIENT BGM ---
+        this.sound.stopAll(); 
+        this.sound.play('1993_ambient', { loop: true, volume: 0.4 });
+
+        // --- WORLD SETUP ---
         this.physics.world.setBounds(0, 750, 4000, 330); 
         
         this.add.image(0, 0, 'part1_sky').setOrigin(0, 0).setDisplaySize(4000, 1080).setScrollFactor(0.1);
@@ -91,8 +94,6 @@ export class MainLevel extends Phaser.Scene {
 
         this.cameras.main.setBounds(0, 0, 4000, 1080);
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
-        
-        // Initial HUD broadcast
         this.updateReactHUD();
 
         this.scene.pause();
@@ -100,10 +101,9 @@ export class MainLevel extends Phaser.Scene {
     }
 
     /**
-     * Handled via the React 'request-scene-restart' event
+     * Catches the restart event fired by the GameHUD component.
      */
     private handleRestart = () => {
-        // This stops the current scene and restarts it from init() -> preload() -> create()
         this.scene.restart();
     };
 
@@ -183,12 +183,14 @@ export class MainLevel extends Phaser.Scene {
         const items = ['item-burek', 'item-coffee', 'item-pork', 'item-beer', 'item-sandwich'];
         const randomItem = items[Math.floor(Math.random() * items.length)];
         
+        // Spawn slightly in the air so it can bounce down to the floor
         const drop = this.physics.add.sprite(x, y - 40, randomItem);
         drop.setOrigin(0.5, 1); 
         this.items.add(drop);
 
         drop.setScale(0.5);
 
+        // Resize the hitbox to the tiny base of the item
         const body = drop.body as Phaser.Physics.Arcade.Body;
         if (body) {
             body.setSize(drop.width, 20);
@@ -213,11 +215,15 @@ export class MainLevel extends Phaser.Scene {
     }
 
     private collectItem(player: any, item: any) {
+        // DEPTH CHECK: Ensure player is standing in the exact same Y-lane as the item
         if (Math.abs(player.y - item.y) > 30) return;
 
         item.destroy();
-        this.playSFX(['melee_1', 'melee_2'], 0.8); 
         
+        // REPLACED melee_2 WITH Metal-Impact-Shield
+        this.playSFX(['melee_1', 'Metal-Impact-Shield'], 0.8); 
+        
+        // TRIGGER PLAYER PICKUP ANIMATION
         if (player.playPickupAnim) {
             player.playPickupAnim();
         }
