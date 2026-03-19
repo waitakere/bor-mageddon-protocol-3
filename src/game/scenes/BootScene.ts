@@ -1,91 +1,98 @@
 import Phaser from 'phaser';
 
+/**
+ * BootScene: The System Initialisation Phase.
+ * Preloads all heavy assets (audio, spritesheets, backgrounds) into memory 
+ * before the MainLevel mounts, preventing cache-miss crashes.
+ */
 export class BootScene extends Phaser.Scene {
-    constructor() { super({ key: 'BootScene' }); }
+    constructor() {
+        super('BootScene');
+    }
 
     preload() {
-        this.load.image('part1_sky', 'assets/images/environments/part1_sky.png');
-        this.load.image('part1_mid', 'assets/images/environments/part1_mid.png');
-        this.load.image('part1_floor', 'assets/images/environments/part1_floor.png');
-        this.load.image('explosion_01', 'assets/images/environments/explosion_01.png');
+        // 1. Initialise the retro loading UI
+        this.createLoadingBar();
 
-        this.load.image('item-burek', 'assets/images/environments/item-burek.png');
-        this.load.image('item-coffee', 'assets/images/environments/item-coffee.png');
-        this.load.image('item-pork', 'assets/images/environments/item-pork.png');
-        this.load.image('item-beer', 'assets/images/environments/item-beer.png');
-        this.load.image('item-sandwich', 'assets/images/environments/item-sandwich.png');
+        // ==========================================
+        // 2. PRELOAD AUDIO (Fixes the crash)
+        // ==========================================
+        this.load.audio('1993_ambient', '/assets/audio/bgm/bor_streets_93.mp3');
+        
+        // Assuming you have generated your audio sprite for the SFX:
+        // this.load.audioSprite('sfx_atlas', '/assets/audio/sfx_atlas.json', ['/assets/audio/sfx_atlas.mp3']);
 
-        this.load.atlas('marko', 'assets/sprites/marko.png', 'assets/sprites/marko.json');
-        this.load.atlas('maja', 'assets/sprites/maja.png', 'assets/sprites/maja.json');
-        this.load.atlas('darko', 'assets/sprites/darko.png', 'assets/sprites/darko.json');
-        this.load.atlas('enemies_1993', 'assets/sprites/enemies_1993.png', 'assets/sprites/enemies_1993.json');
+        // ==========================================
+        // 3. PRELOAD SPRITES (Fixes the ERR_FAILED)
+        // ==========================================
+        // Note: Assuming your pixel art is 256x256 based on the PRD specs.
+        this.load.spritesheet('marko', '/assets/sprites/marko.png', { frameWidth: 256, frameHeight: 256 });
+        this.load.spritesheet('darko', '/assets/sprites/darko.png', { frameWidth: 256, frameHeight: 256 });
+        this.load.spritesheet('maja', '/assets/sprites/maja.png', { frameWidth: 256, frameHeight: 256 });
+        this.load.spritesheet('enemies_1993', '/assets/sprites/enemies_1993.png', { frameWidth: 256, frameHeight: 256 });
 
-        this.load.audioSprite('sfx_atlas', 'assets/audio/sfx_atlas.json', ['assets/audio/sfx_atlas.mp3']);
+        // ==========================================
+        // 4. PRELOAD BACKGROUNDS & VFX
+        // ==========================================
+        this.load.image('part1_sky', '/assets/backgrounds/1993/part1_sky.png');
+        this.load.image('part1_mid', '/assets/backgrounds/1993/part1_mid.png');
+        this.load.image('part1_floor', '/assets/backgrounds/1993/part1_floor.png');
+        this.load.image('explosion_01', '/assets/vfx/explosion_01.png');
+
+        // Preload the drops from your MainLevel.ts dropItem() method
+        this.load.image('item-burek', '/assets/items/item-burek.png');
+        this.load.image('item-coffee', '/assets/items/item-coffee.png');
+        this.load.image('item-pork', '/assets/items/item-pork.png');
+        this.load.image('item-beer', '/assets/items/item-beer.png');
+        this.load.image('item-sandwich', '/assets/items/item-sandwich.png');
     }
 
     create() {
-        this.createPlayerAnimations();
-        this.createEnemyAnimations();
-
-        const selected = this.game.canvas.parentElement?.getAttribute('data-selected-character') || 'marko';
-        this.registry.set('selectedCharacter', selected);
+        // Broadcast to your React layer that the engine is fully primed
+        window.dispatchEvent(new CustomEvent('phaser-ready'));
+        
+        // Transition cleanly to the Main Level now that the cache is full
         this.scene.start('MainLevel');
     }
 
-    private createPlayerAnimations() {
-        const characters = ['marko', 'maja', 'darko'];
-        const actionMap = { 
-            'idle': 'idle', 'walk': 'walk', 'run': 'run', 
-            'punch-1': 'punch-1', 'punch-2': 'punch-2', 'kick-1': 'kick-1', 'kick-2': 'kick-2', 
-            'jump-punch': 'jump-punch', 'jump-kick': 'jump-kick',
-            'damage': 'damage', 'dying': 'dying', 'special': 'special', 'finisher': 'finisher',
-            'pick-up': 'pick-up' // EXACT MATCH FOR YOUR FOLDER
-        };
+    /**
+     * Builds a brutalist, 1993-era loading bar.
+     */
+    private createLoadingBar() {
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
 
-        characters.forEach(char => {
-            Object.entries(actionMap).forEach(([actionKey, folderName]) => {
-                const animKey = `${char}-${actionKey}`; 
-                const framePrefix = `${char}-${folderName}/frame_`;
-                const fps = ['punch-1', 'punch-2', 'kick-1', 'kick-2', 'jump-punch', 'jump-kick', 'special', 'finisher', 'pick-up'].includes(actionKey) ? 15 : 10;
-                const isLoop = ['idle', 'walk', 'run'].includes(actionKey);
-                this.createAutoAnimation(char, animKey, framePrefix, isLoop, fps);
-            });
-            this.createFallbackAnimation(`${char}-special`, `${char}-special_attack`);
-            this.createFallbackAnimation(`${char}-finisher`, `${char}-finish_move`);
-            this.createFallbackAnimation(`${char}-dying`, `${char}-knockdown`);
-        });
-    }
-
-    private createEnemyAnimations() {
-        const enemyTypes = ['mup', 'dizel', 'dizelcic', 'rudar', 'sloba'];
-        const actions = ['idle', 'walk', 'punch-1', 'punch-2', 'damage', 'hurt', 'dying'];
+        const progressBar = this.add.graphics();
+        const progressBox = this.add.graphics();
         
-        enemyTypes.forEach(type => {
-            actions.forEach(action => {
-                const key = `${type}-${action}`;
-                this.createAutoAnimation('enemies_1993', key, `${key}/frame_`, ['idle', 'walk'].includes(action), 10);
-            });
-            
-            this.createFallbackAnimation(`${type}-damage`, `${type}-hurt`);
-            this.createFallbackAnimation(`${type}-hurt`, `${type}-damage`);
+        // Dark grey background box
+        progressBox.fillStyle(0x222222, 0.8);
+        progressBox.fillRect(width / 2 - 160, height / 2 - 25, 320, 50);
+
+        const loadingText = this.add.text(width / 2, height / 2 - 50, 'UČITAVANJE ARHIVE...', {
+            font: '20px monospace',
+            color: '#39ff14' // SMF Radioactive Green
+        }).setOrigin(0.5);
+
+        const percentText = this.add.text(width / 2, height / 2, '0%', {
+            font: '18px monospace',
+            color: '#ffffff'
+        }).setOrigin(0.5);
+
+        // Update the bar as assets stream in
+        this.load.on('progress', (value: number) => {
+            percentText.setText(`${Math.floor(value * 100)}%`);
+            progressBar.clear();
+            progressBar.fillStyle(0x39ff14, 1);
+            progressBar.fillRect(width / 2 - 150, height / 2 - 15, 300 * value, 30);
         });
-    }
 
-    private createAutoAnimation(atlasKey: string, animKey: string, framePrefix: string, isLooping: boolean, fps: number) {
-        const texture = this.textures.get(atlasKey);
-        const frames: Phaser.Types.Animations.AnimationFrame[] = [];
-        for (let i = 0; i <= 60; i++) {
-            const frameName = `${framePrefix}${i.toString().padStart(3, '0')}.png`;
-            if (texture.has(frameName)) frames.push({ key: atlasKey, frame: frameName });
-        }
-        if (frames.length > 0) this.anims.create({ key: animKey, frames, frameRate: fps, repeat: isLooping ? -1 : 0 });
-    }
-
-    private createFallbackAnimation(newKey: string, sourceKey: string) {
-        if (!this.anims.exists(newKey) && this.anims.exists(sourceKey)) {
-            const sourceAnim = this.anims.get(sourceKey);
-            const frameConfig = sourceAnim.frames.map(f => ({ key: f.textureKey, frame: f.textureFrame }));
-            this.anims.create({ key: newKey, frames: frameConfig, frameRate: sourceAnim.frameRate, repeat: sourceAnim.repeat ? -1 : 0 });
-        }
+        // Clean up the memory once complete
+        this.load.on('complete', () => {
+            progressBar.destroy();
+            progressBox.destroy();
+            loadingText.destroy();
+            percentText.destroy();
+        });
     }
 }
