@@ -23,19 +23,78 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private kickImpacts = ['kick_1', 'kick_2', 'kick_3', 'kick_4'];
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
-        const texture = scene.textures.get('darko');
-        const firstFrame = texture ? texture.getFrameNames()[0] : 'darko-idle/frame_000.png';
-        
-        super(scene, x, y, 'darko', firstFrame);
-        scene.add.existing(this); scene.physics.add.existing(this);
+        super(scene, x, y, 'darko', 'darko-idle/frame_000.png');
+        scene.add.existing(this); 
+        scene.physics.add.existing(this);
         
         this.setOrigin(0.5, 1);
         this.setScale(1.7); 
         
         if (this.body) {
-            this.body.setSize(50, 30); this.body.setOffset(this.width / 2 - 25, this.height - 30);
+            this.body.setSize(50, 30); 
+            this.body.setOffset(this.width / 2 - 25, this.height - 30);
             (this.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
         }
+
+        // Initialise all animations dynamically from the loaded JSON atlas
+        this.createAnimations();
+    }
+
+    /**
+     * Builds all of Darko's animations using the precise frame names from darko.json
+     */
+    private createAnimations() {
+        const anims = this.scene.anims;
+        
+        if (anims.exists(`${this.characterName}-idle`)) return;
+
+        const createAnim = (key: string, start: number, end: number, frameRate: number, repeat: number = 0) => {
+            anims.create({
+                key: key,
+                frames: anims.generateFrameNames('darko', {
+                    prefix: `${key}/frame_`,
+                    suffix: '.png',
+                    start: start,
+                    end: end,
+                    zeroPad: 3 
+                }),
+                frameRate: frameRate,
+                repeat: repeat
+            });
+        };
+
+        // Core Movement
+        createAnim('darko-idle', 0, 8, 10, -1);
+        createAnim('darko-walk', 0, 8, 12, -1);
+        createAnim('darko-run', 0, 8, 18, -1);
+        createAnim('darko-jump', 0, 3, 12, 0);
+        
+        // Standard Attacks
+        createAnim('darko-punch-1', 0, 6, 15, 0);
+        createAnim('darko-punch-2', 0, 14, 18, 0);
+        createAnim('darko-kick-1', 0, 8, 15, 0);
+        createAnim('darko-kick-2', 0, 8, 15, 0);
+        createAnim('darko-melee', 0, 30, 20, 0);
+        
+        // Aerial Attacks
+        createAnim('darko-jump-punch', 0, 0, 10, 0);
+        createAnim('darko-jump-kick', 0, 0, 10, 0);
+        
+        // Specials & Finishers
+        createAnim('darko-special-attack', 0, 15, 18, 0);
+        createAnim('darko-finish-move', 0, 15, 15, 0);
+        createAnim('darko-throw', 0, 8, 15, 0);
+        
+        // Reactions & Environment
+        createAnim('darko-damage', 0, 3, 12, 0); 
+        createAnim('darko-knockdown-get-up', 0, 8, 12, 0);
+        createAnim('darko-dying', 0, 15, 12, 0);
+        createAnim('darko-pick-up', 0, 3, 10, 0);
+        
+        // Static Poses
+        createAnim('darko-shoot', 0, 0, 10, 0);
+        createAnim('darko-shoot-recoil', 0, 0, 10, 0);
+        createAnim('darko-shoot-up', 0, 0, 10, 0);
     }
 
     private playVoice(marker: string | string[]) {
@@ -140,7 +199,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 (this.scene as any).spawnHitEffect(hitX, enemy.y - 80);
                 if (enemy.takeDamage) enemy.takeDamage(damage); 
                 
-                // FIX: Disable body safely instead of destroying it mid-physics step
                 if (hitZone.body) hitZone.body.enable = false; 
             }
         });
@@ -176,7 +234,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 (this.scene as any).spawnHitEffect(hitX, enemy.y - 50);
                 if (enemy.takeDamage) enemy.takeDamage(damage); 
                 
-                // FIX: Disable body safely instead of destroying it mid-physics step
                 if (hitZone.body) hitZone.body.enable = false; 
             }
         });
@@ -190,7 +247,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
     private executeRoundhouseSpin() {
         this.isAttacking = true; this.setVelocity(0, 0); this.smfMeter -= 25; (this.scene as any).updateReactHUD();
-        const anim = this.scene.anims.exists('darko-special') ? 'darko-special' : 'darko-kick-2';
+        const anim = this.scene.anims.exists('darko-special-attack') ? 'darko-special-attack' : 'darko-kick-2';
         this.play(anim, true);
         
         this.playVoice('darko_special_1'); 
@@ -209,7 +266,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
     private executeGuitarRiff() {
         this.isAttacking = true; this.smfMeter = 0; (this.scene as any).updateReactHUD();
-        const anim = this.scene.anims.exists('darko-finisher') ? 'darko-finisher' : 'darko-punch-2';
+        const anim = this.scene.anims.exists('darko-finish-move') ? 'darko-finish-move' : 'darko-punch-2';
         this.play(anim, true);
         
         this.playVoice('forbidden_riff'); 
@@ -232,7 +289,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         (this.scene as any).spawnHitEffect(this.x, this.y - 40);
         this.playVoice(['agony_m_3', 'agony_m_4']); 
 
-        // RED FLASH TRIGGER
         (this.scene as any).lastPlayerHitTime = Date.now();
 
         if (this.health <= 0) { this.die(); } 

@@ -24,15 +24,78 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'marko', 'marko-idle/frame_000.png');
-        scene.add.existing(this); scene.physics.add.existing(this);
+        scene.add.existing(this); 
+        scene.physics.add.existing(this);
         
         this.setOrigin(0.5, 1);
         this.setScale(1.7); 
 
         if (this.body) {
-            this.body.setSize(80, 30); this.body.setOffset(this.width / 2 - 40, this.height - 30);
+            this.body.setSize(80, 30); 
+            this.body.setOffset(this.width / 2 - 40, this.height - 30);
             (this.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
         }
+
+        // Initialize all animations dynamically from the loaded JSON atlas
+        this.createAnimations();
+    }
+
+    /**
+     * Builds all of Marko's animations using the precise frame names from marko.json
+     */
+    private createAnimations() {
+        const anims = this.scene.anims;
+        
+        // If the idle animation already exists, we don't need to rebuild them
+        if (anims.exists(`${this.characterName}-idle`)) return;
+
+        const createAnim = (key: string, start: number, end: number, frameRate: number, repeat: number = 0) => {
+            anims.create({
+                key: key,
+                frames: anims.generateFrameNames('marko', {
+                    prefix: `${key}/frame_`,
+                    suffix: '.png',
+                    start: start,
+                    end: end,
+                    zeroPad: 3 // Matches the 000, 001 format in your JSON
+                }),
+                frameRate: frameRate,
+                repeat: repeat
+            });
+        };
+
+        // Core Movement
+        createAnim('marko-idle', 0, 8, 10, -1);
+        createAnim('marko-walk', 0, 16, 15, -1);
+        createAnim('marko-run', 0, 16, 20, -1);
+        createAnim('marko-jump', 0, 8, 12, 0);
+        
+        // Standard Attacks
+        createAnim('marko-punch-1', 0, 3, 12, 0);
+        createAnim('marko-punch-2', 0, 8, 15, 0);
+        createAnim('marko-kick-1', 0, 7, 15, 0);
+        createAnim('marko-kick-2', 0, 2, 10, 0);
+        createAnim('marko-melee', 0, 24, 15, 0);
+        
+        // Aerial Attacks
+        createAnim('marko-jump-punch', 0, 0, 10, 0);
+        createAnim('marko-jump-kick', 0, 0, 10, 0);
+        
+        // Specials & Finishers
+        createAnim('marko-special-attack', 0, 15, 15, 0);
+        createAnim('marko-finish-move', 0, 35, 15, 0);
+        createAnim('marko-throw', 0, 26, 15, 0);
+        
+        // Reactions & Environment (Note: damage starts at frame_001 in your JSON)
+        createAnim('marko-damage', 1, 7, 15, 0); 
+        createAnim('marko-knockdown-get-up', 0, 35, 15, 0);
+        createAnim('marko-dying', 0, 36, 12, 0);
+        createAnim('marko-pick-up', 0, 3, 10, 0);
+        
+        // Static Poses
+        createAnim('marko-shoot', 0, 0, 10, 0);
+        createAnim('marko-shoot-recoil', 0, 0, 10, 0);
+        createAnim('marko-shoot-up', 0, 0, 10, 0);
     }
 
     private playVoice(marker: string | string[]) {
@@ -137,7 +200,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 (this.scene as any).spawnHitEffect(hitX, enemy.y - 80);
                 if (enemy.takeDamage) enemy.takeDamage(damage); 
                 
-                // FIX: Disable body safely instead of destroying it mid-physics step
                 if (hitZone.body) hitZone.body.enable = false; 
             }
         });
@@ -175,7 +237,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 
                 if (enemy.takeDamage) enemy.takeDamage(damage); 
                 
-                // FIX: Disable body safely instead of destroying it mid-physics step
                 if (hitZone.body) hitZone.body.enable = false; 
             }
         });
@@ -189,7 +250,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
 
     private executeMegaphoneScream() {
         this.isAttacking = true; this.setVelocity(0, 0); this.smfMeter -= 25; (this.scene as any).updateReactHUD();
-        const anim = this.scene.anims.exists('marko-special') ? 'marko-special' : 'marko-punch-2';
+        // Updated to explicitly match the JSON mapping 'marko-special-attack'
+        const anim = this.scene.anims.exists('marko-special-attack') ? 'marko-special-attack' : 'marko-punch-2';
         this.play(anim, true);
         
         this.playVoice('marko_special_1'); 
@@ -205,57 +267,4 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 (this.scene as any).spawnHitEffect(enemy.x, enemy.y - 50);
             }
         });
-        this.scene.time.delayedCall(250, () => { if (waveZone.active) waveZone.destroy(); });
-        this.once('animationcomplete', () => { this.isAttacking = false; });
-    }
-
-    private executeChainWhip() {
-        this.isAttacking = true; this.smfMeter = 0; (this.scene as any).updateReactHUD();
-        const anim = this.scene.anims.exists('marko-finisher') ? 'marko-finisher' : 'marko-kick-2';
-        this.play(anim, true);
-        
-        this.playVoice('marko_special_2'); 
-
-        this.scene.cameras.main.shake(600, 0.02);
-        const spinZone = this.scene.add.circle(this.x, this.y - 40, 150);
-        this.scene.physics.add.existing(spinZone);
-        
-        this.scene.physics.overlap(spinZone, (this.scene as any).enemies, (sz, enemy: any) => {
-            if (Math.abs(this.y - enemy.y) <= 80) { 
-                if (enemy.takeDamage) { enemy.takeDamage(90 * this.damageMultiplier); if (enemy.body) enemy.setVelocityY(-200); }
-                (this.scene as any).spawnHitEffect(enemy.x, enemy.y - 50);
-            }
-        });
-        this.scene.time.delayedCall(200, () => { if (spinZone.active) spinZone.destroy(); });
-        this.once('animationcomplete', () => { this.isAttacking = false; });
-    }
-
-    public takeDamage(amount: number) {
-        this.health -= amount; this.queuedAction = null;
-        
-        (this.scene as any).spawnHitEffect(this.x, this.y - 40);
-        this.playVoice(['agony_m_1', 'agony_m_2']); 
-
-        // RED FLASH TRIGGER
-        (this.scene as any).lastPlayerHitTime = Date.now();
-
-        if (this.health <= 0) { this.die(); } 
-        else {
-            const dmgAnim = `${this.characterName}-damage`;
-            if (this.scene.anims.exists(dmgAnim)) { this.isAttacking = true; this.play(dmgAnim, true); this.once('animationcomplete', () => { this.isAttacking = false; }); } 
-            else { this.setTint(0xff0000); this.scene.time.delayedCall(200, () => this.clearTint()); }
-        }
-        (this.scene as any).updateReactHUD();
-    }
-
-    private die() { 
-        this.isDead = true; 
-        this.setVelocity(0, 0); 
-        const dieAnim = `${this.characterName}-dying`; 
-        if (this.scene.anims.exists(dieAnim)) {
-            this.play(dieAnim, true); 
-        } else {
-            this.setTint(0xff0000);
-        }
-    }
-}
+        this.scene.time.delayedCall(250, () =>

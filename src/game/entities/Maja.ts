@@ -24,15 +24,77 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'maja', 'maja-idle/frame_000.png');
-        scene.add.existing(this); scene.physics.add.existing(this);
+        scene.add.existing(this); 
+        scene.physics.add.existing(this);
         
         this.setOrigin(0.5, 1);
         this.setScale(1.7); 
 
         if (this.body) {
-            this.body.setSize(60, 30); this.body.setOffset(this.width / 2 - 30, this.height - 30);
+            this.body.setSize(60, 30); 
+            this.body.setOffset(this.width / 2 - 30, this.height - 30);
             (this.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
         }
+
+        // Initialise all animations dynamically from the loaded JSON atlas
+        this.createAnimations();
+    }
+
+    /**
+     * Builds all of Maja's animations using the precise frame names from maja.json
+     */
+    private createAnimations() {
+        const anims = this.scene.anims;
+        
+        if (anims.exists(`${this.characterName}-idle`)) return;
+
+        const createAnim = (key: string, start: number, end: number, frameRate: number, repeat: number = 0) => {
+            anims.create({
+                key: key,
+                frames: anims.generateFrameNames('maja', {
+                    prefix: `${key}/frame_`,
+                    suffix: '.png',
+                    start: start,
+                    end: end,
+                    zeroPad: 3 
+                }),
+                frameRate: frameRate,
+                repeat: repeat
+            });
+        };
+
+        // Core Movement
+        createAnim('maja-idle', 0, 8, 10, -1);
+        createAnim('maja-walk', 0, 8, 12, -1);
+        createAnim('maja-run', 0, 8, 18, -1);
+        createAnim('maja-jump', 0, 3, 12, 0);
+        
+        // Standard Attacks
+        createAnim('maja-punch-1', 0, 3, 12, 0);
+        createAnim('maja-punch-2', 0, 8, 15, 0);
+        createAnim('maja-kick-1', 0, 8, 15, 0);
+        createAnim('maja-kick-2', 0, 8, 15, 0);
+        createAnim('maja-melee', 0, 8, 15, 0);
+        
+        // Aerial Attacks
+        createAnim('maja-jump-punch', 0, 0, 10, 0);
+        createAnim('maja-jump-kick', 0, 0, 10, 0);
+        
+        // Specials & Finishers
+        createAnim('maja-special-attack', 0, 8, 15, 0);
+        createAnim('maja-finish-move', 0, 15, 15, 0);
+        createAnim('maja-throw', 0, 8, 15, 0);
+        
+        // Reactions & Environment 
+        createAnim('maja-damage', 0, 3, 12, 0); 
+        createAnim('maja-knockdown-get-up', 0, 8, 12, 0);
+        createAnim('maja-dying', 0, 8, 10, 0);
+        createAnim('maja-pick-up', 0, 3, 10, 0);
+        
+        // Static Poses
+        createAnim('maja-shoot', 0, 0, 10, 0);
+        createAnim('maja-shoot-recoil', 0, 0, 10, 0);
+        createAnim('maja-shoot-up', 0, 0, 10, 0);
     }
 
     private playVoice(marker: string | string[]) {
@@ -137,7 +199,6 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 (this.scene as any).spawnHitEffect(hitX, enemy.y - 80);
                 if (enemy.takeDamage) enemy.takeDamage(damage); 
                 
-                // FIX: Disable body safely instead of destroying it mid-physics step
                 if (hitZone.body) hitZone.body.enable = false; 
             }
         });
@@ -173,7 +234,6 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 (this.scene as any).spawnHitEffect(hitX, enemy.y - 50);
                 if (enemy.takeDamage) enemy.takeDamage(damage); 
                 
-                // FIX: Disable body safely instead of destroying it mid-physics step
                 if (hitZone.body) hitZone.body.enable = false; 
             }
         });
@@ -198,14 +258,14 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
         if (grabbedEnemy) {
             this.smfMeter -= 25; (this.scene as any).updateReactHUD();
-            const anim = this.scene.anims.exists('maja-special') ? 'maja-special' : 'maja-punch-1';
+            const anim = this.scene.anims.exists('maja-special-attack') ? 'maja-special-attack' : 'maja-punch-1';
             this.play(anim, true);
             grabbedEnemy.setVelocity(0, 0);
             
             this.scene.time.delayedCall(200, () => { 
                 this.scene.cameras.main.shake(300, 0.02); 
                 (this.scene as any).spawnHitEffect(grabbedEnemy.x, grabbedEnemy.y - 50);
-                grabbedEnemy.takeDamage(40 * this.damageMultiplier); 
+                if(grabbedEnemy.takeDamage) grabbedEnemy.takeDamage(40 * this.damageMultiplier); 
                 (this.scene as any).playSFX('Break_1'); 
             });
             this.once('animationcomplete', () => { this.isAttacking = false; });
@@ -214,7 +274,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
     private executeIndustrialDrill() {
         this.isAttacking = true; this.smfMeter = 0; (this.scene as any).updateReactHUD();
-        const anim = this.scene.anims.exists('maja-finisher') ? 'maja-finisher' : 'maja-run';
+        const anim = this.scene.anims.exists('maja-finish-move') ? 'maja-finish-move' : 'maja-run';
         this.play(anim, true);
         
         this.playVoice('Metal-Impact-Shield');
