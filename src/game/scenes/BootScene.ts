@@ -6,19 +6,19 @@ export class BootScene extends Phaser.Scene {
     }
 
     preload() {
+        // Tells Phaser to use Vite's dynamic base URL for cloud environments
+        this.load.setBaseURL(import.meta.env.BASE_URL);
+
         this.createLoadingBar();
 
         // ==========================================
-        // 1. PRELOAD AUDIO (No leading slashes!)
+        // 1. PRELOAD AUDIO 
         // ==========================================
-        // Assumes you placed the MP3 directly in the audio folder
-        this.load.audio('1993_ambient', 'assets/audio/bor_streets_93.mp3');
+        // Using the exact .wav file name you mentioned. 
+        this.load.audio('1993_ambient', 'assets/audio/audio-1993-1.wav');
         
-        // If you have your SFX atlas ready, uncomment this:
-        // this.load.audioSprite('sfx_atlas', 'assets/audio/sfx_atlas.json', ['assets/audio/sfx_atlas.mp3']);
-
         // ==========================================
-        // 2. PRELOAD SPRITES (Using Atlas, not Spritesheet) 
+        // 2. PRELOAD SPRITES (Atlases)
         // ==========================================
         this.load.atlas('marko', 'assets/sprites/marko.png', 'assets/sprites/marko.json');
         this.load.atlas('darko', 'assets/sprites/darko.png', 'assets/sprites/darko.json');
@@ -28,16 +28,15 @@ export class BootScene extends Phaser.Scene {
         // ==========================================
         // 3. PRELOAD BACKGROUNDS & VFX
         // ==========================================
-        // Mapped to your "assets/images/environments/" folder
+        // Adjust these to match exactly where you placed them inside the public folder!
         this.load.image('part1_sky', 'assets/images/environments/part1_sky.png');
         this.load.image('part1_mid', 'assets/images/environments/part1_mid.png');
         this.load.image('part1_floor', 'assets/images/environments/part1_floor.png');
         
-        // Mapped to your "assets/fx/" or "assets/images/" folder (adjust if needed)
+        // Corrected to your 'fx' folder
         this.load.image('explosion_01', 'assets/fx/explosion_01.png');
 
-        // Mapped to your items (guessing they are in environments or a missing items folder)
-        // UPDATE THESE PATHS IF YOUR ITEMS ARE ELSEWHERE
+        // Note: Make sure these items actually exist in this path, or Phaser will get mad again!
         this.load.image('item-burek', 'assets/images/environments/item-burek.png');
         this.load.image('item-coffee', 'assets/images/environments/item-coffee.png');
         this.load.image('item-pork', 'assets/images/environments/item-pork.png');
