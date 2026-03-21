@@ -1,13 +1,14 @@
 import Phaser from 'phaser';
 
-/**
- * Miner: The "Shambling Tank" of the Bor Copper Mine.
- */
 export class Miner extends Phaser.Physics.Arcade.Sprite {
     public health: number = 250; 
+    public maxHealth: number = 250;
     public isDead: boolean = false;
     public isHurt: boolean = false; 
-    public skinPrefix: string = 'MINER'; // <--- UPDATED: React HUD will now display "MINER"
+    public isKnockedDown: boolean = false;
+    public hasBeenKnockedDown: boolean = false;
+    public isInvulnerable: boolean = false;
+    public skinPrefix: string = 'MINER'; 
     
     private isAttacking: boolean = false;
     private attackCooldown: boolean = false;
@@ -15,11 +16,11 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
     private speed: number = 50; 
     private attackRange: number = 90; 
 
+    private grunts = ['grunt_m_1', 'grunt_m_2', 'grunt_m_3', 'grunt_m_4'];
+    private agonies = ['agony_m_1', 'agony_m_2', 'agony_m_3', 'agony_m_4'];
+
     constructor(scene: Phaser.Scene, x: number, y: number) {
-        // ==========================================
-        // STRICT FRAME FALLBACK
-        // Forces the sprite to find 'miner-walk' 
-        // ==========================================
+        // FIXED: The fallback is allFrames (a string), not allFrames (an array)!
         const texture = scene.textures.get('enemies_1993');
         const allFrames = texture ? texture.getFrameNames() : [];
         const firstFrame = allFrames.find(f => f.includes('miner-walk/frame_000')) || allFrames;
@@ -45,7 +46,7 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
     }
 
     public updateAI(player: any) {
-        if (this.isDead || this.isHurt || this.isAttacking || player.isDead) {
+        if (this.isDead || this.isHurt || this.isKnockedDown || this.isAttacking || player.isDead) {
             this.setVelocity(0, 0);
             return;
         }
@@ -80,10 +81,8 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
             this.play('miner-melee', true); 
         }
         
-        (this.scene as any).playSFX(['melee_1', 'melee_2']);
-
         this.scene.time.delayedCall(400, () => {
-            if (this.isDead || this.isHurt) return;
+            if (this.isDead || this.isHurt || this.isKnockedDown) return;
 
             const distX = Math.abs(player.x - this.x);
             const distY = Math.abs(player.y - this.y);
@@ -105,7 +104,7 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
     }
 
     public takeDamage(amount: number) {
-        if (this.isDead) return;
+        if (this.isDead || this.isInvulnerable) return;
         
         this.health -= amount;
         
@@ -122,22 +121,49 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
         (this.scene as any).updateReactHUD();
 
         (this.scene as any).spawnHitEffect(this.x, this.y - 80);
-        (this.scene as any).playSFX(['agony_m_1', 'agony_m_2', 'agony_m_3']);
 
         if (this.health <= 0) {
             this.die();
-        } else if (amount >= 20) {
-            if (this.scene.anims.exists('miner-damage')) {
+        } else if (this.health <= this.maxHealth * 0.5 && !this.hasBeenKnockedDown) {
+            this.takeKnockdown();
+        } else {
+            (this.scene as any).playSFX(this.grunts);
+            if (amount >= 20 && this.scene.anims.exists('miner-damage')) {
                 this.play('miner-damage', true);
+                this.scene.time.delayedCall(400, () => {
+                    if (!this.isDead && !this.isKnockedDown) {
+                        this.isHurt = false;
+                        if (this.scene.anims.exists('miner-walk')) this.play('miner-walk', true);
+                    }
+                });
             }
-            
-            this.scene.time.delayedCall(400, () => {
-                if (!this.isDead) {
-                    this.isHurt = false;
-                    if (this.scene.anims.exists('miner-walk')) this.play('miner-walk', true);
-                }
-            });
         }
+    }
+
+    public takeKnockdown() {
+        if (this.isDead || this.isKnockedDown) return;
+
+        this.isKnockedDown = true;
+        this.isInvulnerable = true; 
+        this.hasBeenKnockedDown = true;
+        this.isHurt = true;
+        
+        this.x += this.flipX ? 20 : -20; 
+        (this.scene as any).playSFX(this.agonies);
+        
+        if (this.scene.anims.exists('miner-knockdown-get-up')) {
+             this.play('miner-knockdown-get-up', true);
+        } else {
+             this.scene.time.delayedCall(1200, () => { this.emit('animationcomplete'); });
+        }
+
+        this.once('animationcomplete', () => {
+            if (this.health <= 0) return;
+            this.isKnockedDown = false;
+            this.isInvulnerable = false;
+            this.isHurt = false;
+            if (this.scene.anims.exists('miner-walk')) this.play('miner-walk', true);
+        });
     }
 
     protected die() {
@@ -145,7 +171,7 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
         this.setVelocity(0, 0);
         (this.body as Phaser.Physics.Arcade.Body).enable = false;
 
-        (this.scene as any).playSFX(['Break_1', 'Break_2']);
+        (this.scene as any).playSFX(this.agonies);
         (this.scene as any).registerEnemyDeath();
 
         if (this.scene.anims.exists('miner-dying')) {
