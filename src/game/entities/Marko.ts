@@ -235,8 +235,11 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     }
 
     private executeAction(action: string) {
-        if (action === 'special') { if (this.smfMeter >= 25) { this.executeMegaphoneScream(); return; } action = 'punch-1'; }
-        if (action === 'finisher') { if (this.smfMeter >= 100) { this.executeChainWhip(); return; } action = 'kick-2'; }
+        // ==========================================
+        // METER LOCKS REMOVED! Specials fire instantly.
+        // ==========================================
+        if (action === 'special') { this.executeMegaphoneScream(); return; }
+        if (action === 'finisher') { this.executeChainWhip(); return; }
 
         this.isAttacking = true; this.setVelocity(0, 0);
         const animToPlay = `${this.characterName}-${action}`;
@@ -270,7 +273,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     }
 
     private executeMegaphoneScream() {
-        this.isAttacking = true; this.setVelocity(0, 0); this.smfMeter -= 25; (this.scene as any).updateReactHUD();
+        this.isAttacking = true; this.setVelocity(0, 0);
         const anim = this.scene.anims.exists(`${this.characterName}-special-attack`) ? `${this.characterName}-special-attack` : `${this.characterName}-punch-2`;
         if (this.scene.anims.exists(anim)) this.play(anim, true);
         
@@ -292,7 +295,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     }
 
     private executeChainWhip() {
-        this.isAttacking = true; this.smfMeter = 0; (this.scene as any).updateReactHUD();
+        this.isAttacking = true;
         const anim = this.scene.anims.exists(`${this.characterName}-finish-move`) ? `${this.characterName}-finish-move` : `${this.characterName}-kick-2`;
         if (this.scene.anims.exists(anim)) this.play(anim, true);
         

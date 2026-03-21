@@ -235,8 +235,11 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     }
 
     private executeAction(action: string) {
-        if (action === 'special') { if (this.smfMeter >= 25) { this.executeRoundhouseSpin(); return; } action = 'kick-1'; }
-        if (action === 'finisher') { if (this.smfMeter >= 100) { this.executeGuitarRiff(); return; } action = 'punch-2'; }
+        // ==========================================
+        // METER LOCKS REMOVED! Specials fire instantly.
+        // ==========================================
+        if (action === 'special') { this.executeRoundhouseSpin(); return; }
+        if (action === 'finisher') { this.executeGuitarRiff(); return; }
 
         this.isAttacking = true; this.setVelocity(0, 0);
         const animToPlay = `${this.characterName}-${action}`;
@@ -270,7 +273,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     }
 
     private executeRoundhouseSpin() {
-        this.isAttacking = true; this.setVelocity(0, 0); this.smfMeter -= 25; (this.scene as any).updateReactHUD();
+        this.isAttacking = true; this.setVelocity(0, 0);
         const anim = this.scene.anims.exists(`${this.characterName}-special-attack`) ? `${this.characterName}-special-attack` : `${this.characterName}-kick-2`;
         if (this.scene.anims.exists(anim)) this.play(anim, true);
         
@@ -289,7 +292,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     }
 
     private executeGuitarRiff() {
-        this.isAttacking = true; this.smfMeter = 0; (this.scene as any).updateReactHUD();
+        this.isAttacking = true;
         const anim = this.scene.anims.exists(`${this.characterName}-finish-move`) ? `${this.characterName}-finish-move` : `${this.characterName}-punch-2`;
         if (this.scene.anims.exists(anim)) this.play(anim, true);
         
