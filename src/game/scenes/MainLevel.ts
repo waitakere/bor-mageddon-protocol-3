@@ -8,12 +8,12 @@ import { Dizel } from '../entities/Dizel';
 import { Dizelcic } from '../entities/Dizelcic';
 import { Miner } from '../entities/Miner';
 import { SlobodanCEO } from '../entities/SlobodanCEO'; 
-import { BreakableObject, BreakableType } from '../entities/BreakableObject'; // NEW
+import { BreakableObject, BreakableType } from '../entities/BreakableObject';
 
 export class MainLevel extends Phaser.Scene {
     public player!: any; 
     public enemies!: Phaser.Physics.Arcade.Group;
-    public breakables!: Phaser.Physics.Arcade.Group; // NEW
+    public breakables!: Phaser.Physics.Arcade.Group; 
     public items!: Phaser.Physics.Arcade.Group;
     private shadows!: Phaser.GameObjects.Graphics;
     
@@ -92,7 +92,7 @@ export class MainLevel extends Phaser.Scene {
         
         this.items = this.physics.add.group();
         this.enemies = this.physics.add.group();
-        this.breakables = this.physics.add.group(); // NEW
+        this.breakables = this.physics.add.group(); 
 
         let charKey = 'marko';
         if (this.registry.has('selectedCharacter')) {
@@ -121,7 +121,6 @@ export class MainLevel extends Phaser.Scene {
         this.physics.add.collider(this.player, this.enemies);
         this.physics.add.collider(this.enemies, this.enemies);
         
-        // Players and Enemies bump into Kiosks and Crates
         this.physics.add.collider(this.player, this.breakables);
         this.physics.add.collider(this.enemies, this.breakables);
         
@@ -136,19 +135,19 @@ export class MainLevel extends Phaser.Scene {
     }
 
     private scatterBreakables() {
+        // Adjusted Y coordinates to sit nicely on the street pavement
+        // Only one Kiosk exists per your design rules!
         const props = [
-            { x: 600, y: 920, type: 'barrel' },
-            { x: 900, y: 1020, type: 'crate' },
-            { x: 1500, y: 900, type: 'kontejner' },
-            { x: 2200, y: 980, type: 'kiosk' },
-            { x: 2800, y: 920, type: 'barrel' },
-            { x: 3500, y: 1000, type: 'crate' }
+            { x: 600, y: 880, type: 'barrel' },
+            { x: 1200, y: 1000, type: 'crate' },
+            { x: 1800, y: 920, type: 'kontejner' },
+            { x: 2600, y: 840, type: 'kiosk' }, 
+            { x: 3200, y: 1040, type: 'barrel' },
+            { x: 3700, y: 900, type: 'crate' }
         ];
 
         props.forEach(p => {
             const obj = new BreakableObject(this, p.x, p.y, p.type as BreakableType);
-            // Ensure they look right next to the characters
-            obj.setScale(1.5); 
             this.breakables.add(obj);
         });
     }
@@ -211,8 +210,9 @@ export class MainLevel extends Phaser.Scene {
         this.shadows.clear().fillStyle(0x000000, 0.5);
         this.shadows.fillEllipse(this.player.x, this.player.y, 70 * this.player.scale, 20);
         this.enemies.getChildren().forEach((e: any) => { if (!e.isDead) this.shadows.fillEllipse(e.x, e.y, e.width * 0.6, 20); });
-        // Shadows for breakables too!
-        this.breakables.getChildren().forEach((b: any) => { if (!b.isDead) this.shadows.fillEllipse(b.x, b.y, b.width * 1.2, 15); });
+        
+        // Shrink breakable shadows slightly so they don't look like huge voids
+        this.breakables.getChildren().forEach((b: any) => { if (!b.isDead) this.shadows.fillEllipse(b.x, b.y, b.displayWidth * 0.7, 15); });
 
         const cursors = this.input.keyboard!.createCursorKeys();
         const kb = this.input.keyboard!;
@@ -278,7 +278,7 @@ export class MainLevel extends Phaser.Scene {
     }
 
     public dropItem(x: number, y: number) {
-        const items = ['item-burek', 'item-coffee', 'item-pork', 'item-beer', 'item-sandwich'];
+        const items = ['item-burek', 'item-coffee', 'item-pork', 'item-beer', 'item-sandwich', 'item-rakija'];
         const randomItem = items[Math.floor(Math.random() * items.length)];
         
         const drop = this.physics.add.sprite(x, y - 40, randomItem);
