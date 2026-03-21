@@ -10,6 +10,8 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     public isDead: boolean = false;
     public isJumping: boolean = false;
 
+    private currentVoice: any = null;
+
     private walkSpeed: number = 160;
     private runSpeed: number = 320;
     private jumpVelocityX: number = 0; 
@@ -83,6 +85,30 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 });
             }
         });
+    }
+
+    private playVoice(marker: string | string[]) {
+        if (this.currentVoice && this.currentVoice.isPlaying) this.currentVoice.stop();
+        this.currentVoice = (this.scene as any).playSFX(marker);
+    }
+
+    public playPickupAnim() {
+        if (this.isDead || this.isJumping || this.isAttacking) return;
+        
+        this.isAttacking = true;
+        this.setVelocity(0, 0);
+
+        const animKey = `${this.characterName}-pick-up`;
+        
+        if (this.scene.anims.exists(animKey)) {
+            this.play(animKey, true);
+            this.once('animationcomplete', () => {
+                this.isAttacking = false;
+            });
+        } else {
+            if (this.scene.anims.exists(`${this.characterName}-idle`)) this.play(`${this.characterName}-idle`, true);
+            this.scene.time.delayedCall(300, () => { this.isAttacking = false; });
+        }
     }
 
     public update(input: any) {
@@ -186,16 +212,18 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.scene.physics.add.existing(hitZone);
         
         let hasHit = false;
-        this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
-            if (Math.abs(this.y - enemy.y) <= 60) { 
+        const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
+
+        this.scene.physics.add.overlap(hitZone, targets, (hz, target: any) => {
+            if (Math.abs(this.y - target.y) <= 60) { 
                 if (!hasHit) {
                     (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     hasHit = true;
                 }
                 const damage = 15 * this.damageMultiplier;
-                const hitX = (this.x + enemy.x) / 2;
-                (this.scene as any).spawnHitEffect(hitX, enemy.y - 80);
-                if (enemy.takeDamage) enemy.takeDamage(damage); 
+                const hitX = (this.x + target.x) / 2;
+                (this.scene as any).spawnHitEffect(hitX, target.y - 80);
+                if (target.takeDamage) target.takeDamage(damage); 
                 if (hitZone.body) hitZone.body.enable = false; 
             }
         });
@@ -218,16 +246,18 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.scene.physics.add.existing(hitZone);
         
         let hasHit = false;
-        this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
-            if (Math.abs(this.y - enemy.y) <= 60) { 
+        const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
+
+        this.scene.physics.add.overlap(hitZone, targets, (hz, target: any) => {
+            if (Math.abs(this.y - target.y) <= 60) { 
                 if (!hasHit) {
                     (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     hasHit = true;
                 }
                 const damage = (action.includes('2') ? 15 : 10) * this.damageMultiplier;
-                const hitX = (this.x + enemy.x) / 2;
-                (this.scene as any).spawnHitEffect(hitX, enemy.y - 50);
-                if (enemy.takeDamage) enemy.takeDamage(damage); 
+                const hitX = (this.x + target.x) / 2;
+                (this.scene as any).spawnHitEffect(hitX, target.y - 50);
+                if (target.takeDamage) target.takeDamage(damage); 
                 if (hitZone.body) hitZone.body.enable = false; 
             }
         });
@@ -244,21 +274,23 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         const grabZone = this.scene.add.zone(this.x + (this.flipX ? -50 : 50), this.y - 40, 70, 70);
         this.scene.physics.add.existing(grabZone);
         
-        let grabbedEnemy: any = null;
-        this.scene.physics.overlap(grabZone, (this.scene as any).enemies, (gz, enemy: any) => { 
-            if (!grabbedEnemy && !enemy.isDead && Math.abs(this.y - enemy.y) <= 60) grabbedEnemy = enemy; 
+        let grabbedTarget: any = null;
+        const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
+        this.scene.physics.overlap(grabZone, targets, (gz, target: any) => { 
+            if (!grabbedTarget && !target.isDead && Math.abs(this.y - target.y) <= 60) grabbedTarget = target; 
         });
         grabZone.destroy(); 
 
-        if (grabbedEnemy) {
+        if (grabbedTarget) {
             const anim = this.scene.anims.exists(`${this.characterName}-special-attack`) ? `${this.characterName}-special-attack` : `${this.characterName}-punch-1`;
             if (this.scene.anims.exists(anim)) this.play(anim, true);
-            grabbedEnemy.setVelocity(0, 0);
+            
+            if (grabbedTarget.setVelocity) grabbedTarget.setVelocity(0, 0);
             
             this.scene.time.delayedCall(200, () => { 
                 this.scene.cameras.main.shake(300, 0.02); 
-                (this.scene as any).spawnHitEffect(grabbedEnemy.x, grabbedEnemy.y - 50);
-                if(grabbedEnemy.takeDamage) grabbedEnemy.takeDamage(40 * this.damageMultiplier); 
+                (this.scene as any).spawnHitEffect(grabbedTarget.x, grabbedTarget.y - 50);
+                if(grabbedTarget.takeDamage) grabbedTarget.takeDamage(40 * this.damageMultiplier); 
             });
             this.once('animationcomplete', () => { this.isAttacking = false; });
         } else { 
@@ -277,13 +309,15 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         const drillZone = this.scene.add.zone(this.x, this.y, 100, 80);
         this.scene.physics.add.existing(drillZone);
         
+        const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
+
         const drillUpdate = () => {
             if (!drillZone.active) return;
             drillZone.setPosition(this.x + (60 * direction), this.y - 40);
-            this.scene.physics.overlap(drillZone, (this.scene as any).enemies, (dz, enemy: any) => { 
-                if (Math.abs(this.y - enemy.y) <= 60) {
-                    (this.scene as any).spawnHitEffect(enemy.x, enemy.y - 50);
-                    if (enemy.takeDamage) enemy.takeDamage(5); 
+            this.scene.physics.overlap(drillZone, targets, (dz, target: any) => { 
+                if (Math.abs(this.y - target.y) <= 60) {
+                    (this.scene as any).spawnHitEffect(target.x, target.y - 50);
+                    if (target.takeDamage) target.takeDamage(5); 
                 }
             });
         };

@@ -10,6 +10,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     public isDead: boolean = false;
     public isJumping: boolean = false;
 
+    private currentVoice: any = null;
+
     private walkSpeed: number = 250;
     private runSpeed: number = 460;
     private jumpVelocityX: number = 0; 
@@ -83,6 +85,30 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 });
             }
         });
+    }
+
+    private playVoice(marker: string | string[]) {
+        if (this.currentVoice && this.currentVoice.isPlaying) this.currentVoice.stop();
+        this.currentVoice = (this.scene as any).playSFX(marker);
+    }
+
+    public playPickupAnim() {
+        if (this.isDead || this.isJumping || this.isAttacking) return;
+        
+        this.isAttacking = true;
+        this.setVelocity(0, 0);
+
+        const animKey = `${this.characterName}-pick-up`;
+        
+        if (this.scene.anims.exists(animKey)) {
+            this.play(animKey, true);
+            this.once('animationcomplete', () => {
+                this.isAttacking = false;
+            });
+        } else {
+            if (this.scene.anims.exists(`${this.characterName}-idle`)) this.play(`${this.characterName}-idle`, true);
+            this.scene.time.delayedCall(300, () => { this.isAttacking = false; });
+        }
     }
 
     public update(input: any) {
@@ -186,16 +212,18 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.scene.physics.add.existing(hitZone);
         
         let hasHit = false;
-        this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
-            if (Math.abs(this.y - enemy.y) <= 60) { 
+        const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
+
+        this.scene.physics.add.overlap(hitZone, targets, (hz, target: any) => {
+            if (Math.abs(this.y - target.y) <= 60) { 
                 if (!hasHit) {
                     (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     hasHit = true;
                 }
                 const damage = 15 * this.damageMultiplier;
-                const hitX = (this.x + enemy.x) / 2;
-                (this.scene as any).spawnHitEffect(hitX, enemy.y - 80);
-                if (enemy.takeDamage) enemy.takeDamage(damage); 
+                const hitX = (this.x + target.x) / 2;
+                (this.scene as any).spawnHitEffect(hitX, target.y - 80);
+                if (target.takeDamage) target.takeDamage(damage); 
                 if (hitZone.body) hitZone.body.enable = false; 
             }
         });
@@ -218,16 +246,18 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.scene.physics.add.existing(hitZone);
         
         let hasHit = false;
-        this.scene.physics.add.overlap(hitZone, (this.scene as any).enemies, (hz, enemy: any) => {
-            if (Math.abs(this.y - enemy.y) <= 60) { 
+        const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
+
+        this.scene.physics.add.overlap(hitZone, targets, (hz, target: any) => {
+            if (Math.abs(this.y - target.y) <= 60) { 
                 if (!hasHit) {
                     (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     hasHit = true;
                 }
                 const damage = (action.includes('2') ? 15 : 10) * this.damageMultiplier;
-                const hitX = (this.x + enemy.x) / 2;
-                (this.scene as any).spawnHitEffect(hitX, enemy.y - 50);
-                if (enemy.takeDamage) enemy.takeDamage(damage); 
+                const hitX = (this.x + target.x) / 2;
+                (this.scene as any).spawnHitEffect(hitX, target.y - 50);
+                if (target.takeDamage) target.takeDamage(damage); 
                 if (hitZone.body) hitZone.body.enable = false; 
             }
         });
@@ -248,10 +278,12 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
         const spinZone = this.scene.add.circle(this.x, this.y - 40, 100);
         this.scene.physics.add.existing(spinZone);
-        this.scene.physics.add.overlap(spinZone, (this.scene as any).enemies, (sz, enemy: any) => {
-            if (Math.abs(this.y - enemy.y) <= 60) {
-                if (enemy.takeDamage) { enemy.takeDamage(20 * this.damageMultiplier); const pushDir = enemy.x > this.x ? 1 : -1; if (enemy.body) enemy.setVelocityX(300 * pushDir); }
-                (this.scene as any).spawnHitEffect(enemy.x, enemy.y - 50);
+
+        const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
+        this.scene.physics.add.overlap(spinZone, targets, (sz, target: any) => {
+            if (Math.abs(this.y - target.y) <= 60) {
+                if (target.takeDamage) { target.takeDamage(20 * this.damageMultiplier); const pushDir = target.x > this.x ? 1 : -1; if (target.body && target.type !== 'obj_kiosk' && target.type !== 'obj_kontejner') target.setVelocityX(300 * pushDir); }
+                (this.scene as any).spawnHitEffect(target.x, target.y - 50);
             }
         });
         this.scene.time.delayedCall(200, () => { if (spinZone.active) spinZone.destroy(); });
@@ -266,12 +298,14 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         (this.scene as any).playSFX('forbidden_riff'); 
 
         this.scene.cameras.main.shake(800, 0.015); this.scene.cameras.main.flash(300, 0, 255, 255);
+        
         const enemies = (this.scene as any).enemies.getChildren();
-        enemies.forEach((enemy: any) => {
-            if (!enemy.isDead && Math.abs(this.y - enemy.y) <= 100) { 
-                if (enemy.takeDamage) enemy.takeDamage(100); 
-                enemy.setTint(0x00ffff); this.scene.time.delayedCall(200, () => enemy.clearTint());
-                (this.scene as any).spawnHitEffect(enemy.x, enemy.y - 50);
+        const breakables = (this.scene as any).breakables ? (this.scene as any).breakables.getChildren() : [];
+        [...enemies, ...breakables].forEach((target: any) => {
+            if (!target.isDead && Math.abs(this.y - target.y) <= 100) { 
+                if (target.takeDamage) target.takeDamage(100); 
+                target.setTint(0x00ffff); this.scene.time.delayedCall(200, () => target.clearTint());
+                (this.scene as any).spawnHitEffect(target.x, target.y - 50);
             }
         });
         this.once('animationcomplete', () => { this.isAttacking = false; });
