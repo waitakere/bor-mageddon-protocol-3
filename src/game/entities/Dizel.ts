@@ -2,21 +2,27 @@ import Phaser from 'phaser';
 
 export class Dizel extends Phaser.Physics.Arcade.Sprite {
     public health: number = 120; 
+    public maxHealth: number = 120;
     public isDead: boolean = false;
     public isHurt: boolean = false; 
+    public isKnockedDown: boolean = false;
+    public hasBeenKnockedDown: boolean = false;
+    public isInvulnerable: boolean = false;
     public skinPrefix: string = 'dizel'; 
     
     private isSlashing: boolean = false;
     private slashCooldown: boolean = false;
-    private isKnockedDown: boolean = false;
-    public isInvulnerable: boolean = false;
 
     private speed: number = 140; 
     private attackRange: number = 100;
 
+    private grunts = ['grunt_m_1', 'grunt_m_2', 'grunt_m_3', 'grunt_m_4'];
+    private agonies = ['agony_m_1', 'agony_m_2', 'agony_m_3', 'agony_m_4'];
+
     constructor(scene: Phaser.Scene, x: number, y: number) {
         const texture = scene.textures.get('enemies_1993');
-        const firstFrame = texture && texture.getFrameNames().length > 0 ? texture.getFrameNames() : undefined;
+        const allFrames = texture ? texture.getFrameNames() : [];
+        const firstFrame = allFrames.find(f => f.includes('dizel-walk/frame_000')) || allFrames;
 
         super(scene, x, y, 'enemies_1993', firstFrame);
 
@@ -73,7 +79,6 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
         if (this.scene.anims.exists('dizel-punch-1')) {
             this.play('dizel-punch-1', true);
         }
-        (this.scene as any).playSFX(['melee_1', 'melee_2']); 
 
         this.scene.time.delayedCall(200, () => {
             if (this.isDead || this.isHurt || this.isKnockedDown) return;
@@ -86,7 +91,7 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
                 player.takeDamage(25); 
                 
                 (this.scene as any).spawnHitEffect(player.x, player.y - 80);
-                (this.scene as any).playSFX('dizel_stab_1'); 
+                (this.scene as any).playSFX(['punch_1', 'punch_2', 'punch_3']); 
                 
                 this.scene.physics.world.pause();
                 this.scene.time.delayedCall(50, () => this.scene.physics.world.resume());
@@ -118,15 +123,16 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
         (this.scene as any).updateReactHUD();
 
         (this.scene as any).spawnHitEffect(this.x, this.y - 50);
-        (this.scene as any).playSFX(['agony_m_1', 'agony_m_2', 'agony_m_3']);
 
         if (this.health <= 0) {
+            this.die();
+        } else if (this.health <= this.maxHealth * 0.5 && !this.hasBeenKnockedDown) {
             this.takeKnockdown();
         } else {
+            (this.scene as any).playSFX(this.grunts);
             if (this.scene.anims.exists('dizel-damage')) {
                 this.play('dizel-damage', true);
             }
-            
             this.x += this.flipX ? 15 : -15;
 
             this.scene.time.delayedCall(400, () => {
@@ -143,39 +149,42 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
 
         this.isKnockedDown = true;
         this.isInvulnerable = true; 
+        this.hasBeenKnockedDown = true;
         
         this.x += this.flipX ? 40 : -40; 
+        (this.scene as any).playSFX(this.agonies);
         
         if (this.scene.anims.exists('dizel-knockdown-get-up')) {
              this.play('dizel-knockdown-get-up', true);
-        } else if (this.scene.anims.exists('dizel-dying')) {
-             this.play('dizel-dying', true);
+        } else {
+             this.scene.time.delayedCall(1000, () => { this.emit('animationcomplete'); });
         }
 
         this.once('animationcomplete', () => {
-            if (this.health <= 0) {
-                this.isDead = true;
-                (this.body as Phaser.Physics.Arcade.Body).enable = false;
-                
-                (this.scene as any).playSFX(['Break_1', 'Break_2']);
-                (this.scene as any).registerEnemyDeath();
-                
-                if (this.scene.anims.exists('dizel-dying')) {
-                    this.play('dizel-dying', true);
-                }
-                
-                if (Phaser.Math.Between(1, 100) <= 40) {
-                    (this.scene as any).dropItem(this.x, this.y);
-                }
-
-                this.scene.tweens.add({ targets: this, alpha: 0, y: this.y + 20, duration: 800, delay: 500, onComplete: () => this.destroy() });
-
-            } else {
-                this.isKnockedDown = false;
-                this.isInvulnerable = false;
-                this.isHurt = false;
-                if (this.scene.anims.exists('dizel-walk')) this.play('dizel-walk', true);
-            }
+            if (this.health <= 0) return;
+            this.isKnockedDown = false;
+            this.isInvulnerable = false;
+            this.isHurt = false;
+            if (this.scene.anims.exists('dizel-walk')) this.play('dizel-walk', true);
         });
+    }
+
+    private die() {
+        this.isDead = true;
+        this.setVelocity(0, 0);
+        (this.body as Phaser.Physics.Arcade.Body).enable = false;
+        
+        (this.scene as any).playSFX(this.agonies);
+        (this.scene as any).registerEnemyDeath();
+        
+        if (this.scene.anims.exists('dizel-dying')) {
+            this.play('dizel-dying', true);
+        }
+        
+        if (Phaser.Math.Between(1, 100) <= 40) {
+            (this.scene as any).dropItem(this.x, this.y);
+        }
+
+        this.scene.tweens.add({ targets: this, alpha: 0, y: this.y + 20, duration: 800, delay: 500, onComplete: () => this.destroy() });
     }
 }

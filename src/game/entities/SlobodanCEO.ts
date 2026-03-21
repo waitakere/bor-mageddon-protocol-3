@@ -5,6 +5,8 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
     private maxHealth: number = 500;
     public isDead: boolean = false;
     public isHurt: boolean = false; 
+    public isKnockedDown: boolean = false;
+    public isInvulnerable: boolean = false;
     private isAttacking: boolean = false;
     public skinPrefix: string = 'slobodan'; 
     
@@ -15,11 +17,10 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
     private isPhaseTwo: boolean = false;
     private jumpTimer: number = 0;
 
+    private grunts = ['grunt_m_1', 'grunt_m_2', 'grunt_m_3', 'grunt_m_4'];
+    private agonies = ['agony_m_1', 'agony_m_2', 'agony_m_3', 'agony_m_4'];
+
     constructor(scene: Phaser.Scene, x: number, y: number) {
-        // ==========================================
-        // SAFE FALLBACK: Finds Slobodan's exact first frame 
-        // to prevent him from spawning looking like Dizel!
-        // ==========================================
         const texture = scene.textures.get('enemies_1993');
         const allFrames = texture ? texture.getFrameNames() : [];
         const firstFrame = allFrames.find(f => f.includes('slobodan-walk/frame_000')) || allFrames;
@@ -53,13 +54,14 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
     }
 
     public updateAI(player: any) {
-        if (this.isDead || this.isHurt || this.isAttacking || player.isDead) return;
+        if (this.isDead || this.isHurt || this.isKnockedDown || this.isAttacking || player.isDead) return;
 
         this.headHitbox.setPosition(this.x, this.y - 200);
         this.torsoHitbox.setPosition(this.x, this.y - 100);
 
         if (this.health < (this.maxHealth * 0.5) && !this.isPhaseTwo) {
             this.triggerPhaseTwo();
+            return;
         }
 
         this.handleBossCombat(player);
@@ -106,10 +108,8 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
             this.play('slobodan-punch-1', true);
         }
 
-        (this.scene as any).playSFX(['melee_1', 'melee_2']);
-
         this.scene.time.delayedCall(300, () => {
-            if (this.isDead || this.isHurt) return;
+            if (this.isDead || this.isHurt || this.isKnockedDown) return;
 
             const distX = Math.abs(player.x - this.x);
             const distY = Math.abs(player.y - this.y);
@@ -118,6 +118,7 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
                 (this.scene as any).lastEngagedEnemy = this; 
                 player.takeDamage(22); 
                 (this.scene as any).spawnHitEffect(player.x, player.y - 80);
+                (this.scene as any).playSFX(['punch_1', 'punch_2']);
                 this.scene.cameras.main.shake(150, 0.007);
             }
         });
@@ -137,7 +138,7 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
         }
 
         this.scene.time.delayedCall(500, () => {
-            if (this.isDead || this.isHurt) return;
+            if (this.isDead || this.isHurt || this.isKnockedDown) return;
             this.triggerShockwaveImpact(player);
         });
 
@@ -149,7 +150,6 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
 
     private triggerShockwaveImpact(player: any) {
         this.scene.cameras.main.shake(600, 0.025);
-        (this.scene as any).playSFX('Paper-Shredding'); 
 
         const distX = Math.abs(player.x - this.x);
         const distY = Math.abs(player.y - this.y);
@@ -157,6 +157,7 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
         if (distX < 250 && distY < 80) {
             (this.scene as any).lastEngagedEnemy = this; 
             player.takeDamage(45); 
+            (this.scene as any).playSFX(['punch_3', 'punch_4']);
             (this.scene as any).spawnHitEffect(player.x, player.y);
         }
     }
@@ -166,8 +167,10 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
     }
 
     public takeDamage(amount: number) {
-        if (this.isDead || this.isHurt) return;
+        if (this.isDead || this.isInvulnerable) return;
         this.isHurt = true; 
+        this.isAttacking = false;
+        this.setVelocity(0, 0);
 
         const multiplier = this.currentDamageZone === 'head' ? 3 : 1;
         this.health -= (amount * multiplier); 
@@ -178,45 +181,61 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
         (this.scene as any).updateReactHUD();
 
         (this.scene as any).spawnHitEffect(this.x, this.y - 150);
-        (this.scene as any).playSFX(['agony_m_1', 'agony_m_2', 'agony_m_3']);
 
-        if (this.scene.anims.exists('slobodan-damage')) {
-            this.play('slobodan-damage', true);
+        if (this.health <= 0) {
+            this.die(); 
         } else {
-            this.setTint(0xffffff);
-            this.scene.time.delayedCall(100, () => this.clearTint());
-        }
-
-        this.scene.physics.world.pause();
-        this.scene.time.delayedCall(100, () => {
-            this.scene.physics.world.resume();
-            if (this.health <= 0) {
-                this.die(); 
+            (this.scene as any).playSFX(this.grunts);
+            if (this.scene.anims.exists('slobodan-damage')) {
+                this.play('slobodan-damage', true);
             } else {
-                this.scene.time.delayedCall(300, () => {
+                this.setTint(0xffffff);
+                this.scene.time.delayedCall(100, () => this.clearTint());
+            }
+
+            this.scene.time.delayedCall(400, () => {
+                if (!this.isDead && !this.isKnockedDown) {
                     this.isHurt = false;
                     const anim = this.scene.anims.exists('slobodan-run') && this.isPhaseTwo ? 'slobodan-run' : 'slobodan-walk';
                     if (this.scene.anims.exists(anim)) this.play(anim, true);
-                });
-            }
-        });
+                }
+            });
+        }
     }
 
     private triggerPhaseTwo() {
         this.isPhaseTwo = true;
-        this.setTint(0xff5555); 
+        this.isKnockedDown = true;
+        this.isInvulnerable = true;
+        this.isHurt = true;
+        
+        (this.scene as any).playSFX(this.agonies);
+
+        if (this.scene.anims.exists('slobodan-knockdown-get-up')) {
+             this.play('slobodan-knockdown-get-up', true);
+        } else {
+             this.scene.time.delayedCall(1000, () => { this.emit('animationcomplete'); });
+        }
+
+        this.once('animationcomplete', () => {
+            this.isKnockedDown = false;
+            this.isInvulnerable = false;
+            this.isHurt = false;
+            this.setTint(0xff5555); 
+            if (this.scene.anims.exists('slobodan-run')) this.play('slobodan-run', true);
+        });
     }
 
     protected die() {
         this.isDead = true;
         this.setVelocity(0, 0);
         
-        (this.body as Phaser.Physics.Arcade.Body).enable = false;
+        (this.body as ArcadePhysics.Body).enable = false;
         this.headHitbox.destroy();
         this.torsoHitbox.destroy();
         
+        (this.scene as any).playSFX(this.agonies);
         (this.scene as any).registerEnemyDeath();
-        (this.scene as any).playSFX(['Break_1', 'Break_2']);
 
         if (this.scene.anims.exists('slobodan-dying')) {
             this.play('slobodan-dying', true);
