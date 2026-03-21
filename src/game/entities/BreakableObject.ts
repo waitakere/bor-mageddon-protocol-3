@@ -2,15 +2,11 @@ import Phaser from 'phaser';
 
 export type BreakableType = 'crate' | 'barrel' | 'kiosk' | 'kontejner';
 
-/**
- * BreakableObject: Handles environmental hazards and loot containers.
- */
 export class BreakableObject extends Phaser.Physics.Arcade.Sprite {
     public health: number;
     public isDead: boolean = false;
 
     constructor(scene: Phaser.Scene, x: number, y: number, type: BreakableType) {
-        // Assumes your BootScene loaded images with keys matching the BreakableType exactly
         super(scene, x, y, type); 
         
         scene.add.existing(this);
@@ -18,25 +14,31 @@ export class BreakableObject extends Phaser.Physics.Arcade.Sprite {
         
         this.setOrigin(0.5, 1);
         
+        // Custom scaling to normalize the wildly different base image sizes!
+        switch(type) {
+            case 'barrel': this.setScale(2.5); break; // Barrel was too small
+            case 'crate': this.setScale(0.8); break;  // Crate was enormous
+            case 'kiosk': this.setScale(2.3); break;  // Taller than the player
+            case 'kontejner': this.setScale(1.5); break;
+        }
+        
         const body = this.body as Phaser.Physics.Arcade.Body;
+        
+        // This explicitly prevents the player from sliding them around!
         body.setImmovable(true); 
-        body.setSize(this.width * 0.8, 30);
-        body.setOffset(this.width * 0.1, this.height - 30);
+        (body as any).pushable = false; 
+        
+        body.setSize(this.width * 0.8, 40);
+        body.setOffset(this.width * 0.1, this.height - 40);
 
-        // Crates/Barrels take 1-2 hits. Kiosks/Kontejners take 4-5 hits.
         this.health = (type === 'kiosk' || type === 'kontejner') ? 60 : 20; 
     }
 
-    /**
-     * Matches the exact signature of our Enemy takeDamage methods
-     * so the players can punch them seamlessly.
-     */
     public takeDamage(amount: number) {
         if (this.health <= 0 || this.isDead) return;
 
         this.health -= amount;
 
-        // Kinetic shake feedback
         this.scene.tweens.add({
             targets: this,
             x: this.x + Phaser.Math.Between(-4, 4),
@@ -45,13 +47,11 @@ export class BreakableObject extends Phaser.Physics.Arcade.Sprite {
             repeat: 1
         });
 
-        // Flash white when hit
         this.setTintFill(0xffffff);
         this.scene.time.delayedCall(50, () => {
             this.clearTint();
         });
 
-        // Use our existing metal impact sounds
         (this.scene as any).playSFX(['Metal-Impact-Pick', 'Metal-Impact-Shield']);
 
         if (this.health <= 0) {
@@ -62,22 +62,32 @@ export class BreakableObject extends Phaser.Physics.Arcade.Sprite {
     private shatter() {
         this.isDead = true;
         
-        // Play era-appropriate destruction sound
+        // Immediately disable the physics body so the player can walk through it
+        if (this.body) {
+            (this.body as Phaser.Physics.Arcade.Body).enable = false;
+        }
+        
         (this.scene as any).playSFX(['Break_1', 'Break_2', 'Break_3']);
 
-        // Slight screen shake for heavy objects breaking
         if (this.texture.key === 'kiosk' || this.texture.key === 'kontejner') {
             this.scene.cameras.main.shake(150, 0.005); 
         }
 
-        // Spawn explosion effect instead of gore
-        (this.scene as any).spawnHitEffect(this.x, this.y - (this.height / 2));
+        // Use displayHeight to spawn the explosion at the correct visual center
+        (this.scene as any).spawnHitEffect(this.x, this.y - (this.displayHeight / 2));
 
-        // 60% chance to drop a Burek, Coffee, etc. using our existing unified loot system!
-        if (Phaser.Math.Between(1, 100) <= 60) {
-            (this.scene as any).dropItem(this.x, this.y);
-        }
+        // 100% chance to drop an item now!
+        (this.scene as any).dropItem(this.x, this.y);
         
-        this.destroy();
+        // The Red Blink & Fade Out
+        this.setTintFill(0xff0000);
+        this.scene.tweens.add({
+            targets: this,
+            alpha: 0,
+            duration: 300,
+            onComplete: () => {
+                this.destroy();
+            }
+        });
     }
 }
