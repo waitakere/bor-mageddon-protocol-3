@@ -4,6 +4,13 @@ import { Maja } from '../entities/Maja';
 import { Darko } from '../entities/Darko';
 import { Enemy } from '../entities/Enemy';
 
+// ==========================================
+// IMPORTING THE NEW SUBCLASSES
+// ==========================================
+import { Dizel } from '../entities/Dizel';
+import { Dizelcic } from '../entities/Dizelcic';
+import { Miner } from '../entities/Miner';
+
 export class MainLevel extends Phaser.Scene {
     public player!: any; 
     public enemies!: Phaser.Physics.Arcade.Group;
@@ -43,7 +50,6 @@ export class MainLevel extends Phaser.Scene {
         this.lastPlayerHitTime = 0;
         this.lastEnemyHitTime = 0;
 
-        // Generate the enemy animations as soon as the level starts
         this.createEnemyAnimations();
     }
 
@@ -54,10 +60,6 @@ export class MainLevel extends Phaser.Scene {
             window.removeEventListener('request-scene-restart', this.handleRestart);
         });
 
-        // ==========================================
-        // THE AUDIO PAUSE FIX
-        // Links global audio state to the scene state
-        // ==========================================
         this.events.on(Phaser.Scenes.Events.PAUSE, () => {
             this.sound.pauseAll();
         });
@@ -92,7 +94,10 @@ export class MainLevel extends Phaser.Scene {
         }
 
         this.player.setScale(1.7);
-        this.enemies.add(new Enemy(this, 1000, 950, 'mup'));
+        
+        // Spawn our newly fixed Dizel subclass as the first encounter
+        const firstEnemy = new Dizel(this, 1000, 950);
+        this.enemies.add(firstEnemy);
 
         this.physics.add.collider(this.player, this.enemies);
         this.physics.add.collider(this.enemies, this.enemies);
@@ -107,17 +112,12 @@ export class MainLevel extends Phaser.Scene {
         window.dispatchEvent(new CustomEvent('phaser-ready'));
     }
 
-    /**
-     * Builds all enemy animations from the enemies_1993 atlas.
-     * Assumes zero-padded formatting (e.g. mup-walk/frame_000.png)
-     */
     private createEnemyAnimations() {
         if (this.anims.exists('mup-walk')) return;
 
         const enemyTypes = ['mup', 'dizel', 'dizelcic', 'rudar', 'sloba'];
         
         enemyTypes.forEach(enemy => {
-            // Walk Cycle
             this.anims.create({
                 key: `${enemy}-walk`,
                 frames: this.anims.generateFrameNames('enemies_1993', { prefix: `${enemy}-walk/frame_`, suffix: '.png', start: 0, end: 8, zeroPad: 3 }),
@@ -125,7 +125,6 @@ export class MainLevel extends Phaser.Scene {
                 repeat: -1
             });
             
-            // Attack Cycle
             this.anims.create({
                 key: `${enemy}-attack`,
                 frames: this.anims.generateFrameNames('enemies_1993', { prefix: `${enemy}-attack/frame_`, suffix: '.png', start: 0, end: 8, zeroPad: 3 }),
@@ -133,10 +132,23 @@ export class MainLevel extends Phaser.Scene {
                 repeat: 0
             });
 
-            // Death/Hurt (Optional, defaults to tinting in Enemy.ts if it doesn't exist)
+            this.anims.create({
+                key: `${enemy}-damage`,
+                frames: this.anims.generateFrameNames('enemies_1993', { prefix: `${enemy}-damage/frame_`, suffix: '.png', start: 0, end: 3, zeroPad: 3 }),
+                frameRate: 12,
+                repeat: 0
+            });
+
             this.anims.create({
                 key: `${enemy}-dying`,
                 frames: this.anims.generateFrameNames('enemies_1993', { prefix: `${enemy}-dying/frame_`, suffix: '.png', start: 0, end: 8, zeroPad: 3 }),
+                frameRate: 12,
+                repeat: 0
+            });
+
+            this.anims.create({
+                key: `${enemy}-knockdown-get-up`,
+                frames: this.anims.generateFrameNames('enemies_1993', { prefix: `${enemy}-knockdown-get-up/frame_`, suffix: '.png', start: 0, end: 8, zeroPad: 3 }),
                 frameRate: 12,
                 repeat: 0
             });
@@ -185,17 +197,12 @@ export class MainLevel extends Phaser.Scene {
         }
     }
 
-    // ==========================================
-    // THE SMART AUDIO MANAGER FIX
-    // Checks for atlas first, falls back to standalone files
-    // ==========================================
     public playSFX(marker: string | string[], volume: number = 0.8) {
         try {
             if (this.sound.context.state === 'suspended') this.sound.context.resume();
 
             const finalMarker = Array.isArray(marker) ? marker[Math.floor(Math.random() * marker.length)] : marker;
 
-            // 1. Try to play from an Audio Sprite Atlas (if you ever build one)
             if (this.cache.json.exists('sfx_atlas')) {
                 const json = this.cache.json.get('sfx_atlas');
                 if (json && json.spritemap && json.spritemap[finalMarker]) {
@@ -205,14 +212,11 @@ export class MainLevel extends Phaser.Scene {
                 }
             }
 
-            // 2. Fallback: Play as a standalone loaded audio file
-            // (Requires you to preload this file in BootScene.ts!)
             if (this.cache.audio.exists(finalMarker)) {
                 this.sound.play(finalMarker, { volume });
                 return;
             }
 
-            // If it hits here, you haven't loaded the sound file into Phaser yet!
             console.warn(`[AUDIO] '${finalMarker}' not found in atlas or cache!`);
             return null;
 
@@ -322,12 +326,34 @@ export class MainLevel extends Phaser.Scene {
         }
     }
 
+    // ==========================================
+    // THE ENEMY SUBCLASS FACTORY
+    // Replaces the generic 'new Enemy' logic
+    // ==========================================
     private spawnEnemyOffScreen(view: Phaser.Geom.Rectangle, type: string) {
         const spawnOnLeft = Math.random() > 0.5;
         const spawnX = spawnOnLeft ? view.left - 80 : view.right + 80;
         const spawnY = Phaser.Math.Between(800, 1050);
         
-        const enemy = new Enemy(this, spawnX, spawnY, type); 
+        let enemy: any;
+
+        // Route the type to the highly-optimised custom classes
+        switch (type) {
+            case 'dizel':
+                enemy = new Dizel(this, spawnX, spawnY);
+                break;
+            case 'dizelcic':
+                enemy = new Dizelcic(this, spawnX, spawnY);
+                break;
+            case 'rudar':
+                enemy = new Miner(this, spawnX, spawnY);
+                break;
+            default:
+                // Fallback for MUP or Sloba until you build dedicated classes for them
+                enemy = new Enemy(this, spawnX, spawnY, type); 
+                break;
+        }
+        
         this.enemies.add(enemy);
         this.spawnedThisWave++;
     }
@@ -354,6 +380,7 @@ export class MainLevel extends Phaser.Scene {
     public updateReactHUD() {
         let eMaxHealth = 100;
         if (this.lastEngagedEnemy) {
+            // Note: If you add a dedicated Sloba class later, make sure its maxHealth matches here!
             eMaxHealth = this.lastEngagedEnemy.skinPrefix === 'sloba' ? 600 : 100;
         }
 
