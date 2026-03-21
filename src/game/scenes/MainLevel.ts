@@ -15,16 +15,17 @@ export class MainLevel extends Phaser.Scene {
     public items!: Phaser.Physics.Arcade.Group;
     private shadows!: Phaser.GameObjects.Graphics;
     
-    // Reverted back to Images for proper stretching/zooming
+    // Background Layers
     private skyLayer!: Phaser.GameObjects.Image;
     private midLayer!: Phaser.GameObjects.Image;
-    private floorLayer!: Phaser.GameObjects.Image;
+    private floorLayer!: Phaser.GameObjects.TileSprite;
     
+    // Wave Management
     private sectors = [
-        { triggerX: 800, totalEnemies: 4, maxActive: 2 },  
-        { triggerX: 1600, totalEnemies: 6, maxActive: 3 }, 
-        { triggerX: 2400, totalEnemies: 8, maxActive: 3 }, // Transition to Part 2 textures after this
-        { triggerX: 3200, totalEnemies: 5, maxActive: 4 }  
+        { triggerX: 800, totalEnemies: 4, maxActive: 2 },  // Wave 1
+        { triggerX: 1600, totalEnemies: 6, maxActive: 3 }, // Wave 2
+        { triggerX: 2400, totalEnemies: 8, maxActive: 3 }, // Wave 3
+        { triggerX: 3200, totalEnemies: 5, maxActive: 4 }  // Wave 4
     ];
     
     private currentSectorIndex!: number;
@@ -53,6 +54,7 @@ export class MainLevel extends Phaser.Scene {
         this.lastPlayerHitTime = 0;
         this.lastEnemyHitTime = 0;
 
+        // Safely builds animations before any enemies spawn
         this.createEnemyAnimations();
     }
 
@@ -62,6 +64,7 @@ export class MainLevel extends Phaser.Scene {
             window.removeEventListener('request-scene-restart', this.handleRestart);
         });
 
+        // Pause audio when game is paused
         this.events.on(Phaser.Scenes.Events.PAUSE, () => this.sound.pauseAll());
         this.events.on(Phaser.Scenes.Events.RESUME, () => this.sound.resumeAll());
 
@@ -74,25 +77,27 @@ export class MainLevel extends Phaser.Scene {
         this.sound.stopAll(); 
         this.sound.play('1993_ambient', { loop: true, volume: 0.4 });
 
+        // The physics world is long to allow continuous scrolling
         this.physics.world.setBounds(0, 750, 6000, 330); 
         
+        const camW = this.cameras.main.width;
+
         // ==========================================
-        // FIXED PARALLAX SCALING & DEPTH
-        // Using explicit negative depths (-100 to -300) so they NEVER overlap the characters
+        // HYBRID PARALLAX BACKGROUND SYSTEM
         // ==========================================
+        // Sky and Midground are stretched Images with native scroll factors
         this.skyLayer = this.add.image(0, 0, 'part1_sky')
-            .setOrigin(0, 0).setDisplaySize(6000, 1080).setScrollFactor(0.1).setDepth(-300);
+            .setOrigin(0, 0).setDisplaySize(4000, 1080).setScrollFactor(0.1).setDepth(-300);
             
         this.midLayer = this.add.image(0, 750, 'part1_mid')
-            .setOrigin(0, 1).setDisplaySize(6000, 650).setScrollFactor(0.5).setDepth(-200);
+            .setOrigin(0, 1).setDisplaySize(4000, 650).setScrollFactor(0.5).setDepth(-200);
             
-        this.floorLayer = this.add.image(0, 1080, 'part1_floor')
-            .setOrigin(0, 1).setDisplaySize(6000, 330).setScrollFactor(1).setDepth(-100);
+        // Floor is a TileSprite pinned to the camera that repeats horizontally
+        this.floorLayer = this.add.tileSprite(0, 1080, camW, 330, 'part1_floor')
+            .setOrigin(0, 1).setScrollFactor(0).setDepth(-100);
 
-        this.shadows = this.add.graphics().setAlpha(0.4);
-        
-        // Shadows must render under feet but above the floor
-        this.shadows.setDepth(-50); 
+        // Shadows render under feet but above the floor
+        this.shadows = this.add.graphics().setAlpha(0.4).setDepth(-50);
         
         this.items = this.physics.add.group();
         this.enemies = this.physics.add.group();
@@ -106,6 +111,7 @@ export class MainLevel extends Phaser.Scene {
 
         this.player.setScale(1.7);
         
+        // First enemy spawns automatically to kick things off
         const firstEnemy = new Dizel(this, 1000, 950);
         this.enemies.add(firstEnemy);
 
@@ -121,6 +127,10 @@ export class MainLevel extends Phaser.Scene {
         window.dispatchEvent(new CustomEvent('phaser-ready'));
     }
 
+    /**
+     * BULLETPROOF ANIMATION BUILDER
+     * Checks if the frame actually exists in the JSON before trying to build it.
+     */
     private createEnemyAnimations() {
         const texture = this.textures.get('enemies_1993');
         if (!texture || texture.key === '__MISSING') return;
@@ -167,6 +177,12 @@ export class MainLevel extends Phaser.Scene {
 
         this.handleWaveManager();
 
+        // ==========================================
+        // FLOOR TILE SCROLLING
+        // Only the floor needs its UVs shifted because it's a TileSprite
+        // ==========================================
+        this.floorLayer.tilePositionX = this.cameras.main.scrollX;
+
         this.children.each((child: any) => {
             if (child.body && child.type === 'Sprite') { child.setAngle(0); child.rotation = 0; }
         });
@@ -191,12 +207,9 @@ export class MainLevel extends Phaser.Scene {
         this.player.update(keys);
         this.enemies.getChildren().forEach((e: any) => { if (e.updateAI && !e.isDead) e.updateAI(this.player); });
         
-        // ==========================================
-        // DYNAMIC DEPTH SORTING
-        // Now safely ignores our strictly layered background Images
-        // ==========================================
+        // Dynamic Depth Sorting (ignores strictly layered background Images)
         this.children.each((c: any) => { 
-            if (c.y && c.type !== 'Image' && c.type !== 'Graphics') {
+            if (c.y && c.type !== 'Image' && c.type !== 'Graphics' && c.type !== 'TileSprite') {
                 c.setDepth(c.y); 
             } 
         });
@@ -276,17 +289,20 @@ export class MainLevel extends Phaser.Scene {
     private handleWaveManager() {
         const cam = this.cameras.main;
 
+        // 1. Lock camera when entering a new sector
         if (!this.isLocked && this.currentSectorIndex < this.sectors.length) {
             const nextSector = this.sectors[this.currentSectorIndex];
             if (this.player.x > nextSector.triggerX) {
                 this.isLocked = true;
                 cam.stopFollow();
                 
+                // Lock the player inside the current screen bounds
                 this.physics.world.setBounds(cam.worldView.left, 750, cam.width, 330);
                 this.updateReactHUD();
             }
         }
 
+        // 2. Spawn logic while locked
         if (this.isLocked) {
             const currentSector = this.sectors[this.currentSectorIndex];
             const activeEnemies = this.enemies.getChildren().filter((e: any) => !e.isDead).length;
@@ -303,6 +319,7 @@ export class MainLevel extends Phaser.Scene {
                 this.bossSpawned = true;
             }
 
+            // 3. Wave Cleared -> Unlock and Prompt Player
             if (this.spawnedThisWave >= currentSector.totalEnemies && activeEnemies === 0) {
                 if (isFinalSector && !this.bossSpawned) return; 
                 this.unlockCamera();
@@ -333,24 +350,31 @@ export class MainLevel extends Phaser.Scene {
         this.currentSectorIndex++; 
         
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+        // Extend the bounds back out so the player can keep walking right
         this.physics.world.setBounds(0, 750, 6000, 330);
         this.updateReactHUD();
 
+        // ==========================================
+        // TEXTURE SWAP (Temporarily Disabled)
+        // Enable this once your part2_sky, etc., assets are in the public folder
+        // ==========================================
+        /*
         if (this.currentSectorIndex === 3) {
             this.cameras.main.flash(500, 0, 0, 0);
             
             if (this.textures.exists('part2_sky')) {
                 this.skyLayer.setTexture('part2_sky');
                 this.midLayer.setTexture('part2_mid');
-                this.floorLayer.setTexture('part2_floor');
                 
-                // Re-apply display size because setting a new texture resets it to native dimensions
-                this.skyLayer.setDisplaySize(6000, 1080);
-                this.midLayer.setDisplaySize(6000, 650);
-                this.floorLayer.setDisplaySize(6000, 330);
+                // You will need to recreate the floor layer or update its texture safely here
             }
         }
+        */
         
+        // ==========================================
+        // THE "GO! ->" PROMPT
+        // Guides the player to pan the screen to the next wave
+        // ==========================================
         if (this.currentSectorIndex < this.sectors.length) {
             const goText = this.add.text(this.player.x + 100, this.player.y - 150, 'GO! ➡', { 
                 font: '900 64px "Space Mono"', 
@@ -359,6 +383,7 @@ export class MainLevel extends Phaser.Scene {
                 strokeThickness: 8 
             }).setOrigin(0.5);
             
+            // Bouncing pulse animation to the right
             this.tweens.add({ 
                 targets: goText, 
                 x: goText.x + 60, 
