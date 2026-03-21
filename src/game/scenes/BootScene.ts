@@ -35,11 +35,13 @@ export class BootScene extends Phaser.Scene {
         // ==========================================
         // 3. STRICTLY RELATIVE ENVIRONMENT, VFX & PROPS
         // ==========================================
+        // Backgrounds
         this.load.image('part1_sky', './assets/images/environments/part1_sky.png');
         this.load.image('part1_mid', './assets/images/environments/part1_mid.png');
         this.load.image('part1_floor', './assets/images/environments/part1_floor.png');
         
-        this.load.image('explosion_01', './assets/fx/explosion_01.png');
+        // VFX
+        this.load.image('explosion_01', './assets/images/environments/explosion_01.png'); // Note: Spotted this in your environments folder too!
 
         // Health Items
         this.load.image('item-burek', './assets/images/environments/item-burek.png');
@@ -47,12 +49,17 @@ export class BootScene extends Phaser.Scene {
         this.load.image('item-pork', './assets/images/environments/item-pork.png');
         this.load.image('item-beer', './assets/images/environments/item-beer.png');
         this.load.image('item-sandwich', './assets/images/environments/item-sandwich.png');
+        this.load.image('item-rakija', './assets/images/environments/item-rakija.png'); // Added Rakija since it's there!
 
-        // Breakable Props (Ensure these match your actual folder structure!)
-        this.load.image('barrel', './assets/sprites/barrel.png');
-        this.load.image('crate', './assets/sprites/crate.png');
-        this.load.image('kiosk', './assets/sprites/kiosk.png');
-        this.load.image('kontejner', './assets/sprites/kontejner.png');
+        // Breakable Props (Paths fixed to match your screenshot)
+        this.load.image('barrel', './assets/images/environments/barrel.png');
+        this.load.image('crate', './assets/images/environments/crate.png');
+        this.load.image('kontejner', './assets/images/environments/kontejner.png');
+        
+        // NOTE: kiosk.png is missing from your folder! 
+        // If you have it, drag it into the environments folder. 
+        // If not, it will still show a green box until you upload it.
+        this.load.image('kiosk', './assets/images/environments/kiosk.png');
     }
 
     create() {
