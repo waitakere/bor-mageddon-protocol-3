@@ -18,10 +18,8 @@ export class BootScene extends Phaser.Scene {
         // ==========================================
         // 1. STRICTLY RELATIVE AUDIO PATHS
         // ==========================================
-        // The background ambient track
         this.load.audio('1993_ambient', './assets/audio/bor_streets_93.mp3');
         
-        // The SFX Atlas (loads the JSON map and the compiled MP3 together)
         this.load.audioSprite('sfx_atlas', './assets/audio/sfx_atlas.json', [
             './assets/audio/sfx_atlas.mp3'
         ]);
@@ -35,7 +33,7 @@ export class BootScene extends Phaser.Scene {
         this.load.atlas('enemies_1993', './assets/sprites/enemies_1993.png', './assets/sprites/enemies_1993.json');
 
         // ==========================================
-        // 3. STRICTLY RELATIVE ENVIRONMENT & VFX PATHS
+        // 3. STRICTLY RELATIVE ENVIRONMENT, VFX & PROPS
         // ==========================================
         this.load.image('part1_sky', './assets/images/environments/part1_sky.png');
         this.load.image('part1_mid', './assets/images/environments/part1_mid.png');
@@ -43,18 +41,22 @@ export class BootScene extends Phaser.Scene {
         
         this.load.image('explosion_01', './assets/fx/explosion_01.png');
 
+        // Health Items
         this.load.image('item-burek', './assets/images/environments/item-burek.png');
         this.load.image('item-coffee', './assets/images/environments/item-coffee.png');
         this.load.image('item-pork', './assets/images/environments/item-pork.png');
         this.load.image('item-beer', './assets/images/environments/item-beer.png');
         this.load.image('item-sandwich', './assets/images/environments/item-sandwich.png');
+
+        // Breakable Props (Ensure these match your actual folder structure!)
+        this.load.image('barrel', './assets/sprites/barrel.png');
+        this.load.image('crate', './assets/sprites/crate.png');
+        this.load.image('kiosk', './assets/sprites/kiosk.png');
+        this.load.image('kontejner', './assets/sprites/kontejner.png');
     }
 
     create() {
-        // Signal the React layer that the engine is fully primed
         window.dispatchEvent(new CustomEvent('phaser-ready'));
-        
-        // Start the main level
         this.scene.start('MainLevel');
     }
 
