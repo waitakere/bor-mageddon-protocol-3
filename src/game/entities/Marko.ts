@@ -23,7 +23,12 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     private kickImpacts = ['kick_1', 'kick_2', 'kick_3', 'kick_4'];
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
-        super(scene, x, y, 'marko', 'marko-idle/frame_000.png');
+        // Safe frame grabber
+        const texture = scene.textures.get('marko');
+        const allFrames = texture ? texture.getFrameNames() : [];
+        const firstFrame = allFrames.find(f => f.includes('marko-idle')) || allFrames;
+
+        super(scene, x, y, 'marko', firstFrame);
         scene.add.existing(this); 
         scene.physics.add.existing(this);
         
@@ -36,66 +41,45 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             (this.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
         }
 
-        // Initialize all animations dynamically from the loaded JSON atlas
         this.createAnimations();
     }
 
     /**
-     * Builds all of Marko's animations using the precise frame names from marko.json
+     * UNIVERSAL FUZZY ANIMATION BUILDER
+     * Scans the atlas and safely builds animations only from existing frames.
      */
     private createAnimations() {
         const anims = this.scene.anims;
-        
-        // If the idle animation already exists, we don't need to rebuild them
         if (anims.exists(`${this.characterName}-idle`)) return;
 
-        const createAnim = (key: string, start: number, end: number, frameRate: number, repeat: number = 0) => {
-            anims.create({
-                key: key,
-                frames: anims.generateFrameNames('marko', {
-                    prefix: `${key}/frame_`,
-                    suffix: '.png',
-                    start: start,
-                    end: end,
-                    zeroPad: 3 // Matches the 000, 001 format in your JSON
-                }),
-                frameRate: frameRate,
-                repeat: repeat
-            });
-        };
+        const texture = this.scene.textures.get(this.characterName);
+        if (!texture || texture.key === '__MISSING') return;
 
-        // Core Movement
-        createAnim('marko-idle', 0, 8, 10, -1);
-        createAnim('marko-walk', 0, 16, 15, -1);
-        createAnim('marko-run', 0, 16, 20, -1);
-        createAnim('marko-jump', 0, 8, 12, 0);
+        const allFrames = texture.getFrameNames();
         
-        // Standard Attacks
-        createAnim('marko-punch-1', 0, 3, 12, 0);
-        createAnim('marko-punch-2', 0, 8, 15, 0);
-        createAnim('marko-kick-1', 0, 7, 15, 0);
-        createAnim('marko-kick-2', 0, 2, 10, 0);
-        createAnim('marko-melee', 0, 24, 15, 0);
-        
-        // Aerial Attacks
-        createAnim('marko-jump-punch', 0, 0, 10, 0);
-        createAnim('marko-jump-kick', 0, 0, 10, 0);
-        
-        // Specials & Finishers
-        createAnim('marko-special-attack', 0, 15, 15, 0);
-        createAnim('marko-finish-move', 0, 35, 15, 0);
-        createAnim('marko-throw', 0, 26, 15, 0);
-        
-        // Reactions & Environment (Note: damage starts at frame_001 in your JSON)
-        createAnim('marko-damage', 1, 7, 15, 0); 
-        createAnim('marko-knockdown-get-up', 0, 35, 15, 0);
-        createAnim('marko-dying', 0, 36, 12, 0);
-        createAnim('marko-pick-up', 0, 3, 10, 0);
-        
-        // Static Poses
-        createAnim('marko-shoot', 0, 0, 10, 0);
-        createAnim('marko-shoot-recoil', 0, 0, 10, 0);
-        createAnim('marko-shoot-up', 0, 0, 10, 0);
+        const animTypes = [
+            'idle', 'walk', 'run', 'jump', 'punch-1', 'punch-2', 'kick-1', 'kick-2', 
+            'melee', 'jump-punch', 'jump-kick', 'special-attack', 'finish-move', 
+            'throw', 'damage', 'knockdown-get-up', 'dying', 'pick-up', 
+            'shoot', 'shoot-recoil', 'shoot-up'
+        ];
+
+        animTypes.forEach(animType => {
+            const animKey = `${this.characterName}-${animType}`;
+            if (anims.exists(animKey)) return;
+
+            const searchStr = `${animKey}/frame_`;
+            const matchingFrames = allFrames.filter(f => f.includes(searchStr)).sort();
+
+            if (matchingFrames.length > 0) {
+                anims.create({
+                    key: animKey,
+                    frames: matchingFrames.map(f => ({ key: this.characterName, frame: f })),
+                    frameRate: 15,
+                    repeat: (animType === 'idle' || animType === 'walk' || animType === 'run') ? -1 : 0
+                });
+            }
+        });
     }
 
     private playVoice(marker: string | string[]) {
@@ -117,7 +101,9 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 this.isAttacking = false;
             });
         } else {
-            this.play(`${this.characterName}-idle`, true);
+            if (this.scene.anims.exists(`${this.characterName}-idle`)) {
+                this.play(`${this.characterName}-idle`, true);
+            }
             this.scene.time.delayedCall(300, () => {
                 this.isAttacking = false;
             });
@@ -170,8 +156,16 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             if (vx !== 0) this.setFlipX(vx < 0);
             if (vx !== 0 || vy !== 0) {
                 const anim = this.isRunning ? `${this.characterName}-run` : `${this.characterName}-walk`;
-                this.play(this.scene.anims.exists(anim) ? anim : `${this.characterName}-walk`, true);
-            } else { if (!this.isJumping) this.play(`${this.characterName}-idle`, true); }
+                if (this.scene.anims.exists(anim)) {
+                    this.play(anim, true);
+                } else if (this.scene.anims.exists(`${this.characterName}-walk`)) {
+                    this.play(`${this.characterName}-walk`, true);
+                }
+            } else { 
+                if (!this.isJumping && this.scene.anims.exists(`${this.characterName}-idle`)) {
+                    this.play(`${this.characterName}-idle`, true); 
+                }
+            }
         }
     }
 
@@ -181,7 +175,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         const animToPlay = `${this.characterName}-${type}`;
         
         if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
-        else this.play(`${this.characterName}-kick-1`, true); 
+        else if (this.scene.anims.exists(`${this.characterName}-kick-1`)) this.play(`${this.characterName}-kick-1`, true); 
         
         this.playVoice(['melee_1', 'melee_2']); 
 
@@ -250,9 +244,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
 
     private executeMegaphoneScream() {
         this.isAttacking = true; this.setVelocity(0, 0); this.smfMeter -= 25; (this.scene as any).updateReactHUD();
-        // Updated to explicitly match the JSON mapping 'marko-special-attack'
-        const anim = this.scene.anims.exists('marko-special-attack') ? 'marko-special-attack' : 'marko-punch-2';
-        this.play(anim, true);
+        const anim = this.scene.anims.exists(`${this.characterName}-special-attack`) ? `${this.characterName}-special-attack` : `${this.characterName}-punch-2`;
+        if (this.scene.anims.exists(anim)) this.play(anim, true);
         
         this.playVoice('marko_special_1'); 
         
@@ -273,9 +266,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
 
     private executeChainWhip() {
         this.isAttacking = true; this.smfMeter = 0; (this.scene as any).updateReactHUD();
-        // Updated to explicitly match the JSON mapping 'marko-finish-move'
-        const anim = this.scene.anims.exists('marko-finish-move') ? 'marko-finish-move' : 'marko-kick-2';
-        this.play(anim, true);
+        const anim = this.scene.anims.exists(`${this.characterName}-finish-move`) ? `${this.characterName}-finish-move` : `${this.characterName}-kick-2`;
+        if (this.scene.anims.exists(anim)) this.play(anim, true);
         
         this.playVoice('marko_special_2'); 
 
