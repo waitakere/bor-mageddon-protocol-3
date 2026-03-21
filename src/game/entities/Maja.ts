@@ -14,6 +14,8 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
     private walkSpeed: number = 160;
     private runSpeed: number = 320;
+    private jumpVelocityX: number = 0; // Stores momentum for Street Fighter style jumps
+
     private lastKey: string = '';
     private lastKeyTime: number = 0;
     private isRunning: boolean = false;
@@ -23,7 +25,6 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     private kickImpacts = ['kick_1', 'kick_2', 'kick_3', 'kick_4'];
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
-        // Safe frame grabber
         const texture = scene.textures.get('maja');
         const allFrames = texture ? texture.getFrameNames() : [];
         const firstFrame = allFrames.find(f => f.includes('maja-idle')) || allFrames;
@@ -44,9 +45,6 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.createAnimations();
     }
 
-    /**
-     * UNIVERSAL FUZZY ANIMATION BUILDER
-     */
     private createAnimations() {
         const anims = this.scene.anims;
         if (anims.exists(`${this.characterName}-idle`)) return;
@@ -71,10 +69,17 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             const matchingFrames = allFrames.filter(f => f.includes(searchStr)).sort();
 
             if (matchingFrames.length > 0) {
+                // DYNAMIC FRAME RATES FOR SMOOTHER IDLES & SNAPPY ATTACKS
+                let fps = 15;
+                if (animType === 'idle') fps = 6;
+                else if (animType === 'walk') fps = 12;
+                else if (animType === 'run') fps = 18;
+                else if (animType === 'jump') fps = 8; // Allows knee bend to be visible
+
                 anims.create({
                     key: animKey,
                     frames: matchingFrames.map(f => ({ key: this.characterName, frame: f })),
-                    frameRate: 15,
+                    frameRate: fps,
                     repeat: (animType === 'idle' || animType === 'walk' || animType === 'run') ? -1 : 0
                 });
             }
@@ -100,12 +105,8 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 this.isAttacking = false;
             });
         } else {
-            if (this.scene.anims.exists(`${this.characterName}-idle`)) {
-                this.play(`${this.characterName}-idle`, true);
-            }
-            this.scene.time.delayedCall(300, () => {
-                this.isAttacking = false;
-            });
+            if (this.scene.anims.exists(`${this.characterName}-idle`)) this.play(`${this.characterName}-idle`, true);
+            this.scene.time.delayedCall(300, () => { this.isAttacking = false; });
         }
     }
 
@@ -113,10 +114,39 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         if (this.isDead) return;
         this.setAngle(0);
 
+        // ==========================================
+        // STREET FIGHTER JUMP MECHANICS
+        // ==========================================
         if (input.space && !this.isJumping && !this.isAttacking) {
             this.isJumping = true;
+            
+            // 1. Commit to directional momentum
+            if (input.left) this.jumpVelocityX = -this.runSpeed * 1.2; 
+            else if (input.right) this.jumpVelocityX = this.runSpeed * 1.2;
+            else this.jumpVelocityX = 0;
+
+            // 2. Play the Jump Animation Frames!
+            if (this.scene.anims.exists(`${this.characterName}-jump`)) {
+                this.play(`${this.characterName}-jump`, true);
+            }
+
             this.playVoice(['grunt_f_1', 'grunt_f_2']); 
-            this.scene.tweens.add({ targets: this, displayOriginY: this.height + 150, duration: 350, yoyo: true, ease: 'Sine.easeInOut', onComplete: () => { this.isJumping = false; this.displayOriginY = this.height; }});
+            
+            // 3. Parabolic gravity curve
+            this.scene.tweens.add({ 
+                targets: this, 
+                displayOriginY: this.height + 220, 
+                duration: 400, 
+                yoyo: true, 
+                ease: 'Quad.easeOut', // Fast takeoff, hangs at peak
+                onComplete: () => { 
+                    this.isJumping = false; 
+                    this.displayOriginY = this.height; 
+                    if (!this.isAttacking && this.scene.anims.exists(`${this.characterName}-idle`)) {
+                        this.play(`${this.characterName}-idle`, true);
+                    }
+                }
+            });
         }
 
         const now = this.scene.time.now;
@@ -146,24 +176,39 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             return; 
         }
 
+        // ==========================================
+        // MOVEMENT & PHYSICS APPLICATION
+        // ==========================================
         if (!this.isAttacking) {
-            const speed = this.isRunning ? this.runSpeed : this.walkSpeed;
-            let vx = input.left ? -speed : (input.right ? speed : 0);
+            let vx = 0;
             let vy = 0;
-            if (!this.isJumping) vy = input.up ? -speed * 0.6 : (input.down ? speed * 0.6 : 0);
+
+            if (this.isJumping) {
+                // Lock X velocity to jump momentum, zero out Y movement (can't steer up/down in mid-air)
+                vx = this.jumpVelocityX;
+            } else {
+                const speed = this.isRunning ? this.runSpeed : this.walkSpeed;
+                vx = input.left ? -speed : (input.right ? speed : 0);
+                vy = input.up ? -speed * 0.6 : (input.down ? speed * 0.6 : 0);
+            }
+
             this.setVelocity(vx, vy);
             if (vx !== 0) this.setFlipX(vx < 0);
-            if (vx !== 0 || vy !== 0) {
-                const anim = this.isRunning ? `${this.characterName}-run` : `${this.characterName}-walk`;
-                if (this.scene.anims.exists(anim)) {
-                    this.play(anim, true);
-                } else if (this.scene.anims.exists(`${this.characterName}-walk`)) {
-                    this.play(`${this.characterName}-walk`, true);
+            
+            // Only play ground animations if we are NOT jumping
+            if (!this.isJumping) {
+                if (vx !== 0 || vy !== 0) {
+                    const anim = this.isRunning ? `${this.characterName}-run` : `${this.characterName}-walk`;
+                    if (this.scene.anims.exists(anim)) this.play(anim, true);
+                    else if (this.scene.anims.exists(`${this.characterName}-walk`)) this.play(`${this.characterName}-walk`, true);
+                } else { 
+                    if (this.scene.anims.exists(`${this.characterName}-idle`)) this.play(`${this.characterName}-idle`, true); 
                 }
-            } else { 
-                if (!this.isJumping && this.scene.anims.exists(`${this.characterName}-idle`)) {
-                    this.play(`${this.characterName}-idle`, true); 
-                }
+            }
+        } else {
+            // Maintains horizontal momentum during aerial kick/punch
+            if (this.isJumping) {
+                this.setVelocity(this.jumpVelocityX, 0);
             }
         }
     }
@@ -192,7 +237,6 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 const hitX = (this.x + enemy.x) / 2;
                 (this.scene as any).spawnHitEffect(hitX, enemy.y - 80);
                 if (enemy.takeDamage) enemy.takeDamage(damage); 
-                
                 if (hitZone.body) hitZone.body.enable = false; 
             }
         });
@@ -227,7 +271,6 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 const hitX = (this.x + enemy.x) / 2;
                 (this.scene as any).spawnHitEffect(hitX, enemy.y - 50);
                 if (enemy.takeDamage) enemy.takeDamage(damage); 
-                
                 if (hitZone.body) hitZone.body.enable = false; 
             }
         });

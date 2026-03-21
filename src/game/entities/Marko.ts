@@ -14,6 +14,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
 
     private walkSpeed: number = 200;
     private runSpeed: number = 380;
+    private jumpVelocityX: number = 0; 
+
     private lastKey: string = '';
     private lastKeyTime: number = 0;
     private isRunning: boolean = false;
@@ -23,7 +25,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     private kickImpacts = ['kick_1', 'kick_2', 'kick_3', 'kick_4'];
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
-        // Safe frame grabber
         const texture = scene.textures.get('marko');
         const allFrames = texture ? texture.getFrameNames() : [];
         const firstFrame = allFrames.find(f => f.includes('marko-idle')) || allFrames;
@@ -44,10 +45,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         this.createAnimations();
     }
 
-    /**
-     * UNIVERSAL FUZZY ANIMATION BUILDER
-     * Scans the atlas and safely builds animations only from existing frames.
-     */
     private createAnimations() {
         const anims = this.scene.anims;
         if (anims.exists(`${this.characterName}-idle`)) return;
@@ -72,10 +69,16 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             const matchingFrames = allFrames.filter(f => f.includes(searchStr)).sort();
 
             if (matchingFrames.length > 0) {
+                let fps = 15;
+                if (animType === 'idle') fps = 6;
+                else if (animType === 'walk') fps = 12;
+                else if (animType === 'run') fps = 18;
+                else if (animType === 'jump') fps = 8;
+
                 anims.create({
                     key: animKey,
                     frames: matchingFrames.map(f => ({ key: this.characterName, frame: f })),
-                    frameRate: 15,
+                    frameRate: fps,
                     repeat: (animType === 'idle' || animType === 'walk' || animType === 'run') ? -1 : 0
                 });
             }
@@ -101,12 +104,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 this.isAttacking = false;
             });
         } else {
-            if (this.scene.anims.exists(`${this.characterName}-idle`)) {
-                this.play(`${this.characterName}-idle`, true);
-            }
-            this.scene.time.delayedCall(300, () => {
-                this.isAttacking = false;
-            });
+            if (this.scene.anims.exists(`${this.characterName}-idle`)) this.play(`${this.characterName}-idle`, true);
+            this.scene.time.delayedCall(300, () => { this.isAttacking = false; });
         }
     }
 
@@ -116,8 +115,31 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
 
         if (input.space && !this.isJumping && !this.isAttacking) {
             this.isJumping = true;
+            
+            if (input.left) this.jumpVelocityX = -this.runSpeed * 1.2; 
+            else if (input.right) this.jumpVelocityX = this.runSpeed * 1.2;
+            else this.jumpVelocityX = 0;
+
+            if (this.scene.anims.exists(`${this.characterName}-jump`)) {
+                this.play(`${this.characterName}-jump`, true);
+            }
+
             this.playVoice(['grunt_m_1', 'grunt_m_2']); 
-            this.scene.tweens.add({ targets: this, displayOriginY: this.height + 150, duration: 350, yoyo: true, ease: 'Sine.easeInOut', onComplete: () => { this.isJumping = false; this.displayOriginY = this.height; }});
+            
+            this.scene.tweens.add({ 
+                targets: this, 
+                displayOriginY: this.height + 220, 
+                duration: 400, 
+                yoyo: true, 
+                ease: 'Quad.easeOut', 
+                onComplete: () => { 
+                    this.isJumping = false; 
+                    this.displayOriginY = this.height; 
+                    if (!this.isAttacking && this.scene.anims.exists(`${this.characterName}-idle`)) {
+                        this.play(`${this.characterName}-idle`, true);
+                    }
+                }
+            });
         }
 
         const now = this.scene.time.now;
@@ -148,23 +170,32 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         }
 
         if (!this.isAttacking) {
-            const speed = this.isRunning ? this.runSpeed : this.walkSpeed;
-            let vx = input.left ? -speed : (input.right ? speed : 0);
+            let vx = 0;
             let vy = 0;
-            if (!this.isJumping) vy = input.up ? -speed * 0.6 : (input.down ? speed * 0.6 : 0);
+
+            if (this.isJumping) {
+                vx = this.jumpVelocityX;
+            } else {
+                const speed = this.isRunning ? this.runSpeed : this.walkSpeed;
+                vx = input.left ? -speed : (input.right ? speed : 0);
+                vy = input.up ? -speed * 0.6 : (input.down ? speed * 0.6 : 0);
+            }
+
             this.setVelocity(vx, vy);
             if (vx !== 0) this.setFlipX(vx < 0);
-            if (vx !== 0 || vy !== 0) {
-                const anim = this.isRunning ? `${this.characterName}-run` : `${this.characterName}-walk`;
-                if (this.scene.anims.exists(anim)) {
-                    this.play(anim, true);
-                } else if (this.scene.anims.exists(`${this.characterName}-walk`)) {
-                    this.play(`${this.characterName}-walk`, true);
+            
+            if (!this.isJumping) {
+                if (vx !== 0 || vy !== 0) {
+                    const anim = this.isRunning ? `${this.characterName}-run` : `${this.characterName}-walk`;
+                    if (this.scene.anims.exists(anim)) this.play(anim, true);
+                    else if (this.scene.anims.exists(`${this.characterName}-walk`)) this.play(`${this.characterName}-walk`, true);
+                } else { 
+                    if (this.scene.anims.exists(`${this.characterName}-idle`)) this.play(`${this.characterName}-idle`, true); 
                 }
-            } else { 
-                if (!this.isJumping && this.scene.anims.exists(`${this.characterName}-idle`)) {
-                    this.play(`${this.characterName}-idle`, true); 
-                }
+            }
+        } else {
+            if (this.isJumping) {
+                this.setVelocity(this.jumpVelocityX, 0);
             }
         }
     }
@@ -193,7 +224,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 const hitX = (this.x + enemy.x) / 2;
                 (this.scene as any).spawnHitEffect(hitX, enemy.y - 80);
                 if (enemy.takeDamage) enemy.takeDamage(damage); 
-                
                 if (hitZone.body) hitZone.body.enable = false; 
             }
         });
@@ -224,13 +254,10 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                     (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     hasHit = true;
                 }
-
                 const damage = (action.includes('2') ? 15 : 10) * this.damageMultiplier;
                 const hitX = (this.x + enemy.x) / 2;
                 (this.scene as any).spawnHitEffect(hitX, enemy.y - 50);
-                
                 if (enemy.takeDamage) enemy.takeDamage(damage); 
-                
                 if (hitZone.body) hitZone.body.enable = false; 
             }
         });
