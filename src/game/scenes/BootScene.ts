@@ -16,10 +16,16 @@ export class BootScene extends Phaser.Scene {
         this.createLoadingBar();
 
         // ==========================================
-        // 1. STRICTLY RELATIVE AUDIO PATH (MP3 Update)
+        // 1. STRICTLY RELATIVE AUDIO PATHS
         // ==========================================
+        // The background ambient track
         this.load.audio('1993_ambient', './assets/audio/bor_streets_93.mp3');
         
+        // The SFX Atlas (loads the JSON map and the compiled MP3 together)
+        this.load.audioSprite('sfx_atlas', './assets/audio/sfx_atlas.json', [
+            './assets/audio/sfx_atlas.mp3'
+        ]);
+
         // ==========================================
         // 2. STRICTLY RELATIVE SPRITE PATHS (Atlases)
         // ==========================================
