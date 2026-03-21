@@ -1,14 +1,10 @@
 import Phaser from 'phaser';
 
-/**
- * Dizel: The "Stabbing Brute" / Tracksuit Thug of Bor 1993.
- * Focused on high-speed approach, butterfly knife area denial, and weighted physics.
- */
 export class Dizel extends Phaser.Physics.Arcade.Sprite {
     public health: number = 120; 
     public isDead: boolean = false;
-    public isHurt: boolean = false; // STUN LOCK FLAG
-    public skinPrefix: string = 'dizel'; // For HUD
+    public isHurt: boolean = false; 
+    public skinPrefix: string = 'dizel'; 
     
     private isSlashing: boolean = false;
     private slashCooldown: boolean = false;
@@ -19,7 +15,10 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
     private attackRange: number = 100;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
-        super(scene, x, y, 'enemies_1993', 'dizel-walk/frame_000.png');
+        const texture = scene.textures.get('enemies_1993');
+        const firstFrame = texture && texture.getFrameNames().length > 0 ? texture.getFrameNames() : undefined;
+
+        super(scene, x, y, 'enemies_1993', firstFrame);
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
@@ -28,14 +27,15 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
         this.setOrigin(0.5, 1);
 
         const body = this.body as Phaser.Physics.Arcade.Body;
-        // FIX: Hardcoded 256px math prevents the Atlas width bug
         body.setSize(60, 40);
-        body.setOffset(98, 216); // (256/2) - 30, and 256 - 40
+        body.setOffset(98, 216); 
         
         body.setCollideWorldBounds(true);
         body.setAllowGravity(false); 
 
-        this.play('dizel-walk', true); 
+        if (scene.anims.exists('dizel-walk')) {
+            this.play('dizel-walk', true); 
+        }
     }
 
     public updateAI(player: any) {
@@ -60,7 +60,7 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
 
             this.setVelocity(vx, vy);
             
-            if (this.anims.currentAnim?.key !== 'dizel-walk') {
+            if (this.anims.currentAnim?.key !== 'dizel-walk' && this.scene.anims.exists('dizel-walk')) {
                 this.play('dizel-walk', true);
             }
         }
@@ -70,7 +70,9 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
         this.isSlashing = true;
         this.setVelocity(0, 0);
 
-        this.play('dizel-punch-1', true);
+        if (this.scene.anims.exists('dizel-punch-1')) {
+            this.play('dizel-punch-1', true);
+        }
         (this.scene as any).playSFX(['melee_1', 'melee_2']); 
 
         this.scene.time.delayedCall(200, () => {
@@ -96,7 +98,7 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
                 this.isSlashing = false;
                 this.slashCooldown = true;
                 this.scene.time.delayedCall(1500, () => (this.slashCooldown = false));
-                this.play('dizel-walk', true);
+                if (this.scene.anims.exists('dizel-walk')) this.play('dizel-walk', true);
             }
         });
     }
@@ -130,7 +132,7 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
             this.scene.time.delayedCall(400, () => {
                 if (!this.isDead && !this.isKnockedDown) {
                     this.isHurt = false;
-                    this.play('dizel-walk', true);
+                    if (this.scene.anims.exists('dizel-walk')) this.play('dizel-walk', true);
                 }
             });
         }
@@ -146,7 +148,7 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
         
         if (this.scene.anims.exists('dizel-knockdown-get-up')) {
              this.play('dizel-knockdown-get-up', true);
-        } else {
+        } else if (this.scene.anims.exists('dizel-dying')) {
              this.play('dizel-dying', true);
         }
 
@@ -172,7 +174,7 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
                 this.isKnockedDown = false;
                 this.isInvulnerable = false;
                 this.isHurt = false;
-                this.play('dizel-walk', true);
+                if (this.scene.anims.exists('dizel-walk')) this.play('dizel-walk', true);
             }
         });
     }

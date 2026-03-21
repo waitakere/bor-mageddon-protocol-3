@@ -1,14 +1,10 @@
 import Phaser from 'phaser';
 
-/**
- * Dizelčić: The younger tracksuit thug of Bor 1993.
- * Uses an aerosol spray can for close-range area denial.
- */
 export class Dizelcic extends Phaser.Physics.Arcade.Sprite {
     public health: number = 80; 
     public isDead: boolean = false;
     public isHurt: boolean = false;
-    public skinPrefix: string = 'dizelcic'; // For HUD portrait
+    public skinPrefix: string = 'dizelcic'; 
     
     private isSpraying: boolean = false;
     private sprayCooldown: boolean = false;
@@ -17,23 +13,27 @@ export class Dizelcic extends Phaser.Physics.Arcade.Sprite {
     private attackRange: number = 150;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
-        super(scene, x, y, 'enemies_1993', 'dizelcic-walk/frame_000.png');
+        const texture = scene.textures.get('enemies_1993');
+        const firstFrame = texture && texture.getFrameNames().length > 0 ? texture.getFrameNames() : undefined;
+
+        super(scene, x, y, 'enemies_1993', firstFrame);
         
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        // FIX: Added the missing scale and correct offset math
         this.setScale(1.7);
         this.setOrigin(0.5, 1);
         
         const body = this.body as Phaser.Physics.Arcade.Body;
         body.setSize(50, 40);
-        body.setOffset(103, 216); // (256/2) - 25, and 256 - 40
+        body.setOffset(103, 216); 
         
         body.setCollideWorldBounds(true);
         body.setAllowGravity(false);
 
-        this.play('dizelcic-walk', true);
+        if (scene.anims.exists('dizelcic-walk')) {
+            this.play('dizelcic-walk', true);
+        }
     }
 
     public updateAI(player: any) {
@@ -58,7 +58,7 @@ export class Dizelcic extends Phaser.Physics.Arcade.Sprite {
 
             this.setVelocity(vx, vy);
             
-            if (this.anims.currentAnim?.key !== 'dizelcic-walk') {
+            if (this.anims.currentAnim?.key !== 'dizelcic-walk' && this.scene.anims.exists('dizelcic-walk')) {
                 this.play('dizelcic-walk', true);
             }
         }
@@ -68,7 +68,9 @@ export class Dizelcic extends Phaser.Physics.Arcade.Sprite {
         this.isSpraying = true;
         this.setVelocity(0, 0);
         
-        this.play('dizelcic-punch-1', true); 
+        if (this.scene.anims.exists('dizelcic-punch-1')) {
+            this.play('dizelcic-punch-1', true); 
+        }
         (this.scene as any).playSFX(['Dizelcic-Aerosol_1', 'Dizelcic-Aerosol_2']); 
 
         this.scene.time.delayedCall(200, () => {
@@ -82,7 +84,7 @@ export class Dizelcic extends Phaser.Physics.Arcade.Sprite {
                 this.isSpraying = false;
                 this.sprayCooldown = true;
                 this.scene.time.delayedCall(2000, () => (this.sprayCooldown = false));
-                this.play('dizelcic-walk', true);
+                if (this.scene.anims.exists('dizelcic-walk')) this.play('dizelcic-walk', true);
             }
         });
     }
@@ -133,7 +135,7 @@ export class Dizelcic extends Phaser.Physics.Arcade.Sprite {
             this.scene.time.delayedCall(400, () => {
                 if (!this.isDead) {
                     this.isHurt = false;
-                    this.play('dizelcic-walk', true);
+                    if (this.scene.anims.exists('dizelcic-walk')) this.play('dizelcic-walk', true);
                 }
             });
         }
