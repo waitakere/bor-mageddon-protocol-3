@@ -4,6 +4,7 @@ import { Maja } from '../entities/Maja';
 import { Darko } from '../entities/Darko';
 import { Enemy } from '../entities/Enemy';
 
+// Custom Subclasses
 import { Dizel } from '../entities/Dizel';
 import { Dizelcic } from '../entities/Dizelcic';
 import { Miner } from '../entities/Miner';
@@ -19,11 +20,15 @@ export class MainLevel extends Phaser.Scene {
     private midLayer!: Phaser.GameObjects.Image;
     private floorLayer!: Phaser.GameObjects.TileSprite;
     
+    // ==========================================
+    // UPDATED WAVE MANAGER (End of 1st Third)
+    // ==========================================
     private sectors = [
-        { triggerX: 800, totalEnemies: 4, maxActive: 2 },  
-        { triggerX: 1600, totalEnemies: 6, maxActive: 3 }, 
-        { triggerX: 2400, totalEnemies: 8, maxActive: 3 }, 
-        { triggerX: 3200, totalEnemies: 5, maxActive: 4 }  
+        { triggerX: 1000, totalEnemies: 4, maxActive: 2, isBossWave: false },  
+        { triggerX: 2000, totalEnemies: 6, maxActive: 3, isBossWave: false }, 
+        { triggerX: 3000, totalEnemies: 8, maxActive: 3, isBossWave: false }, 
+        // 3800px is right at the end of the 4000px midground layer!
+        { triggerX: 3800, totalEnemies: 4, maxActive: 3, isBossWave: true }  
     ];
     
     private currentSectorIndex!: number;
@@ -91,7 +96,19 @@ export class MainLevel extends Phaser.Scene {
         this.items = this.physics.add.group();
         this.enemies = this.physics.add.group();
 
-        const charKey = data.selectedCharacter || 'marko';
+        // ==========================================
+        // BULLETPROOF CHARACTER SELECTION
+        // Checks multiple sources to beat the React race condition
+        // ==========================================
+        let charKey = 'marko';
+        if (this.registry.has('selectedCharacter')) {
+            charKey = this.registry.get('selectedCharacter');
+        } else if (data && data.selectedCharacter) {
+            charKey = data.selectedCharacter;
+        } else if (window.localStorage.getItem('selectedCharacter')) {
+            charKey = window.localStorage.getItem('selectedCharacter') || 'marko';
+        }
+        charKey = charKey.toLowerCase();
         
         switch(charKey) {
             case 'maja': this.player = new Maja(this, 200, 950); break;
@@ -101,6 +118,7 @@ export class MainLevel extends Phaser.Scene {
 
         this.player.setScale(1.7);
         
+        // Spawn the first enemy to kick off the level
         const firstEnemy = new Dizel(this, 1000, 950);
         this.enemies.add(firstEnemy);
 
@@ -116,38 +134,48 @@ export class MainLevel extends Phaser.Scene {
         window.dispatchEvent(new CustomEvent('phaser-ready'));
     }
 
+    /**
+     * ==========================================
+     * FUZZY MATCH ANIMATION BUILDER
+     * Finds frames regardless of how Texture Packer nested the folders!
+     * ==========================================
+     */
     private createEnemyAnimations() {
         const texture = this.textures.get('enemies_1993');
         if (!texture || texture.key === '__MISSING') return;
 
-        // UPDATED: Now looks for all of Slobodan's specific folders from the screenshot
+        const allFrames = texture.getFrameNames();
+
         const enemyPrefixes = [
-            { id: 'mup', anims: ['walk', 'attack', 'damage', 'dying', 'knockdown-get-up'] },
-            { id: 'dizel', anims: ['walk', 'punch-1', 'damage', 'dying', 'knockdown-get-up'] },
-            { id: 'dizelcic', anims: ['walk', 'punch-1', 'damage', 'dying'] },
-            { id: 'rudar', anims: ['walk', 'punch-2', 'damage', 'dying'] },
-            { id: 'slobodan', anims: ['walk', 'run', 'punch-1', 'punch-2', 'damage', 'dying', 'jump', 'jump-punch', 'special-attack', 'knockdown-get-up'] }
+            { id: 'mup', search: 'mup' },
+            { id: 'dizel', search: 'dizel' },
+            { id: 'dizelcic', search: 'dizelcic' },
+            { id: 'rudar', search: 'rudar' },
+            { id: 'slobodan', search: 'slobodan' }
         ];
 
+        const animTypes = ['walk', 'run', 'attack', 'punch-1', 'punch-2', 'damage', 'dying', 'knockdown-get-up', 'jump', 'jump-punch', 'special-attack'];
+
         enemyPrefixes.forEach(enemy => {
-            enemy.anims.forEach(animType => {
+            animTypes.forEach(animType => {
                 const animKey = `${enemy.id}-${animType}`;
                 if (this.anims.exists(animKey)) return;
 
-                const frames = [];
-                for (let i = 0; i <= 15; i++) {
-                    const frameName = `${animKey}/frame_${i.toString().padStart(3, '0')}.png`;
-                    if (texture.has(frameName)) {
-                        frames.push({ key: 'enemies_1993', frame: frameName });
-                    }
-                }
+                // Look for ANY frame that includes the name (e.g. "SLOBA/slobodan-walk/frame_000.png")
+                const searchStr = `${enemy.search}-${animType}/frame_`;
+                const matchingFrames = allFrames.filter(f => f.includes(searchStr));
 
-                if (frames.length > 0) {
+                if (matchingFrames.length > 0) {
+                    // Sort them so they play in numerical order
+                    matchingFrames.sort();
+                    
+                    const frames = matchingFrames.map(f => ({ key: 'enemies_1993', frame: f }));
+
                     this.anims.create({
                         key: animKey,
                         frames: frames,
                         frameRate: 10,
-                        repeat: animKey.includes('walk') || animKey.includes('run') ? -1 : 0
+                        repeat: (animType === 'walk' || animType === 'run') ? -1 : 0
                     });
                 }
             });
@@ -275,7 +303,6 @@ export class MainLevel extends Phaser.Scene {
             if (this.player.x > nextSector.triggerX) {
                 this.isLocked = true;
                 cam.stopFollow();
-                
                 this.physics.world.setBounds(cam.worldView.left, 750, cam.width, 330);
                 this.updateReactHUD();
             }
@@ -284,22 +311,35 @@ export class MainLevel extends Phaser.Scene {
         if (this.isLocked) {
             const currentSector = this.sectors[this.currentSectorIndex];
             const activeEnemies = this.enemies.getChildren().filter((e: any) => !e.isDead).length;
-            const isFinalSector = this.currentSectorIndex === this.sectors.length - 1;
 
-            if (activeEnemies < currentSector.maxActive && this.spawnedThisWave < currentSector.totalEnemies) {
-                const gangTypes = ['dizel', 'dizelcic', 'rudar'];
-                const randomType = gangTypes[Math.floor(Math.random() * gangTypes.length)];
-                this.spawnEnemyOffScreen(cam.worldView, randomType);
-            }
-
-            if (isFinalSector && this.spawnedThisWave >= currentSector.totalEnemies && activeEnemies === 0 && !this.bossSpawned) {
-                this.spawnEnemyOffScreen(cam.worldView, 'slobodan'); // Updated call
-                this.bossSpawned = true;
-            }
-
-            if (this.spawnedThisWave >= currentSector.totalEnemies && activeEnemies === 0) {
-                if (isFinalSector && !this.bossSpawned) return; 
-                this.unlockCamera();
+            if (currentSector.isBossWave) {
+                // Spawn a few minions first
+                if (activeEnemies < currentSector.maxActive && this.spawnedThisWave < currentSector.totalEnemies) {
+                    const gangTypes = ['dizel', 'dizelcic', 'rudar'];
+                    const randomType = gangTypes[Math.floor(Math.random() * gangTypes.length)];
+                    this.spawnEnemyOffScreen(cam.worldView, randomType);
+                }
+                
+                // Once the minion wave is dead, spawn Slobodan
+                if (this.spawnedThisWave >= currentSector.totalEnemies && activeEnemies === 0 && !this.bossSpawned) {
+                    this.spawnEnemyOffScreen(cam.worldView, 'slobodan');
+                    this.bossSpawned = true;
+                }
+                
+                // Unlock the camera when Slobodan is defeated
+                if (this.bossSpawned && activeEnemies === 0) {
+                    this.unlockCamera();
+                }
+            } else {
+                // Normal Wave Logic
+                if (activeEnemies < currentSector.maxActive && this.spawnedThisWave < currentSector.totalEnemies) {
+                    const gangTypes = ['dizel', 'dizelcic', 'rudar'];
+                    const randomType = gangTypes[Math.floor(Math.random() * gangTypes.length)];
+                    this.spawnEnemyOffScreen(cam.worldView, randomType);
+                }
+                if (this.spawnedThisWave >= currentSector.totalEnemies && activeEnemies === 0) {
+                    this.unlockCamera();
+                }
             }
         }
     }
@@ -314,7 +354,7 @@ export class MainLevel extends Phaser.Scene {
             case 'dizel': enemy = new Dizel(this, spawnX, spawnY); break;
             case 'dizelcic': enemy = new Dizelcic(this, spawnX, spawnY); break;
             case 'rudar': enemy = new Miner(this, spawnX, spawnY); break;
-            case 'slobodan': enemy = new SlobodanCEO(this, spawnX, spawnY); break; // Updated switch case
+            case 'slobodan': enemy = new SlobodanCEO(this, spawnX, spawnY); break; 
             default: enemy = new Enemy(this, spawnX, spawnY, type); break;
         }
         
@@ -330,17 +370,6 @@ export class MainLevel extends Phaser.Scene {
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
         this.physics.world.setBounds(0, 750, 6000, 330);
         this.updateReactHUD();
-
-        /*
-        if (this.currentSectorIndex === 3) {
-            this.cameras.main.flash(500, 0, 0, 0);
-            
-            if (this.textures.exists('part2_sky')) {
-                this.skyLayer.setTexture('part2_sky');
-                this.midLayer.setTexture('part2_mid');
-            }
-        }
-        */
         
         if (this.currentSectorIndex < this.sectors.length) {
             const goText = this.add.text(this.player.x + 100, this.player.y - 150, 'GO! ➡', { 
@@ -372,7 +401,7 @@ export class MainLevel extends Phaser.Scene {
     public updateReactHUD() {
         let eMaxHealth = 100;
         if (this.lastEngagedEnemy) {
-            eMaxHealth = this.lastEngagedEnemy.skinPrefix === 'slobodan' ? 600 : 100; // Updated check
+            eMaxHealth = this.lastEngagedEnemy.skinPrefix === 'slobodan' ? 600 : 100;
         }
 
         window.dispatchEvent(new CustomEvent('update-phaser-hud', {

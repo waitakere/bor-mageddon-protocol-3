@@ -1,17 +1,12 @@
 import Phaser from 'phaser';
 
-/**
- * Slobodan CEO: The Architect of Hyperinflation.
- * First Boss of Bor 1993. Features a Multi-Hitbox system,
- * Phase Transition, and a balanced three-part attack suite.
- */
 export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
     public health: number = 500;
     private maxHealth: number = 500;
     public isDead: boolean = false;
-    public isHurt: boolean = false; // Stun-lock flag
+    public isHurt: boolean = false; 
     private isAttacking: boolean = false;
-    public skinPrefix: string = 'slobodan'; // Updated for HUD and logic
+    public skinPrefix: string = 'slobodan'; 
     
     public headHitbox!: Phaser.GameObjects.Zone;
     public torsoHitbox!: Phaser.GameObjects.Zone;
@@ -21,16 +16,20 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
     private jumpTimer: number = 0;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
-        // Safe frame grabber to prevent crashes
+        // ==========================================
+        // SAFE FALLBACK: Finds Slobodan's exact first frame 
+        // to prevent him from spawning looking like Dizel!
+        // ==========================================
         const texture = scene.textures.get('enemies_1993');
-        const firstFrame = texture && texture.getFrameNames().length > 0 ? texture.getFrameNames() : undefined;
+        const allFrames = texture ? texture.getFrameNames() : [];
+        const firstFrame = allFrames.find(f => f.includes('slobodan-walk/frame_000')) || allFrames;
 
         super(scene, x, y, 'enemies_1993', firstFrame);
         
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        this.setScale(2.1); // Giant boss scale
+        this.setScale(2.1); 
         this.setOrigin(0.5, 1);
 
         const body = this.body as Phaser.Physics.Arcade.Body;
@@ -81,7 +80,6 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
             }
         } 
         else if (this.scene.time.now > this.jumpTimer && !this.isAttacking) {
-            // Boss jump attack
             this.jumpTimer = this.scene.time.now + (this.isPhaseTwo ? 4000 : 5500);
         }
         else if (!this.isAttacking) {
@@ -93,7 +91,6 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
 
             this.setVelocity(vx, vy);
 
-            // Use run in phase two if available, else walk
             const anim = this.scene.anims.exists('slobodan-run') && this.isPhaseTwo ? 'slobodan-run' : 'slobodan-walk';
             if (this.anims.currentAnim?.key !== anim && this.scene.anims.exists(anim)) {
                 this.play(anim, true);
@@ -207,7 +204,7 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
 
     private triggerPhaseTwo() {
         this.isPhaseTwo = true;
-        this.setTint(0xff5555); // Angry red tint
+        this.setTint(0xff5555); 
     }
 
     protected die() {
