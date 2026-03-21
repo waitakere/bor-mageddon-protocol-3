@@ -32,10 +32,6 @@ export class MainLevel extends Phaser.Scene {
         super({ key: 'MainLevel' }); 
     }
 
-    /**
-     * init() runs every time the scene starts or restarts.
-     * Prevents variables carrying over and instantly triggering bosses.
-     */
     init() {
         this.currentSectorIndex = 0;
         this.isLocked = false;
@@ -46,14 +42,27 @@ export class MainLevel extends Phaser.Scene {
         this.lastEngagedEnemy = null;
         this.lastPlayerHitTime = 0;
         this.lastEnemyHitTime = 0;
+
+        // Generate the enemy animations as soon as the level starts
+        this.createEnemyAnimations();
     }
 
     create() {
-        // --- REACT HUD INTEGRATION ---
         window.addEventListener('request-scene-restart', this.handleRestart);
         
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
             window.removeEventListener('request-scene-restart', this.handleRestart);
+        });
+
+        // ==========================================
+        // THE AUDIO PAUSE FIX
+        // Links global audio state to the scene state
+        // ==========================================
+        this.events.on(Phaser.Scenes.Events.PAUSE, () => {
+            this.sound.pauseAll();
+        });
+        this.events.on(Phaser.Scenes.Events.RESUME, () => {
+            this.sound.resumeAll();
         });
 
         const unlockAudio = () => {
@@ -62,11 +71,9 @@ export class MainLevel extends Phaser.Scene {
         this.input.on('pointerdown', unlockAudio);
         this.input.keyboard?.on('keydown', unlockAudio);
 
-        // --- AMBIENT BGM ---
         this.sound.stopAll(); 
         this.sound.play('1993_ambient', { loop: true, volume: 0.4 });
 
-        // --- WORLD SETUP ---
         this.physics.world.setBounds(0, 750, 4000, 330); 
         
         this.add.image(0, 0, 'part1_sky').setOrigin(0, 0).setDisplaySize(4000, 1080).setScrollFactor(0.1);
@@ -101,8 +108,41 @@ export class MainLevel extends Phaser.Scene {
     }
 
     /**
-     * Catches the restart event fired by the GameHUD component.
+     * Builds all enemy animations from the enemies_1993 atlas.
+     * Assumes zero-padded formatting (e.g. mup-walk/frame_000.png)
      */
+    private createEnemyAnimations() {
+        if (this.anims.exists('mup-walk')) return;
+
+        const enemyTypes = ['mup', 'dizel', 'dizelcic', 'rudar', 'sloba'];
+        
+        enemyTypes.forEach(enemy => {
+            // Walk Cycle
+            this.anims.create({
+                key: `${enemy}-walk`,
+                frames: this.anims.generateFrameNames('enemies_1993', { prefix: `${enemy}-walk/frame_`, suffix: '.png', start: 0, end: 8, zeroPad: 3 }),
+                frameRate: 10,
+                repeat: -1
+            });
+            
+            // Attack Cycle
+            this.anims.create({
+                key: `${enemy}-attack`,
+                frames: this.anims.generateFrameNames('enemies_1993', { prefix: `${enemy}-attack/frame_`, suffix: '.png', start: 0, end: 8, zeroPad: 3 }),
+                frameRate: 12,
+                repeat: 0
+            });
+
+            // Death/Hurt (Optional, defaults to tinting in Enemy.ts if it doesn't exist)
+            this.anims.create({
+                key: `${enemy}-dying`,
+                frames: this.anims.generateFrameNames('enemies_1993', { prefix: `${enemy}-dying/frame_`, suffix: '.png', start: 0, end: 8, zeroPad: 3 }),
+                frameRate: 12,
+                repeat: 0
+            });
+        });
+    }
+
     private handleRestart = () => {
         this.scene.restart();
     };
@@ -145,20 +185,37 @@ export class MainLevel extends Phaser.Scene {
         }
     }
 
+    // ==========================================
+    // THE SMART AUDIO MANAGER FIX
+    // Checks for atlas first, falls back to standalone files
+    // ==========================================
     public playSFX(marker: string | string[], volume: number = 0.8) {
         try {
             if (this.sound.context.state === 'suspended') this.sound.context.resume();
 
             const finalMarker = Array.isArray(marker) ? marker[Math.floor(Math.random() * marker.length)] : marker;
-            const json = this.cache.json.get('sfx_atlas');
-            
-            if (json && json.spritemap && !json.spritemap[finalMarker]) {
-                console.warn(`[AUDIO] '${finalMarker}' not found!`);
-                return null;
+
+            // 1. Try to play from an Audio Sprite Atlas (if you ever build one)
+            if (this.cache.json.exists('sfx_atlas')) {
+                const json = this.cache.json.get('sfx_atlas');
+                if (json && json.spritemap && json.spritemap[finalMarker]) {
+                    const sound = this.sound.addAudioSprite('sfx_atlas');
+                    sound.play(finalMarker, { volume });
+                    return sound;
+                }
             }
-            const sound = this.sound.addAudioSprite('sfx_atlas');
-            sound.play(finalMarker, { volume });
-            return sound;
+
+            // 2. Fallback: Play as a standalone loaded audio file
+            // (Requires you to preload this file in BootScene.ts!)
+            if (this.cache.audio.exists(finalMarker)) {
+                this.sound.play(finalMarker, { volume });
+                return;
+            }
+
+            // If it hits here, you haven't loaded the sound file into Phaser yet!
+            console.warn(`[AUDIO] '${finalMarker}' not found in atlas or cache!`);
+            return null;
+
         } catch (e) {
             console.warn("Audio system error:", e);
             return null;
@@ -183,14 +240,12 @@ export class MainLevel extends Phaser.Scene {
         const items = ['item-burek', 'item-coffee', 'item-pork', 'item-beer', 'item-sandwich'];
         const randomItem = items[Math.floor(Math.random() * items.length)];
         
-        // Spawn slightly in the air so it can bounce down to the floor
         const drop = this.physics.add.sprite(x, y - 40, randomItem);
         drop.setOrigin(0.5, 1); 
         this.items.add(drop);
 
         drop.setScale(0.5);
 
-        // Resize the hitbox to the tiny base of the item
         const body = drop.body as Phaser.Physics.Arcade.Body;
         if (body) {
             body.setSize(drop.width, 20);
@@ -215,15 +270,11 @@ export class MainLevel extends Phaser.Scene {
     }
 
     private collectItem(player: any, item: any) {
-        // DEPTH CHECK: Ensure player is standing in the exact same Y-lane as the item
         if (Math.abs(player.y - item.y) > 30) return;
 
         item.destroy();
-        
-        // REPLACED melee_2 WITH Metal-Impact-Shield
         this.playSFX(['melee_1', 'Metal-Impact-Shield'], 0.8); 
         
-        // TRIGGER PLAYER PICKUP ANIMATION
         if (player.playPickupAnim) {
             player.playPickupAnim();
         }
