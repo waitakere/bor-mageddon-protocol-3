@@ -24,13 +24,13 @@ export class Dizel extends Phaser.Physics.Arcade.Sprite {
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        // FIX: Added missing scale so his hitbox aligns with the players!
         this.setScale(1.7); 
         this.setOrigin(0.5, 1);
 
         const body = this.body as Phaser.Physics.Arcade.Body;
-        body.setSize(50, 30);
-        body.setOffset(this.width / 2 - 25, this.height - 30); 
+        // FIX: Hardcoded 256px math prevents the Atlas width bug
+        body.setSize(60, 40);
+        body.setOffset(98, 216); // (256/2) - 30, and 256 - 40
         
         body.setCollideWorldBounds(true);
         body.setAllowGravity(false); 

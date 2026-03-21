@@ -22,10 +22,14 @@ export class Dizelcic extends Phaser.Physics.Arcade.Sprite {
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        const body = this.body as Phaser.Physics.Arcade.Body;
-        body.setSize(40, 30);
-        body.setOffset(this.width / 2 - 20, this.height - 30);
+        // FIX: Added the missing scale and correct offset math
+        this.setScale(1.7);
         this.setOrigin(0.5, 1);
+        
+        const body = this.body as Phaser.Physics.Arcade.Body;
+        body.setSize(50, 40);
+        body.setOffset(103, 216); // (256/2) - 25, and 256 - 40
+        
         body.setCollideWorldBounds(true);
         body.setAllowGravity(false);
 
@@ -65,7 +69,7 @@ export class Dizelcic extends Phaser.Physics.Arcade.Sprite {
         this.setVelocity(0, 0);
         
         this.play('dizelcic-punch-1', true); 
-        (this.scene as any).playSFX(['Dizelcic-Aerosol_1', 'Dizelcic-Aerosol_2']); // NEW AUDIO
+        (this.scene as any).playSFX(['Dizelcic-Aerosol_1', 'Dizelcic-Aerosol_2']); 
 
         this.scene.time.delayedCall(200, () => {
             if (!this.isDead && !this.isHurt) {
@@ -92,7 +96,7 @@ export class Dizelcic extends Phaser.Physics.Arcade.Sprite {
 
         this.scene.physics.add.overlap(impactZone, player, () => {
             if (!player.isInvulnerable) {
-                (this.scene as any).lastEngagedEnemy = this; // Lock to HUD
+                (this.scene as any).lastEngagedEnemy = this; 
                 player.takeDamage(10); 
             }
         });
@@ -105,12 +109,11 @@ export class Dizelcic extends Phaser.Physics.Arcade.Sprite {
         
         this.health -= amount;
         this.isSpraying = false;
-        this.isHurt = true; // Stun lock
+        this.isHurt = true; 
 
         this.setTintFill(0xffffff);
         this.scene.time.delayedCall(50, () => this.clearTint());
 
-        // --- HUD FLASH TRIGGER ---
         (this.scene as any).lastEngagedEnemy = this;
         (this.scene as any).lastEnemyHitTime = Date.now();
         (this.scene as any).updateReactHUD();
@@ -125,7 +128,7 @@ export class Dizelcic extends Phaser.Physics.Arcade.Sprite {
                 this.play('dizelcic-damage', true);
             }
             
-            this.x += this.flipX ? 15 : -15; // Pushback
+            this.x += this.flipX ? 15 : -15; 
 
             this.scene.time.delayedCall(400, () => {
                 if (!this.isDead) {

@@ -8,7 +8,7 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
     public health: number = 250; 
     public isDead: boolean = false;
     public isHurt: boolean = false; // Stun-lock flag
-    public skinPrefix: string = 'rudar'; // For HUD portrait (maps to rudar.png)
+    public skinPrefix: string = 'rudar'; // For HUD portrait
     
     private isAttacking: boolean = false;
     private attackCooldown: boolean = false;
@@ -22,10 +22,13 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        const body = this.body as Phaser.Physics.Arcade.Body;
-        body.setSize(50, 30);
-        body.setOffset(this.width/2 - 25, this.height - 30);
+        // FIX: Added the missing scale and correct offset math
+        this.setScale(1.7);
         this.setOrigin(0.5, 1);
+
+        const body = this.body as Phaser.Physics.Arcade.Body;
+        body.setSize(80, 40);
+        body.setOffset(88, 216); // (256/2) - 40, and 256 - 40
         
         body.setCollideWorldBounds(true);
         body.setAllowGravity(false); 
@@ -66,7 +69,7 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
         this.setVelocity(0, 0);
 
         if (this.scene.anims.exists('rudar-punch-2')) {
-            this.play('rudar-punch-2', true); // Fallback to heavy punch if melee doesn't exist
+            this.play('rudar-punch-2', true); 
         }
         
         (this.scene as any).playSFX(['melee_1', 'melee_2']);
@@ -78,7 +81,7 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
             const distY = Math.abs(player.y - this.y);
 
             if (distX <= this.attackRange + 15 && distY <= 35) {
-                (this.scene as any).lastEngagedEnemy = this; // Lock to HUD
+                (this.scene as any).lastEngagedEnemy = this; 
                 player.takeDamage(35); 
                 (this.scene as any).playSFX(['punch_2', 'kick_4']);
                 this.scene.cameras.main.shake(200, 0.015);
@@ -107,7 +110,6 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
         this.setTintFill(0xffffff);
         this.scene.time.delayedCall(50, () => this.clearTint());
 
-        // --- HUD FLASH TRIGGER ---
         (this.scene as any).lastEngagedEnemy = this;
         (this.scene as any).lastEnemyHitTime = Date.now();
         (this.scene as any).updateReactHUD();
