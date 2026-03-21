@@ -4,15 +4,16 @@ import { Maja } from '../entities/Maja';
 import { Darko } from '../entities/Darko';
 import { Enemy } from '../entities/Enemy';
 
-// Custom Subclasses
 import { Dizel } from '../entities/Dizel';
 import { Dizelcic } from '../entities/Dizelcic';
 import { Miner } from '../entities/Miner';
 import { SlobodanCEO } from '../entities/SlobodanCEO'; 
+import { BreakableObject, BreakableType } from '../entities/BreakableObject'; // NEW
 
 export class MainLevel extends Phaser.Scene {
     public player!: any; 
     public enemies!: Phaser.Physics.Arcade.Group;
+    public breakables!: Phaser.Physics.Arcade.Group; // NEW
     public items!: Phaser.Physics.Arcade.Group;
     private shadows!: Phaser.GameObjects.Graphics;
     
@@ -91,6 +92,7 @@ export class MainLevel extends Phaser.Scene {
         
         this.items = this.physics.add.group();
         this.enemies = this.physics.add.group();
+        this.breakables = this.physics.add.group(); // NEW
 
         let charKey = 'marko';
         if (this.registry.has('selectedCharacter')) {
@@ -113,8 +115,16 @@ export class MainLevel extends Phaser.Scene {
         const firstEnemy = new Dizel(this, 1000, 950);
         this.enemies.add(firstEnemy);
 
+        // Scatter Breakables across the map
+        this.scatterBreakables();
+
         this.physics.add.collider(this.player, this.enemies);
         this.physics.add.collider(this.enemies, this.enemies);
+        
+        // Players and Enemies bump into Kiosks and Crates
+        this.physics.add.collider(this.player, this.breakables);
+        this.physics.add.collider(this.enemies, this.breakables);
+        
         this.physics.add.overlap(this.player, this.items, this.collectItem, undefined, this);
 
         this.cameras.main.setBounds(0, 0, 6000, 1080);
@@ -125,13 +135,30 @@ export class MainLevel extends Phaser.Scene {
         window.dispatchEvent(new CustomEvent('phaser-ready'));
     }
 
+    private scatterBreakables() {
+        const props = [
+            { x: 600, y: 920, type: 'barrel' },
+            { x: 900, y: 1020, type: 'crate' },
+            { x: 1500, y: 900, type: 'kontejner' },
+            { x: 2200, y: 980, type: 'kiosk' },
+            { x: 2800, y: 920, type: 'barrel' },
+            { x: 3500, y: 1000, type: 'crate' }
+        ];
+
+        props.forEach(p => {
+            const obj = new BreakableObject(this, p.x, p.y, p.type as BreakableType);
+            // Ensure they look right next to the characters
+            obj.setScale(1.5); 
+            this.breakables.add(obj);
+        });
+    }
+
     private createEnemyAnimations() {
         const texture = this.textures.get('enemies_1993');
         if (!texture || texture.key === '__MISSING') return;
 
         const allFrames = texture.getFrameNames();
 
-        // UPDATED: Stripped out "rudar" completely.
         const enemyPrefixes = [
             { id: 'mup', search: 'mup' },
             { id: 'dizel', search: 'dizel' },
@@ -184,6 +211,8 @@ export class MainLevel extends Phaser.Scene {
         this.shadows.clear().fillStyle(0x000000, 0.5);
         this.shadows.fillEllipse(this.player.x, this.player.y, 70 * this.player.scale, 20);
         this.enemies.getChildren().forEach((e: any) => { if (!e.isDead) this.shadows.fillEllipse(e.x, e.y, e.width * 0.6, 20); });
+        // Shadows for breakables too!
+        this.breakables.getChildren().forEach((b: any) => { if (!b.isDead) this.shadows.fillEllipse(b.x, b.y, b.width * 1.2, 15); });
 
         const cursors = this.input.keyboard!.createCursorKeys();
         const kb = this.input.keyboard!;
@@ -249,7 +278,6 @@ export class MainLevel extends Phaser.Scene {
     }
 
     public dropItem(x: number, y: number) {
-        if (Math.random() > 0.3) return; 
         const items = ['item-burek', 'item-coffee', 'item-pork', 'item-beer', 'item-sandwich'];
         const randomItem = items[Math.floor(Math.random() * items.length)];
         
@@ -298,7 +326,6 @@ export class MainLevel extends Phaser.Scene {
 
             if (currentSector.isBossWave) {
                 if (activeEnemies < currentSector.maxActive && this.spawnedThisWave < currentSector.totalEnemies) {
-                    // UPDATED: Now spawns 'miner'
                     const gangTypes = ['dizel', 'dizelcic', 'miner'];
                     const randomType = gangTypes[Math.floor(Math.random() * gangTypes.length)];
                     this.spawnEnemyOffScreen(cam.worldView, randomType);
@@ -314,7 +341,6 @@ export class MainLevel extends Phaser.Scene {
                 }
             } else {
                 if (activeEnemies < currentSector.maxActive && this.spawnedThisWave < currentSector.totalEnemies) {
-                    // UPDATED: Now spawns 'miner'
                     const gangTypes = ['dizel', 'dizelcic', 'miner'];
                     const randomType = gangTypes[Math.floor(Math.random() * gangTypes.length)];
                     this.spawnEnemyOffScreen(cam.worldView, randomType);
@@ -335,7 +361,7 @@ export class MainLevel extends Phaser.Scene {
         switch (type) {
             case 'dizel': enemy = new Dizel(this, spawnX, spawnY); break;
             case 'dizelcic': enemy = new Dizelcic(this, spawnX, spawnY); break;
-            case 'miner': enemy = new Miner(this, spawnX, spawnY); break; // <--- UPDATED
+            case 'miner': enemy = new Miner(this, spawnX, spawnY); break; 
             case 'slobodan': enemy = new SlobodanCEO(this, spawnX, spawnY); break; 
             default: enemy = new Enemy(this, spawnX, spawnY, type); break;
         }
