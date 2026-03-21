@@ -7,8 +7,8 @@ import Phaser from 'phaser';
 export class Miner extends Phaser.Physics.Arcade.Sprite {
     public health: number = 250; 
     public isDead: boolean = false;
-    public isHurt: boolean = false; // Stun-lock flag
-    public skinPrefix: string = 'rudar'; // For HUD portrait
+    public isHurt: boolean = false; 
+    public skinPrefix: string = 'rudar'; 
     
     private isAttacking: boolean = false;
     private attackCooldown: boolean = false;
@@ -17,23 +17,29 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
     private attackRange: number = 90; 
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
-        super(scene, x, y, 'enemies_1993', 'rudar-walk/frame_000.png');
+        // SAFE FRAME GRABBER: Prevents crash if specific frames are missing
+        const texture = scene.textures.get('enemies_1993');
+        const firstFrame = texture && texture.getFrameNames().length > 0 ? texture.getFrameNames() : undefined;
+        
+        super(scene, x, y, 'enemies_1993', firstFrame);
         
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        // FIX: Added the missing scale and correct offset math
         this.setScale(1.7);
         this.setOrigin(0.5, 1);
 
         const body = this.body as Phaser.Physics.Arcade.Body;
         body.setSize(80, 40);
-        body.setOffset(88, 216); // (256/2) - 40, and 256 - 40
+        body.setOffset(88, 216); 
         
         body.setCollideWorldBounds(true);
         body.setAllowGravity(false); 
 
-        this.play('rudar-walk', true);
+        // SAFE PLAY: Only play if the animation successfully generated
+        if (scene.anims.exists('rudar-walk')) {
+            this.play('rudar-walk', true);
+        }
     }
 
     public updateAI(player: any) {
@@ -58,7 +64,7 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
 
             this.setVelocity(vx, vy);
             
-            if (this.anims.currentAnim?.key !== 'rudar-walk') {
+            if (this.anims.currentAnim?.key !== 'rudar-walk' && this.scene.anims.exists('rudar-walk')) {
                 this.play('rudar-walk', true);
             }
         }
@@ -92,7 +98,7 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
             this.isAttacking = false;
             this.attackCooldown = true;
             this.scene.time.delayedCall(3000, () => (this.attackCooldown = false));
-            this.play('rudar-walk', true);
+            if (this.scene.anims.exists('rudar-walk')) this.play('rudar-walk', true);
         });
     }
 
@@ -101,7 +107,6 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
         
         this.health -= amount;
         
-        // Miners have heavy poise! Only stun-lock if damage >= 20
         if (amount >= 20) {
             this.isAttacking = false;
             this.isHurt = true;
@@ -127,7 +132,7 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
             this.scene.time.delayedCall(400, () => {
                 if (!this.isDead) {
                     this.isHurt = false;
-                    this.play('rudar-walk', true);
+                    if (this.scene.anims.exists('rudar-walk')) this.play('rudar-walk', true);
                 }
             });
         }
