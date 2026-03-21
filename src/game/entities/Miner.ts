@@ -2,13 +2,12 @@ import Phaser from 'phaser';
 
 /**
  * Miner: The "Shambling Tank" of the Bor Copper Mine.
- * Features high endurance, devastating heavy melee attacks, and a sinking death logic.
  */
 export class Miner extends Phaser.Physics.Arcade.Sprite {
     public health: number = 250; 
     public isDead: boolean = false;
     public isHurt: boolean = false; 
-    public skinPrefix: string = 'rudar'; 
+    public skinPrefix: string = 'MINER'; // <--- UPDATED: React HUD will now display "MINER"
     
     private isAttacking: boolean = false;
     private attackCooldown: boolean = false;
@@ -17,9 +16,13 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
     private attackRange: number = 90; 
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
-        // SAFE FRAME GRABBER: Prevents crash if specific frames are missing
+        // ==========================================
+        // STRICT FRAME FALLBACK
+        // Forces the sprite to find 'miner-walk' 
+        // ==========================================
         const texture = scene.textures.get('enemies_1993');
-        const firstFrame = texture && texture.getFrameNames().length > 0 ? texture.getFrameNames() : undefined;
+        const allFrames = texture ? texture.getFrameNames() : [];
+        const firstFrame = allFrames.find(f => f.includes('miner-walk/frame_000')) || allFrames;
         
         super(scene, x, y, 'enemies_1993', firstFrame);
         
@@ -36,9 +39,8 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
         body.setCollideWorldBounds(true);
         body.setAllowGravity(false); 
 
-        // SAFE PLAY: Only play if the animation successfully generated
-        if (scene.anims.exists('rudar-walk')) {
-            this.play('rudar-walk', true);
+        if (scene.anims.exists('miner-walk')) {
+            this.play('miner-walk', true);
         }
     }
 
@@ -64,8 +66,8 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
 
             this.setVelocity(vx, vy);
             
-            if (this.anims.currentAnim?.key !== 'rudar-walk' && this.scene.anims.exists('rudar-walk')) {
-                this.play('rudar-walk', true);
+            if (this.anims.currentAnim?.key !== 'miner-walk' && this.scene.anims.exists('miner-walk')) {
+                this.play('miner-walk', true);
             }
         }
     }
@@ -74,8 +76,8 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
         this.isAttacking = true;
         this.setVelocity(0, 0);
 
-        if (this.scene.anims.exists('rudar-punch-2')) {
-            this.play('rudar-punch-2', true); 
+        if (this.scene.anims.exists('miner-melee')) {
+            this.play('miner-melee', true); 
         }
         
         (this.scene as any).playSFX(['melee_1', 'melee_2']);
@@ -98,7 +100,7 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
             this.isAttacking = false;
             this.attackCooldown = true;
             this.scene.time.delayedCall(3000, () => (this.attackCooldown = false));
-            if (this.scene.anims.exists('rudar-walk')) this.play('rudar-walk', true);
+            if (this.scene.anims.exists('miner-walk')) this.play('miner-walk', true);
         });
     }
 
@@ -125,14 +127,14 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
         if (this.health <= 0) {
             this.die();
         } else if (amount >= 20) {
-            if (this.scene.anims.exists('rudar-damage')) {
-                this.play('rudar-damage', true);
+            if (this.scene.anims.exists('miner-damage')) {
+                this.play('miner-damage', true);
             }
             
             this.scene.time.delayedCall(400, () => {
                 if (!this.isDead) {
                     this.isHurt = false;
-                    if (this.scene.anims.exists('rudar-walk')) this.play('rudar-walk', true);
+                    if (this.scene.anims.exists('miner-walk')) this.play('miner-walk', true);
                 }
             });
         }
@@ -146,8 +148,8 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
         (this.scene as any).playSFX(['Break_1', 'Break_2']);
         (this.scene as any).registerEnemyDeath();
 
-        if (this.scene.anims.exists('rudar-dying')) {
-            this.play('rudar-dying', true);
+        if (this.scene.anims.exists('miner-dying')) {
+            this.play('miner-dying', true);
         }
 
         this.once('animationcomplete', () => {

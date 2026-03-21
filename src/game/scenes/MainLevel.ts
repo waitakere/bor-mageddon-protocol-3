@@ -20,14 +20,10 @@ export class MainLevel extends Phaser.Scene {
     private midLayer!: Phaser.GameObjects.Image;
     private floorLayer!: Phaser.GameObjects.TileSprite;
     
-    // ==========================================
-    // UPDATED WAVE MANAGER (End of 1st Third)
-    // ==========================================
     private sectors = [
         { triggerX: 1000, totalEnemies: 4, maxActive: 2, isBossWave: false },  
         { triggerX: 2000, totalEnemies: 6, maxActive: 3, isBossWave: false }, 
         { triggerX: 3000, totalEnemies: 8, maxActive: 3, isBossWave: false }, 
-        // 3800px is right at the end of the 4000px midground layer!
         { triggerX: 3800, totalEnemies: 4, maxActive: 3, isBossWave: true }  
     ];
     
@@ -96,10 +92,6 @@ export class MainLevel extends Phaser.Scene {
         this.items = this.physics.add.group();
         this.enemies = this.physics.add.group();
 
-        // ==========================================
-        // BULLETPROOF CHARACTER SELECTION
-        // Checks multiple sources to beat the React race condition
-        // ==========================================
         let charKey = 'marko';
         if (this.registry.has('selectedCharacter')) {
             charKey = this.registry.get('selectedCharacter');
@@ -118,7 +110,6 @@ export class MainLevel extends Phaser.Scene {
 
         this.player.setScale(1.7);
         
-        // Spawn the first enemy to kick off the level
         const firstEnemy = new Dizel(this, 1000, 950);
         this.enemies.add(firstEnemy);
 
@@ -134,12 +125,6 @@ export class MainLevel extends Phaser.Scene {
         window.dispatchEvent(new CustomEvent('phaser-ready'));
     }
 
-    /**
-     * ==========================================
-     * FUZZY MATCH ANIMATION BUILDER
-     * Finds frames regardless of how Texture Packer nested the folders!
-     * ==========================================
-     */
     private createEnemyAnimations() {
         const texture = this.textures.get('enemies_1993');
         if (!texture || texture.key === '__MISSING') return;
@@ -150,30 +135,29 @@ export class MainLevel extends Phaser.Scene {
             { id: 'mup', search: 'mup' },
             { id: 'dizel', search: 'dizel' },
             { id: 'dizelcic', search: 'dizelcic' },
-            { id: 'rudar', search: 'rudar' },
+            { id: 'miner', search: 'miner' }, // <--- FIX: Forces search for 'miner'
             { id: 'slobodan', search: 'slobodan' }
         ];
 
-        const animTypes = ['walk', 'run', 'attack', 'punch-1', 'punch-2', 'damage', 'dying', 'knockdown-get-up', 'jump', 'jump-punch', 'special-attack'];
+        // ADDED 'melee' so the Miner's heavy attack gets built
+        const animTypes = ['walk', 'run', 'attack', 'punch-1', 'punch-2', 'melee', 'damage', 'dying', 'knockdown-get-up', 'jump', 'jump-punch', 'special-attack'];
 
         enemyPrefixes.forEach(enemy => {
             animTypes.forEach(animType => {
                 const animKey = `${enemy.id}-${animType}`;
                 if (this.anims.exists(animKey)) return;
 
-                // Look for ANY frame that includes the name (e.g. "SLOBA/slobodan-walk/frame_000.png")
                 const searchStr = `${enemy.search}-${animType}/frame_`;
-                const matchingFrames = allFrames.filter(f => f.includes(searchStr));
+                const matchingFrames = allFrames.filter(f => f.includes(searchStr)).sort();
 
                 if (matchingFrames.length > 0) {
-                    // Sort them so they play in numerical order
-                    matchingFrames.sort();
-                    
-                    const frames = matchingFrames.map(f => ({ key: 'enemies_1993', frame: f }));
+                    const frameConfig: Phaser.Types.Animations.AnimationFrameConfig[] = matchingFrames.map(f => {
+                        return { key: 'enemies_1993', frame: f };
+                    });
 
                     this.anims.create({
                         key: animKey,
-                        frames: frames,
+                        frames: frameConfig,
                         frameRate: 10,
                         repeat: (animType === 'walk' || animType === 'run') ? -1 : 0
                     });
@@ -313,25 +297,21 @@ export class MainLevel extends Phaser.Scene {
             const activeEnemies = this.enemies.getChildren().filter((e: any) => !e.isDead).length;
 
             if (currentSector.isBossWave) {
-                // Spawn a few minions first
                 if (activeEnemies < currentSector.maxActive && this.spawnedThisWave < currentSector.totalEnemies) {
                     const gangTypes = ['dizel', 'dizelcic', 'rudar'];
                     const randomType = gangTypes[Math.floor(Math.random() * gangTypes.length)];
                     this.spawnEnemyOffScreen(cam.worldView, randomType);
                 }
                 
-                // Once the minion wave is dead, spawn Slobodan
                 if (this.spawnedThisWave >= currentSector.totalEnemies && activeEnemies === 0 && !this.bossSpawned) {
                     this.spawnEnemyOffScreen(cam.worldView, 'slobodan');
                     this.bossSpawned = true;
                 }
                 
-                // Unlock the camera when Slobodan is defeated
                 if (this.bossSpawned && activeEnemies === 0) {
                     this.unlockCamera();
                 }
             } else {
-                // Normal Wave Logic
                 if (activeEnemies < currentSector.maxActive && this.spawnedThisWave < currentSector.totalEnemies) {
                     const gangTypes = ['dizel', 'dizelcic', 'rudar'];
                     const randomType = gangTypes[Math.floor(Math.random() * gangTypes.length)];
