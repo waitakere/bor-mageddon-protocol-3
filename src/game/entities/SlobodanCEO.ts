@@ -11,7 +11,7 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
     public isDead: boolean = false;
     public isHurt: boolean = false; // Stun-lock flag
     private isAttacking: boolean = false;
-    public skinPrefix: string = 'sloba'; // For HUD portrait
+    public skinPrefix: string = 'slobodan'; // Updated for HUD and logic
     
     public headHitbox!: Phaser.GameObjects.Zone;
     public torsoHitbox!: Phaser.GameObjects.Zone;
@@ -21,7 +21,11 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
     private jumpTimer: number = 0;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
-        super(scene, x, y, 'enemies_1993', 'sloba-walk/frame_000.png');
+        // Safe frame grabber to prevent crashes
+        const texture = scene.textures.get('enemies_1993');
+        const firstFrame = texture && texture.getFrameNames().length > 0 ? texture.getFrameNames() : undefined;
+
+        super(scene, x, y, 'enemies_1993', firstFrame);
         
         scene.add.existing(this);
         scene.physics.add.existing(this);
@@ -35,7 +39,10 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
         body.setImmovable(true); 
 
         this.createBossHitboxes();
-        this.play('sloba-walk', true);
+        
+        if (scene.anims.exists('slobodan-walk')) {
+            this.play('slobodan-walk', true);
+        }
     }
 
     private createBossHitboxes() {
@@ -74,7 +81,7 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
             }
         } 
         else if (this.scene.time.now > this.jumpTimer && !this.isAttacking) {
-            // Boss jump attack omitted for brevity if missing animation, falls back to walk
+            // Boss jump attack
             this.jumpTimer = this.scene.time.now + (this.isPhaseTwo ? 4000 : 5500);
         }
         else if (!this.isAttacking) {
@@ -86,8 +93,8 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
 
             this.setVelocity(vx, vy);
 
-            // If we don't have run, fallback to walk
-            const anim = this.scene.anims.exists('sloba-run') && this.isPhaseTwo ? 'sloba-run' : 'sloba-walk';
+            // Use run in phase two if available, else walk
+            const anim = this.scene.anims.exists('slobodan-run') && this.isPhaseTwo ? 'slobodan-run' : 'slobodan-walk';
             if (this.anims.currentAnim?.key !== anim && this.scene.anims.exists(anim)) {
                 this.play(anim, true);
             }
@@ -97,7 +104,10 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
     private executeRegularSwipe(player: any) {
         this.isAttacking = true;
         this.setVelocity(0, 0);
-        if (this.scene.anims.exists('sloba-punch-1')) this.play('sloba-punch-1', true);
+        
+        if (this.scene.anims.exists('slobodan-punch-1')) {
+            this.play('slobodan-punch-1', true);
+        }
 
         (this.scene as any).playSFX(['melee_1', 'melee_2']);
 
@@ -117,14 +127,17 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
 
         this.scene.time.delayedCall(800, () => {
             this.isAttacking = false;
-            if (this.scene.anims.exists('sloba-walk')) this.play('sloba-walk', true);
+            if (this.scene.anims.exists('slobodan-walk')) this.play('slobodan-walk', true);
         });
     }
 
     private executeAuditHammer(player: any) {
         this.isAttacking = true;
         this.setVelocity(0, 0); 
-        if (this.scene.anims.exists('sloba-punch-2')) this.play('sloba-punch-2', true); 
+        
+        if (this.scene.anims.exists('slobodan-punch-2')) {
+            this.play('slobodan-punch-2', true); 
+        }
 
         this.scene.time.delayedCall(500, () => {
             if (this.isDead || this.isHurt) return;
@@ -133,13 +146,13 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
 
         this.scene.time.delayedCall(1000, () => {
             this.isAttacking = false;
-            if (this.scene.anims.exists('sloba-walk')) this.play('sloba-walk', true);
+            if (this.scene.anims.exists('slobodan-walk')) this.play('slobodan-walk', true);
         });
     }
 
     private triggerShockwaveImpact(player: any) {
         this.scene.cameras.main.shake(600, 0.025);
-        (this.scene as any).playSFX('Paper-Shredding'); // Big boss sound
+        (this.scene as any).playSFX('Paper-Shredding'); 
 
         const distX = Math.abs(player.x - this.x);
         const distY = Math.abs(player.y - this.y);
@@ -157,13 +170,12 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
 
     public takeDamage(amount: number) {
         if (this.isDead || this.isHurt) return;
-        this.isHurt = true; // Boss gets stunned!
+        this.isHurt = true; 
 
         const multiplier = this.currentDamageZone === 'head' ? 3 : 1;
         this.health -= (amount * multiplier); 
         this.currentDamageZone = 'torso';
 
-        // --- HUD FLASH TRIGGER ---
         (this.scene as any).lastEngagedEnemy = this;
         (this.scene as any).lastEnemyHitTime = Date.now();
         (this.scene as any).updateReactHUD();
@@ -171,8 +183,8 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
         (this.scene as any).spawnHitEffect(this.x, this.y - 150);
         (this.scene as any).playSFX(['agony_m_1', 'agony_m_2', 'agony_m_3']);
 
-        if (this.scene.anims.exists('sloba-damage')) {
-            this.play('sloba-damage', true);
+        if (this.scene.anims.exists('slobodan-damage')) {
+            this.play('slobodan-damage', true);
         } else {
             this.setTint(0xffffff);
             this.scene.time.delayedCall(100, () => this.clearTint());
@@ -186,7 +198,7 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
             } else {
                 this.scene.time.delayedCall(300, () => {
                     this.isHurt = false;
-                    const anim = this.scene.anims.exists('sloba-run') && this.isPhaseTwo ? 'sloba-run' : 'sloba-walk';
+                    const anim = this.scene.anims.exists('slobodan-run') && this.isPhaseTwo ? 'slobodan-run' : 'slobodan-walk';
                     if (this.scene.anims.exists(anim)) this.play(anim, true);
                 });
             }
@@ -209,8 +221,8 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
         (this.scene as any).registerEnemyDeath();
         (this.scene as any).playSFX(['Break_1', 'Break_2']);
 
-        if (this.scene.anims.exists('sloba-dying')) {
-            this.play('sloba-dying', true);
+        if (this.scene.anims.exists('slobodan-dying')) {
+            this.play('slobodan-dying', true);
         }
 
         this.scene.tweens.add({
