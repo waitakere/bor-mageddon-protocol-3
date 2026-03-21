@@ -267,4 +267,57 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 (this.scene as any).spawnHitEffect(enemy.x, enemy.y - 50);
             }
         });
-        this.scene.time.delayedCall(250, () =>
+        this.scene.time.delayedCall(250, () => { if (waveZone.active) waveZone.destroy(); });
+        this.once('animationcomplete', () => { this.isAttacking = false; });
+    }
+
+    private executeChainWhip() {
+        this.isAttacking = true; this.smfMeter = 0; (this.scene as any).updateReactHUD();
+        // Updated to explicitly match the JSON mapping 'marko-finish-move'
+        const anim = this.scene.anims.exists('marko-finish-move') ? 'marko-finish-move' : 'marko-kick-2';
+        this.play(anim, true);
+        
+        this.playVoice('marko_special_2'); 
+
+        this.scene.cameras.main.shake(600, 0.02);
+        const spinZone = this.scene.add.circle(this.x, this.y - 40, 150);
+        this.scene.physics.add.existing(spinZone);
+        
+        this.scene.physics.overlap(spinZone, (this.scene as any).enemies, (sz, enemy: any) => {
+            if (Math.abs(this.y - enemy.y) <= 80) { 
+                if (enemy.takeDamage) { enemy.takeDamage(90 * this.damageMultiplier); if (enemy.body) enemy.setVelocityY(-200); }
+                (this.scene as any).spawnHitEffect(enemy.x, enemy.y - 50);
+            }
+        });
+        this.scene.time.delayedCall(200, () => { if (spinZone.active) spinZone.destroy(); });
+        this.once('animationcomplete', () => { this.isAttacking = false; });
+    }
+
+    public takeDamage(amount: number) {
+        this.health -= amount; this.queuedAction = null;
+        
+        (this.scene as any).spawnHitEffect(this.x, this.y - 40);
+        this.playVoice(['agony_m_1', 'agony_m_2']); 
+
+        (this.scene as any).lastPlayerHitTime = Date.now();
+
+        if (this.health <= 0) { this.die(); } 
+        else {
+            const dmgAnim = `${this.characterName}-damage`;
+            if (this.scene.anims.exists(dmgAnim)) { this.isAttacking = true; this.play(dmgAnim, true); this.once('animationcomplete', () => { this.isAttacking = false; }); } 
+            else { this.setTint(0xff0000); this.scene.time.delayedCall(200, () => this.clearTint()); }
+        }
+        (this.scene as any).updateReactHUD();
+    }
+
+    private die() { 
+        this.isDead = true; 
+        this.setVelocity(0, 0); 
+        const dieAnim = `${this.characterName}-dying`; 
+        if (this.scene.anims.exists(dieAnim)) {
+            this.play(dieAnim, true); 
+        } else {
+            this.setTint(0xff0000);
+        }
+    }
+}
