@@ -4,9 +4,7 @@ import { Maja } from '../entities/Maja';
 import { Darko } from '../entities/Darko';
 import { Enemy } from '../entities/Enemy';
 
-// ==========================================
-// IMPORTING THE NEW SUBCLASSES
-// ==========================================
+// Custom Subclasses
 import { Dizel } from '../entities/Dizel';
 import { Dizelcic } from '../entities/Dizelcic';
 import { Miner } from '../entities/Miner';
@@ -17,11 +15,18 @@ export class MainLevel extends Phaser.Scene {
     public items!: Phaser.Physics.Arcade.Group;
     private shadows!: Phaser.GameObjects.Graphics;
     
+    // Parallax Layers
+    private skyLayer!: Phaser.GameObjects.TileSprite;
+    private midLayer!: Phaser.GameObjects.TileSprite;
+    private floorLayer!: Phaser.GameObjects.TileSprite;
+    
+    // Wave Management
+    // Wave 1, 2, and 3 make up the first "third" of the level.
     private sectors = [
-        { triggerX: 800, totalEnemies: 4, maxActive: 2 },
-        { triggerX: 1600, totalEnemies: 6, maxActive: 3 },
-        { triggerX: 2400, totalEnemies: 8, maxActive: 3 },
-        { triggerX: 3200, totalEnemies: 5, maxActive: 4 } 
+        { triggerX: 800, totalEnemies: 4, maxActive: 2 },  // Wave 1
+        { triggerX: 1600, totalEnemies: 6, maxActive: 3 }, // Wave 2
+        { triggerX: 2400, totalEnemies: 8, maxActive: 3 }, // Wave 3 (End of First Third)
+        { triggerX: 3200, totalEnemies: 5, maxActive: 4 }  // Wave 4 (Start of Second Third)
     ];
     
     private currentSectorIndex!: number;
@@ -50,22 +55,19 @@ export class MainLevel extends Phaser.Scene {
         this.lastPlayerHitTime = 0;
         this.lastEnemyHitTime = 0;
 
+        // Safely builds animations before any enemies spawn
         this.createEnemyAnimations();
     }
 
     create() {
         window.addEventListener('request-scene-restart', this.handleRestart);
-        
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
             window.removeEventListener('request-scene-restart', this.handleRestart);
         });
 
-        this.events.on(Phaser.Scenes.Events.PAUSE, () => {
-            this.sound.pauseAll();
-        });
-        this.events.on(Phaser.Scenes.Events.RESUME, () => {
-            this.sound.resumeAll();
-        });
+        // Pause audio when game is paused
+        this.events.on(Phaser.Scenes.Events.PAUSE, () => this.sound.pauseAll());
+        this.events.on(Phaser.Scenes.Events.RESUME, () => this.sound.resumeAll());
 
         const unlockAudio = () => {
             if (this.sound.context.state === 'suspended') this.sound.context.resume();
@@ -76,11 +78,20 @@ export class MainLevel extends Phaser.Scene {
         this.sound.stopAll(); 
         this.sound.play('1993_ambient', { loop: true, volume: 0.4 });
 
-        this.physics.world.setBounds(0, 750, 4000, 330); 
+        // The physics world is long to allow continuous scrolling
+        this.physics.world.setBounds(0, 750, 6000, 330); 
         
-        this.add.image(0, 0, 'part1_sky').setOrigin(0, 0).setDisplaySize(4000, 1080).setScrollFactor(0.1);
-        this.add.image(0, 750, 'part1_mid').setOrigin(0, 1).setDisplaySize(4000, 650).setScrollFactor(0.5);
-        this.add.image(0, 1080, 'part1_floor').setOrigin(0, 1).setDisplaySize(4000, 330).setScrollFactor(1);
+        const camW = this.cameras.main.width;
+        const camH = this.cameras.main.height;
+
+        // ==========================================
+        // DYNAMIC PARALLAX TILESPRITES [cite: 150]
+        // Set to the camera's width and pinned to the screen with scrollFactor(0).
+        // We manually pan their UV coordinates in the update() loop.
+        // ==========================================
+        this.skyLayer = this.add.tileSprite(0, 0, camW, 1080, 'part1_sky').setOrigin(0, 0).setScrollFactor(0);
+        this.midLayer = this.add.tileSprite(0, 750, camW, 650, 'part1_mid').setOrigin(0, 1).setScrollFactor(0);
+        this.floorLayer = this.add.tileSprite(0, 1080, camW, 330, 'part1_floor').setOrigin(0, 1).setScrollFactor(0);
 
         this.shadows = this.add.graphics().setAlpha(0.4);
         this.items = this.physics.add.group();
@@ -95,16 +106,15 @@ export class MainLevel extends Phaser.Scene {
 
         this.player.setScale(1.7);
         
-        // Spawn our newly fixed Dizel subclass as the first encounter
+        // First enemy spawns automatically to kick things off
         const firstEnemy = new Dizel(this, 1000, 950);
         this.enemies.add(firstEnemy);
 
         this.physics.add.collider(this.player, this.enemies);
         this.physics.add.collider(this.enemies, this.enemies);
-
         this.physics.add.overlap(this.player, this.items, this.collectItem, undefined, this);
 
-        this.cameras.main.setBounds(0, 0, 4000, 1080);
+        this.cameras.main.setBounds(0, 0, 6000, 1080);
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
         this.updateReactHUD();
 
@@ -112,45 +122,44 @@ export class MainLevel extends Phaser.Scene {
         window.dispatchEvent(new CustomEvent('phaser-ready'));
     }
 
+    /**
+     * BULLETPROOF ANIMATION BUILDER
+     * Checks if the frame actually exists in the JSON before trying to build it,
+     * preventing the "Cannot read properties of undefined" crash!
+     */
     private createEnemyAnimations() {
-        if (this.anims.exists('mup-walk')) return;
+        const texture = this.textures.get('enemies_1993');
+        if (!texture || texture.key === '__MISSING') return;
 
-        const enemyTypes = ['mup', 'dizel', 'dizelcic', 'rudar', 'sloba'];
-        
-        enemyTypes.forEach(enemy => {
-            this.anims.create({
-                key: `${enemy}-walk`,
-                frames: this.anims.generateFrameNames('enemies_1993', { prefix: `${enemy}-walk/frame_`, suffix: '.png', start: 0, end: 8, zeroPad: 3 }),
-                frameRate: 10,
-                repeat: -1
-            });
-            
-            this.anims.create({
-                key: `${enemy}-attack`,
-                frames: this.anims.generateFrameNames('enemies_1993', { prefix: `${enemy}-attack/frame_`, suffix: '.png', start: 0, end: 8, zeroPad: 3 }),
-                frameRate: 12,
-                repeat: 0
-            });
+        const enemyPrefixes = [
+            { id: 'mup', anims: ['walk', 'attack', 'damage', 'dying', 'knockdown-get-up'] },
+            { id: 'dizel', anims: ['walk', 'punch-1', 'damage', 'dying', 'knockdown-get-up'] },
+            { id: 'dizelcic', anims: ['walk', 'punch-1', 'damage', 'dying'] },
+            { id: 'rudar', anims: ['walk', 'punch-2', 'damage', 'dying'] },
+            { id: 'sloba', anims: ['walk', 'attack', 'damage', 'dying'] }
+        ];
 
-            this.anims.create({
-                key: `${enemy}-damage`,
-                frames: this.anims.generateFrameNames('enemies_1993', { prefix: `${enemy}-damage/frame_`, suffix: '.png', start: 0, end: 3, zeroPad: 3 }),
-                frameRate: 12,
-                repeat: 0
-            });
+        enemyPrefixes.forEach(enemy => {
+            enemy.anims.forEach(animType => {
+                const animKey = `${enemy.id}-${animType}`;
+                if (this.anims.exists(animKey)) return;
 
-            this.anims.create({
-                key: `${enemy}-dying`,
-                frames: this.anims.generateFrameNames('enemies_1993', { prefix: `${enemy}-dying/frame_`, suffix: '.png', start: 0, end: 8, zeroPad: 3 }),
-                frameRate: 12,
-                repeat: 0
-            });
+                const frames = [];
+                for (let i = 0; i <= 15; i++) {
+                    const frameName = `${animKey}/frame_${i.toString().padStart(3, '0')}.png`;
+                    if (texture.has(frameName)) {
+                        frames.push({ key: 'enemies_1993', frame: frameName });
+                    }
+                }
 
-            this.anims.create({
-                key: `${enemy}-knockdown-get-up`,
-                frames: this.anims.generateFrameNames('enemies_1993', { prefix: `${enemy}-knockdown-get-up/frame_`, suffix: '.png', start: 0, end: 8, zeroPad: 3 }),
-                frameRate: 12,
-                repeat: 0
+                if (frames.length > 0) {
+                    this.anims.create({
+                        key: animKey,
+                        frames: frames,
+                        frameRate: 10,
+                        repeat: animKey.includes('walk') ? -1 : 0
+                    });
+                }
             });
         });
     }
@@ -163,6 +172,15 @@ export class MainLevel extends Phaser.Scene {
         if (!this.player || this.player.isDead) return;
 
         this.handleWaveManager();
+
+        // ==========================================
+        // INFINITE PARALLAX SCROLLING
+        // Mathematically shifts the tiles based on camera scroll
+        // ==========================================
+        const scrollX = this.cameras.main.scrollX;
+        this.skyLayer.tilePositionX = scrollX * 0.1;
+        this.midLayer.tilePositionX = scrollX * 0.5;
+        this.floorLayer.tilePositionX = scrollX * 1.0;
 
         this.children.each((child: any) => {
             if (child.body && child.type === 'Sprite') { child.setAngle(0); child.rotation = 0; }
@@ -186,9 +204,7 @@ export class MainLevel extends Phaser.Scene {
         };
 
         this.player.update(keys);
-        
         this.enemies.getChildren().forEach((e: any) => { if (e.updateAI && !e.isDead) e.updateAI(this.player); });
-        
         this.children.each((c: any) => { if (c.y && c.type !== 'Image' && c.type !== 'Graphics') c.setDepth(c.y); });
         
         if (this.lastEngagedEnemy && (!this.lastEngagedEnemy.active || this.lastEngagedEnemy.isDead)) {
@@ -200,7 +216,6 @@ export class MainLevel extends Phaser.Scene {
     public playSFX(marker: string | string[], volume: number = 0.8) {
         try {
             if (this.sound.context.state === 'suspended') this.sound.context.resume();
-
             const finalMarker = Array.isArray(marker) ? marker[Math.floor(Math.random() * marker.length)] : marker;
 
             if (this.cache.json.exists('sfx_atlas')) {
@@ -211,17 +226,12 @@ export class MainLevel extends Phaser.Scene {
                     return sound;
                 }
             }
-
             if (this.cache.audio.exists(finalMarker)) {
                 this.sound.play(finalMarker, { volume });
                 return;
             }
-
-            console.warn(`[AUDIO] '${finalMarker}' not found in atlas or cache!`);
             return null;
-
         } catch (e) {
-            console.warn("Audio system error:", e);
             return null;
         }
     }
@@ -230,7 +240,6 @@ export class MainLevel extends Phaser.Scene {
         const explosion = this.add.sprite(x, y, 'explosion_01');
         explosion.setDepth(9999); 
         explosion.setScale(1.5); 
-        
         this.tweens.add({
             targets: explosion,
             scale: 2.0, alpha: 0, duration: 250,
@@ -247,7 +256,6 @@ export class MainLevel extends Phaser.Scene {
         const drop = this.physics.add.sprite(x, y - 40, randomItem);
         drop.setOrigin(0.5, 1); 
         this.items.add(drop);
-
         drop.setScale(0.5);
 
         const body = drop.body as Phaser.Physics.Arcade.Body;
@@ -255,36 +263,17 @@ export class MainLevel extends Phaser.Scene {
             body.setSize(drop.width, 20);
             body.setOffset(0, drop.height - 20);
         }
-
-        this.tweens.add({
-            targets: drop,
-            alpha: 0.2,
-            duration: 100,
-            yoyo: true,
-            repeat: 5, 
-            ease: 'Linear'
-        });
-
-        this.tweens.add({
-            targets: drop,
-            y: y, 
-            duration: 350,
-            ease: 'Bounce.easeOut'
-        });
+        this.tweens.add({ targets: drop, alpha: 0.2, duration: 100, yoyo: true, repeat: 5, ease: 'Linear' });
+        this.tweens.add({ targets: drop, y: y, duration: 350, ease: 'Bounce.easeOut' });
     }
 
     private collectItem(player: any, item: any) {
         if (Math.abs(player.y - item.y) > 30) return;
-
         item.destroy();
         this.playSFX(['melee_1', 'Metal-Impact-Shield'], 0.8); 
+        if (player.playPickupAnim) player.playPickupAnim();
         
-        if (player.playPickupAnim) {
-            player.playPickupAnim();
-        }
-
         this.player.health = Math.min(this.player.health + 30, this.player.maxHealth || 150);
-        
         const healText = this.add.text(this.player.x, this.player.y - 80, '+HP', { font: '900 20px "Space Mono"', color: '#00ff00' }).setOrigin(0.5);
         this.tweens.add({ targets: healText, y: healText.y - 30, alpha: 0, duration: 1000, onComplete: () => healText.destroy() });
         this.updateReactHUD();
@@ -293,23 +282,27 @@ export class MainLevel extends Phaser.Scene {
     private handleWaveManager() {
         const cam = this.cameras.main;
 
+        // 1. Lock camera when entering a new sector
         if (!this.isLocked && this.currentSectorIndex < this.sectors.length) {
             const nextSector = this.sectors[this.currentSectorIndex];
             if (this.player.x > nextSector.triggerX) {
                 this.isLocked = true;
                 cam.stopFollow();
+                
+                // Lock the player inside the current screen bounds
                 this.physics.world.setBounds(cam.worldView.left, 750, cam.width, 330);
                 this.updateReactHUD();
             }
         }
 
+        // 2. Spawn logic while locked
         if (this.isLocked) {
             const currentSector = this.sectors[this.currentSectorIndex];
             const activeEnemies = this.enemies.getChildren().filter((e: any) => !e.isDead).length;
             const isFinalSector = this.currentSectorIndex === this.sectors.length - 1;
 
             if (activeEnemies < currentSector.maxActive && this.spawnedThisWave < currentSector.totalEnemies) {
-                const gangTypes = ['mup', 'dizel', 'dizelcic', 'rudar'];
+                const gangTypes = ['dizel', 'dizelcic', 'rudar'];
                 const randomType = gangTypes[Math.floor(Math.random() * gangTypes.length)];
                 this.spawnEnemyOffScreen(cam.worldView, randomType);
             }
@@ -319,6 +312,7 @@ export class MainLevel extends Phaser.Scene {
                 this.bossSpawned = true;
             }
 
+            // 3. Wave Cleared -> Unlock and Prompt Player
             if (this.spawnedThisWave >= currentSector.totalEnemies && activeEnemies === 0) {
                 if (isFinalSector && !this.bossSpawned) return; 
                 this.unlockCamera();
@@ -326,32 +320,17 @@ export class MainLevel extends Phaser.Scene {
         }
     }
 
-    // ==========================================
-    // THE ENEMY SUBCLASS FACTORY
-    // Replaces the generic 'new Enemy' logic
-    // ==========================================
     private spawnEnemyOffScreen(view: Phaser.Geom.Rectangle, type: string) {
         const spawnOnLeft = Math.random() > 0.5;
         const spawnX = spawnOnLeft ? view.left - 80 : view.right + 80;
         const spawnY = Phaser.Math.Between(800, 1050);
         
         let enemy: any;
-
-        // Route the type to the highly-optimised custom classes
         switch (type) {
-            case 'dizel':
-                enemy = new Dizel(this, spawnX, spawnY);
-                break;
-            case 'dizelcic':
-                enemy = new Dizelcic(this, spawnX, spawnY);
-                break;
-            case 'rudar':
-                enemy = new Miner(this, spawnX, spawnY);
-                break;
-            default:
-                // Fallback for MUP or Sloba until you build dedicated classes for them
-                enemy = new Enemy(this, spawnX, spawnY, type); 
-                break;
+            case 'dizel': enemy = new Dizel(this, spawnX, spawnY); break;
+            case 'dizelcic': enemy = new Dizelcic(this, spawnX, spawnY); break;
+            case 'rudar': enemy = new Miner(this, spawnX, spawnY); break;
+            default: enemy = new Enemy(this, spawnX, spawnY, type); break;
         }
         
         this.enemies.add(enemy);
@@ -360,15 +339,54 @@ export class MainLevel extends Phaser.Scene {
 
     private unlockCamera() {
         this.isLocked = false;
-        this.currentSectorIndex++; 
         this.spawnedThisWave = 0;
-        this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
-        this.physics.world.setBounds(0, 750, 4000, 330);
-        this.updateReactHUD();
+        this.currentSectorIndex++; 
         
+        this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+        // Extend the bounds back out so the player can keep walking right
+        this.physics.world.setBounds(0, 750, 6000, 330);
+        this.updateReactHUD();
+
+        // ==========================================
+        // SECTOR TRANSITION (After Wave 3) [cite: 177, 2128-2129]
+        // This marks the end of the first third. We flash black
+        // and instantly swap the textures to the Part 2 environments.
+        // ==========================================
+        if (this.currentSectorIndex === 3) {
+            this.cameras.main.flash(500, 0, 0, 0);
+            
+            // Ensures the new backgrounds exist in cache before swapping
+            if (this.textures.exists('part2_sky')) {
+                this.skyLayer.setTexture('part2_sky');
+                this.midLayer.setTexture('part2_mid');
+                this.floorLayer.setTexture('part2_floor');
+            }
+        }
+        
+        // ==========================================
+        // THE "GO! ->" PROMPT
+        // Guides the player to pan the screen to the next wave
+        // ==========================================
         if (this.currentSectorIndex < this.sectors.length) {
-            const goText = this.add.text(this.player.x, this.player.y - 150, 'GO! ➡', { font: '900 64px "Metal Mania"', color: '#39ff14', stroke: '#000', strokeThickness: 8 }).setOrigin(0.5);
-            this.tweens.add({ targets: goText, x: goText.x + 100, alpha: 0, duration: 1500, onComplete: () => goText.destroy() });
+            const goText = this.add.text(this.player.x + 100, this.player.y - 150, 'GO! ➡', { 
+                font: '900 64px "Space Mono"', 
+                color: '#39ff14', 
+                stroke: '#000', 
+                strokeThickness: 8 
+            }).setOrigin(0.5);
+            
+            // Bouncing pulse animation to the right
+            this.tweens.add({ 
+                targets: goText, 
+                x: goText.x + 60, 
+                scale: 1.2,
+                duration: 500, 
+                yoyo: true,
+                repeat: 3, 
+                onComplete: () => {
+                    this.tweens.add({ targets: goText, alpha: 0, duration: 500, onComplete: () => goText.destroy() });
+                }
+            });
         }
     }
 
@@ -380,7 +398,6 @@ export class MainLevel extends Phaser.Scene {
     public updateReactHUD() {
         let eMaxHealth = 100;
         if (this.lastEngagedEnemy) {
-            // Note: If you add a dedicated Sloba class later, make sure its maxHealth matches here!
             eMaxHealth = this.lastEngagedEnemy.skinPrefix === 'sloba' ? 600 : 100;
         }
 
