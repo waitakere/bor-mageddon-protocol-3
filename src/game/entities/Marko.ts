@@ -9,8 +9,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     public isAttacking: boolean = false;
     public isDead: boolean = false;
     public isJumping: boolean = false;
-    
-    private currentVoice: any = null;
 
     private walkSpeed: number = 200;
     private runSpeed: number = 380;
@@ -23,6 +21,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
 
     private punchImpacts = ['punch_1', 'punch_2', 'punch_3', 'punch_4', 'punch_5', 'punch_6', 'punch_7', 'punch_8'];
     private kickImpacts = ['kick_1', 'kick_2', 'kick_3', 'kick_4'];
+    private grunts = ['grunt_m_1', 'grunt_m_2', 'grunt_m_3', 'grunt_m_4'];
+    private agonies = ['agony_m_1', 'agony_m_2', 'agony_m_3', 'agony_m_4'];
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         const texture = scene.textures.get('marko');
@@ -85,30 +85,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         });
     }
 
-    private playVoice(marker: string | string[]) {
-        if (this.currentVoice && this.currentVoice.isPlaying) this.currentVoice.stop();
-        this.currentVoice = (this.scene as any).playSFX(marker);
-    }
-
-    public playPickupAnim() {
-        if (this.isDead || this.isJumping || this.isAttacking) return;
-        
-        this.isAttacking = true;
-        this.setVelocity(0, 0);
-
-        const animKey = `${this.characterName}-pick-up`;
-        
-        if (this.scene.anims.exists(animKey)) {
-            this.play(animKey, true);
-            this.once('animationcomplete', () => {
-                this.isAttacking = false;
-            });
-        } else {
-            if (this.scene.anims.exists(`${this.characterName}-idle`)) this.play(`${this.characterName}-idle`, true);
-            this.scene.time.delayedCall(300, () => { this.isAttacking = false; });
-        }
-    }
-
     public update(input: any) {
         if (this.isDead) return;
         this.setAngle(0);
@@ -123,8 +99,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             if (this.scene.anims.exists(`${this.characterName}-jump`)) {
                 this.play(`${this.characterName}-jump`, true);
             }
-
-            this.playVoice(['grunt_m_1', 'grunt_m_2']); 
             
             this.scene.tweens.add({ 
                 targets: this, 
@@ -207,8 +181,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         
         if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
         else if (this.scene.anims.exists(`${this.characterName}-kick-1`)) this.play(`${this.characterName}-kick-1`, true); 
-        
-        this.playVoice(['melee_1', 'melee_2']); 
 
         const hitZone = this.scene.add.zone(this.x + (this.flipX ? -60 : 60), this.y - 100, 140, 90);
         this.scene.physics.add.existing(hitZone);
@@ -235,17 +207,12 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     }
 
     private executeAction(action: string) {
-        // ==========================================
-        // METER LOCKS REMOVED! Specials fire instantly.
-        // ==========================================
         if (action === 'special') { this.executeMegaphoneScream(); return; }
         if (action === 'finisher') { this.executeChainWhip(); return; }
 
         this.isAttacking = true; this.setVelocity(0, 0);
         const animToPlay = `${this.characterName}-${action}`;
         if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
-        
-        this.playVoice(['melee_1', 'melee_2']);
 
         const hitZone = this.scene.add.zone(this.x + (this.flipX ? -80 : 80), this.y - 40, 140, 80);
         this.scene.physics.add.existing(hitZone);
@@ -277,7 +244,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         const anim = this.scene.anims.exists(`${this.characterName}-special-attack`) ? `${this.characterName}-special-attack` : `${this.characterName}-punch-2`;
         if (this.scene.anims.exists(anim)) this.play(anim, true);
         
-        this.playVoice('marko_special_1'); 
+        (this.scene as any).playSFX('marko_special_1'); 
         
         this.scene.cameras.main.shake(300, 0.01);
         const direction = this.flipX ? -1 : 1;
@@ -299,7 +266,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         const anim = this.scene.anims.exists(`${this.characterName}-finish-move`) ? `${this.characterName}-finish-move` : `${this.characterName}-kick-2`;
         if (this.scene.anims.exists(anim)) this.play(anim, true);
         
-        this.playVoice('marko_special_2'); 
+        (this.scene as any).playSFX('marko_special_2'); 
 
         this.scene.cameras.main.shake(600, 0.02);
         const spinZone = this.scene.add.circle(this.x, this.y - 40, 150);
@@ -319,12 +286,14 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         this.health -= amount; this.queuedAction = null;
         
         (this.scene as any).spawnHitEffect(this.x, this.y - 40);
-        this.playVoice(['agony_m_1', 'agony_m_2']); 
-
         (this.scene as any).lastPlayerHitTime = Date.now();
 
-        if (this.health <= 0) { this.die(); } 
+        if (this.health <= 0) { 
+            (this.scene as any).playSFX(this.agonies);
+            this.die(); 
+        } 
         else {
+            (this.scene as any).playSFX(this.grunts);
             const dmgAnim = `${this.characterName}-damage`;
             if (this.scene.anims.exists(dmgAnim)) { this.isAttacking = true; this.play(dmgAnim, true); this.once('animationcomplete', () => { this.isAttacking = false; }); } 
             else { this.setTint(0xff0000); this.scene.time.delayedCall(200, () => this.clearTint()); }
