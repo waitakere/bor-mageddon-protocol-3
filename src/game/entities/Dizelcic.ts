@@ -2,8 +2,12 @@ import Phaser from 'phaser';
 
 export class Dizelcic extends Phaser.Physics.Arcade.Sprite {
     public health: number = 80; 
+    public maxHealth: number = 80;
     public isDead: boolean = false;
     public isHurt: boolean = false;
+    public isKnockedDown: boolean = false;
+    public hasBeenKnockedDown: boolean = false;
+    public isInvulnerable: boolean = false;
     public skinPrefix: string = 'dizelcic'; 
     
     private isSpraying: boolean = false;
@@ -12,9 +16,14 @@ export class Dizelcic extends Phaser.Physics.Arcade.Sprite {
     private speed: number = 110;
     private attackRange: number = 150;
 
+    private grunts = ['grunt_m_1', 'grunt_m_2', 'grunt_m_3', 'grunt_m_4'];
+    private agonies = ['agony_m_1', 'agony_m_2', 'agony_m_3', 'agony_m_4'];
+
     constructor(scene: Phaser.Scene, x: number, y: number) {
+        // FIXED: Now correctly extracts a single frame string to prevent a crash
         const texture = scene.textures.get('enemies_1993');
-        const firstFrame = texture && texture.getFrameNames().length > 0 ? texture.getFrameNames() : undefined;
+        const allFrames = texture ? texture.getFrameNames() : [];
+        const firstFrame = allFrames.find(f => f.includes('dizelcic-walk/frame_000')) || allFrames;
 
         super(scene, x, y, 'enemies_1993', firstFrame);
         
@@ -37,7 +46,7 @@ export class Dizelcic extends Phaser.Physics.Arcade.Sprite {
     }
 
     public updateAI(player: any) {
-        if (this.isDead || this.isHurt || this.isSpraying || player.isDead) {
+        if (this.isDead || this.isHurt || this.isKnockedDown || this.isSpraying || player.isDead) {
             this.setVelocity(0, 0);
             return;
         }
@@ -71,10 +80,9 @@ export class Dizelcic extends Phaser.Physics.Arcade.Sprite {
         if (this.scene.anims.exists('dizelcic-punch-1')) {
             this.play('dizelcic-punch-1', true); 
         }
-        (this.scene as any).playSFX(['Dizelcic-Aerosol_1', 'Dizelcic-Aerosol_2']); 
 
         this.scene.time.delayedCall(200, () => {
-            if (!this.isDead && !this.isHurt) {
+            if (!this.isDead && !this.isHurt && !this.isKnockedDown) {
                 this.spawnMistCloud(player);
             }
         });
@@ -107,7 +115,7 @@ export class Dizelcic extends Phaser.Physics.Arcade.Sprite {
     }
 
     public takeDamage(amount: number) {
-        if (this.isDead) return;
+        if (this.isDead || this.isInvulnerable) return;
         
         this.health -= amount;
         this.isSpraying = false;
@@ -121,19 +129,20 @@ export class Dizelcic extends Phaser.Physics.Arcade.Sprite {
         (this.scene as any).updateReactHUD();
 
         (this.scene as any).spawnHitEffect(this.x, this.y - 70);
-        (this.scene as any).playSFX(['agony_m_1', 'agony_m_2', 'agony_m_3']);
 
         if (this.health <= 0) {
             this.die();
+        } else if (this.health <= this.maxHealth * 0.5 && !this.hasBeenKnockedDown) {
+            this.takeKnockdown();
         } else {
+            (this.scene as any).playSFX(this.grunts);
             if (this.scene.anims.exists('dizelcic-damage')) {
                 this.play('dizelcic-damage', true);
             }
-            
             this.x += this.flipX ? 15 : -15; 
 
             this.scene.time.delayedCall(400, () => {
-                if (!this.isDead) {
+                if (!this.isDead && !this.isKnockedDown) {
                     this.isHurt = false;
                     if (this.scene.anims.exists('dizelcic-walk')) this.play('dizelcic-walk', true);
                 }
@@ -141,12 +150,37 @@ export class Dizelcic extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
+    public takeKnockdown() {
+        if (this.isDead || this.isKnockedDown) return;
+
+        this.isKnockedDown = true;
+        this.isInvulnerable = true; 
+        this.hasBeenKnockedDown = true;
+        
+        this.x += this.flipX ? 40 : -40; 
+        (this.scene as any).playSFX(this.agonies);
+        
+        if (this.scene.anims.exists('dizelcic-knockdown-get-up')) {
+             this.play('dizelcic-knockdown-get-up', true);
+        } else {
+             this.scene.time.delayedCall(1000, () => { this.emit('animationcomplete'); });
+        }
+
+        this.once('animationcomplete', () => {
+            if (this.health <= 0) return;
+            this.isKnockedDown = false;
+            this.isInvulnerable = false;
+            this.isHurt = false;
+            if (this.scene.anims.exists('dizelcic-walk')) this.play('dizelcic-walk', true);
+        });
+    }
+
     private die() {
         this.isDead = true;
         this.setVelocity(0, 0);
         (this.body as Phaser.Physics.Arcade.Body).enable = false;
 
-        (this.scene as any).playSFX(['Break_1', 'Break_2']);
+        (this.scene as any).playSFX(this.agonies);
         (this.scene as any).registerEnemyDeath();
 
         if (this.scene.anims.exists('dizelcic-dying')) {
