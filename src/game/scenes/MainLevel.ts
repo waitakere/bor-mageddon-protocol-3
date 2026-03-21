@@ -131,15 +131,15 @@ export class MainLevel extends Phaser.Scene {
 
         const allFrames = texture.getFrameNames();
 
+        // UPDATED: Stripped out "rudar" completely.
         const enemyPrefixes = [
             { id: 'mup', search: 'mup' },
             { id: 'dizel', search: 'dizel' },
             { id: 'dizelcic', search: 'dizelcic' },
-            { id: 'miner', search: 'miner' }, // <--- FIX: Forces search for 'miner'
+            { id: 'miner', search: 'miner' }, 
             { id: 'slobodan', search: 'slobodan' }
         ];
 
-        // ADDED 'melee' so the Miner's heavy attack gets built
         const animTypes = ['walk', 'run', 'attack', 'punch-1', 'punch-2', 'melee', 'damage', 'dying', 'knockdown-get-up', 'jump', 'jump-punch', 'special-attack'];
 
         enemyPrefixes.forEach(enemy => {
@@ -298,7 +298,8 @@ export class MainLevel extends Phaser.Scene {
 
             if (currentSector.isBossWave) {
                 if (activeEnemies < currentSector.maxActive && this.spawnedThisWave < currentSector.totalEnemies) {
-                    const gangTypes = ['dizel', 'dizelcic', 'rudar'];
+                    // UPDATED: Now spawns 'miner'
+                    const gangTypes = ['dizel', 'dizelcic', 'miner'];
                     const randomType = gangTypes[Math.floor(Math.random() * gangTypes.length)];
                     this.spawnEnemyOffScreen(cam.worldView, randomType);
                 }
@@ -313,7 +314,8 @@ export class MainLevel extends Phaser.Scene {
                 }
             } else {
                 if (activeEnemies < currentSector.maxActive && this.spawnedThisWave < currentSector.totalEnemies) {
-                    const gangTypes = ['dizel', 'dizelcic', 'rudar'];
+                    // UPDATED: Now spawns 'miner'
+                    const gangTypes = ['dizel', 'dizelcic', 'miner'];
                     const randomType = gangTypes[Math.floor(Math.random() * gangTypes.length)];
                     this.spawnEnemyOffScreen(cam.worldView, randomType);
                 }
@@ -333,7 +335,7 @@ export class MainLevel extends Phaser.Scene {
         switch (type) {
             case 'dizel': enemy = new Dizel(this, spawnX, spawnY); break;
             case 'dizelcic': enemy = new Dizelcic(this, spawnX, spawnY); break;
-            case 'rudar': enemy = new Miner(this, spawnX, spawnY); break;
+            case 'miner': enemy = new Miner(this, spawnX, spawnY); break; // <--- UPDATED
             case 'slobodan': enemy = new SlobodanCEO(this, spawnX, spawnY); break; 
             default: enemy = new Enemy(this, spawnX, spawnY, type); break;
         }
