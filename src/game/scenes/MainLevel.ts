@@ -15,18 +15,16 @@ export class MainLevel extends Phaser.Scene {
     public items!: Phaser.Physics.Arcade.Group;
     private shadows!: Phaser.GameObjects.Graphics;
     
-    // Parallax Layers
-    private skyLayer!: Phaser.GameObjects.TileSprite;
-    private midLayer!: Phaser.GameObjects.TileSprite;
-    private floorLayer!: Phaser.GameObjects.TileSprite;
+    // Reverted back to Images for proper stretching/zooming
+    private skyLayer!: Phaser.GameObjects.Image;
+    private midLayer!: Phaser.GameObjects.Image;
+    private floorLayer!: Phaser.GameObjects.Image;
     
-    // Wave Management
-    // Wave 1, 2, and 3 make up the first "third" of the level.
     private sectors = [
-        { triggerX: 800, totalEnemies: 4, maxActive: 2 },  // Wave 1
-        { triggerX: 1600, totalEnemies: 6, maxActive: 3 }, // Wave 2
-        { triggerX: 2400, totalEnemies: 8, maxActive: 3 }, // Wave 3 (End of First Third)
-        { triggerX: 3200, totalEnemies: 5, maxActive: 4 }  // Wave 4 (Start of Second Third)
+        { triggerX: 800, totalEnemies: 4, maxActive: 2 },  
+        { triggerX: 1600, totalEnemies: 6, maxActive: 3 }, 
+        { triggerX: 2400, totalEnemies: 8, maxActive: 3 }, // Transition to Part 2 textures after this
+        { triggerX: 3200, totalEnemies: 5, maxActive: 4 }  
     ];
     
     private currentSectorIndex!: number;
@@ -55,7 +53,6 @@ export class MainLevel extends Phaser.Scene {
         this.lastPlayerHitTime = 0;
         this.lastEnemyHitTime = 0;
 
-        // Safely builds animations before any enemies spawn
         this.createEnemyAnimations();
     }
 
@@ -65,7 +62,6 @@ export class MainLevel extends Phaser.Scene {
             window.removeEventListener('request-scene-restart', this.handleRestart);
         });
 
-        // Pause audio when game is paused
         this.events.on(Phaser.Scenes.Events.PAUSE, () => this.sound.pauseAll());
         this.events.on(Phaser.Scenes.Events.RESUME, () => this.sound.resumeAll());
 
@@ -78,22 +74,26 @@ export class MainLevel extends Phaser.Scene {
         this.sound.stopAll(); 
         this.sound.play('1993_ambient', { loop: true, volume: 0.4 });
 
-        // The physics world is long to allow continuous scrolling
         this.physics.world.setBounds(0, 750, 6000, 330); 
         
-        const camW = this.cameras.main.width;
-        const camH = this.cameras.main.height;
-
         // ==========================================
-        // DYNAMIC PARALLAX TILESPRITES [cite: 150]
-        // Set to the camera's width and pinned to the screen with scrollFactor(0).
-        // We manually pan their UV coordinates in the update() loop.
+        // FIXED PARALLAX SCALING & DEPTH
+        // Using explicit negative depths (-100 to -300) so they NEVER overlap the characters
         // ==========================================
-        this.skyLayer = this.add.tileSprite(0, 0, camW, 1080, 'part1_sky').setOrigin(0, 0).setScrollFactor(0);
-        this.midLayer = this.add.tileSprite(0, 750, camW, 650, 'part1_mid').setOrigin(0, 1).setScrollFactor(0);
-        this.floorLayer = this.add.tileSprite(0, 1080, camW, 330, 'part1_floor').setOrigin(0, 1).setScrollFactor(0);
+        this.skyLayer = this.add.image(0, 0, 'part1_sky')
+            .setOrigin(0, 0).setDisplaySize(6000, 1080).setScrollFactor(0.1).setDepth(-300);
+            
+        this.midLayer = this.add.image(0, 750, 'part1_mid')
+            .setOrigin(0, 1).setDisplaySize(6000, 650).setScrollFactor(0.5).setDepth(-200);
+            
+        this.floorLayer = this.add.image(0, 1080, 'part1_floor')
+            .setOrigin(0, 1).setDisplaySize(6000, 330).setScrollFactor(1).setDepth(-100);
 
         this.shadows = this.add.graphics().setAlpha(0.4);
+        
+        // Shadows must render under feet but above the floor
+        this.shadows.setDepth(-50); 
+        
         this.items = this.physics.add.group();
         this.enemies = this.physics.add.group();
 
@@ -106,7 +106,6 @@ export class MainLevel extends Phaser.Scene {
 
         this.player.setScale(1.7);
         
-        // First enemy spawns automatically to kick things off
         const firstEnemy = new Dizel(this, 1000, 950);
         this.enemies.add(firstEnemy);
 
@@ -122,11 +121,6 @@ export class MainLevel extends Phaser.Scene {
         window.dispatchEvent(new CustomEvent('phaser-ready'));
     }
 
-    /**
-     * BULLETPROOF ANIMATION BUILDER
-     * Checks if the frame actually exists in the JSON before trying to build it,
-     * preventing the "Cannot read properties of undefined" crash!
-     */
     private createEnemyAnimations() {
         const texture = this.textures.get('enemies_1993');
         if (!texture || texture.key === '__MISSING') return;
@@ -173,15 +167,6 @@ export class MainLevel extends Phaser.Scene {
 
         this.handleWaveManager();
 
-        // ==========================================
-        // INFINITE PARALLAX SCROLLING
-        // Mathematically shifts the tiles based on camera scroll
-        // ==========================================
-        const scrollX = this.cameras.main.scrollX;
-        this.skyLayer.tilePositionX = scrollX * 0.1;
-        this.midLayer.tilePositionX = scrollX * 0.5;
-        this.floorLayer.tilePositionX = scrollX * 1.0;
-
         this.children.each((child: any) => {
             if (child.body && child.type === 'Sprite') { child.setAngle(0); child.rotation = 0; }
         });
@@ -205,7 +190,16 @@ export class MainLevel extends Phaser.Scene {
 
         this.player.update(keys);
         this.enemies.getChildren().forEach((e: any) => { if (e.updateAI && !e.isDead) e.updateAI(this.player); });
-        this.children.each((c: any) => { if (c.y && c.type !== 'Image' && c.type !== 'Graphics') c.setDepth(c.y); });
+        
+        // ==========================================
+        // DYNAMIC DEPTH SORTING
+        // Now safely ignores our strictly layered background Images
+        // ==========================================
+        this.children.each((c: any) => { 
+            if (c.y && c.type !== 'Image' && c.type !== 'Graphics') {
+                c.setDepth(c.y); 
+            } 
+        });
         
         if (this.lastEngagedEnemy && (!this.lastEngagedEnemy.active || this.lastEngagedEnemy.isDead)) {
             this.lastEngagedEnemy = null;
@@ -282,20 +276,17 @@ export class MainLevel extends Phaser.Scene {
     private handleWaveManager() {
         const cam = this.cameras.main;
 
-        // 1. Lock camera when entering a new sector
         if (!this.isLocked && this.currentSectorIndex < this.sectors.length) {
             const nextSector = this.sectors[this.currentSectorIndex];
             if (this.player.x > nextSector.triggerX) {
                 this.isLocked = true;
                 cam.stopFollow();
                 
-                // Lock the player inside the current screen bounds
                 this.physics.world.setBounds(cam.worldView.left, 750, cam.width, 330);
                 this.updateReactHUD();
             }
         }
 
-        // 2. Spawn logic while locked
         if (this.isLocked) {
             const currentSector = this.sectors[this.currentSectorIndex];
             const activeEnemies = this.enemies.getChildren().filter((e: any) => !e.isDead).length;
@@ -312,7 +303,6 @@ export class MainLevel extends Phaser.Scene {
                 this.bossSpawned = true;
             }
 
-            // 3. Wave Cleared -> Unlock and Prompt Player
             if (this.spawnedThisWave >= currentSector.totalEnemies && activeEnemies === 0) {
                 if (isFinalSector && !this.bossSpawned) return; 
                 this.unlockCamera();
@@ -343,30 +333,24 @@ export class MainLevel extends Phaser.Scene {
         this.currentSectorIndex++; 
         
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
-        // Extend the bounds back out so the player can keep walking right
         this.physics.world.setBounds(0, 750, 6000, 330);
         this.updateReactHUD();
 
-        // ==========================================
-        // SECTOR TRANSITION (After Wave 3) [cite: 177, 2128-2129]
-        // This marks the end of the first third. We flash black
-        // and instantly swap the textures to the Part 2 environments.
-        // ==========================================
         if (this.currentSectorIndex === 3) {
             this.cameras.main.flash(500, 0, 0, 0);
             
-            // Ensures the new backgrounds exist in cache before swapping
             if (this.textures.exists('part2_sky')) {
                 this.skyLayer.setTexture('part2_sky');
                 this.midLayer.setTexture('part2_mid');
                 this.floorLayer.setTexture('part2_floor');
+                
+                // Re-apply display size because setting a new texture resets it to native dimensions
+                this.skyLayer.setDisplaySize(6000, 1080);
+                this.midLayer.setDisplaySize(6000, 650);
+                this.floorLayer.setDisplaySize(6000, 330);
             }
         }
         
-        // ==========================================
-        // THE "GO! ->" PROMPT
-        // Guides the player to pan the screen to the next wave
-        // ==========================================
         if (this.currentSectorIndex < this.sectors.length) {
             const goText = this.add.text(this.player.x + 100, this.player.y - 150, 'GO! ➡', { 
                 font: '900 64px "Space Mono"', 
@@ -375,7 +359,6 @@ export class MainLevel extends Phaser.Scene {
                 strokeThickness: 8 
             }).setOrigin(0.5);
             
-            // Bouncing pulse animation to the right
             this.tweens.add({ 
                 targets: goText, 
                 x: goText.x + 60, 
