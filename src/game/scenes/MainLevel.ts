@@ -233,8 +233,11 @@ export class MainLevel extends Phaser.Scene {
         const aJust = Phaser.Input.Keyboard.JustDown(ak.a);
         const sJust = Phaser.Input.Keyboard.JustDown(ak.s);
 
-        const specialPressed = (qJust && ak.w.isDown) || (wJust && ak.q.isDown) || (qJust && wJust);
-        const finisherPressed = (aJust && ak.s.isDown) || (sJust && ak.a.isDown) || (aJust && sJust);
+        // ==========================================
+        // COMBO FIX: Highly forgiving input
+        // ==========================================
+        const specialPressed = (ak.q.isDown && ak.w.isDown) && (qJust || wJust);
+        const finisherPressed = (ak.a.isDown && ak.s.isDown) && (aJust || sJust);
 
         const keys = {
             up: cursors.up.isDown, 
@@ -347,24 +350,28 @@ export class MainLevel extends Phaser.Scene {
         this.items.add(drop);
         
         // ==========================================
-        // FIXED SIZES: Highly tuned object scaling
+        // ITEM SCALE FIXES
         // ==========================================
         if (randomItem === 'item-pork') {
-            drop.setScale(2.6); 
-        } else if (randomItem === 'item-beer') {
-            drop.setScale(0.65); 
-        } else if (randomItem === 'item-sandwich') {
-            drop.setScale(0.8); // Sandwich reduced
+            drop.setScale(3.5); 
+        } else if (randomItem === 'item-rakija') {
+            drop.setScale(3.0); 
         } else if (randomItem === 'item-burek') {
-            drop.setScale(1.2); 
+            drop.setScale(2.5); 
+        } else if (randomItem === 'item-beer') {
+            drop.setScale(0.45); 
+        } else if (randomItem === 'item-sandwich') {
+            drop.setScale(0.8);
         } else {
-            drop.setScale(1.3); 
+            drop.setScale(1.5); 
         }
 
         const body = drop.body as Phaser.Physics.Arcade.Body;
         if (body) {
-            body.setSize(drop.displayWidth, 20);
-            body.setOffset(0, drop.displayHeight - 20);
+            // FIXED PHYSICS BODY: Use original unscaled width/height so Phaser 
+            // naturally scales the hitbox with the sprite! This makes it grabbable.
+            body.setSize(drop.width, drop.height);
+            body.setOffset(0, 0);
         }
         
         this.tweens.add({ targets: drop, alpha: 0.2, duration: 100, yoyo: true, repeat: 5, ease: 'Linear' });
@@ -374,7 +381,6 @@ export class MainLevel extends Phaser.Scene {
     private collectItem(player: any, item: any) {
         // ==========================================
         // PICKUP FIX: Expanded tolerance to 80px 
-        // Ensures you can grab it while it's bouncing!
         // ==========================================
         if (Math.abs(player.y - item.y) > 80) return; 
         

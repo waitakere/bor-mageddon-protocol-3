@@ -25,6 +25,9 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private kickImpacts = ['kick_1', 'kick_2', 'kick_3', 'kick_4'];
     private grunts = ['grunt_m_1', 'grunt_m_2', 'grunt_m_3', 'grunt_m_4'];
     private agonies = ['agony_m_1', 'agony_m_2', 'agony_m_3', 'agony_m_4'];
+    
+    // Dedicated special audio pool
+    private specialAudio = ['darko_special_1', 'darko_special_2', 'darko-special-smf'];
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         const texture = scene.textures.get('darko');
@@ -282,7 +285,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         const anim = this.scene.anims.exists(`${this.characterName}-special-attack`) ? `${this.characterName}-special-attack` : `${this.characterName}-kick-2`;
         if (this.scene.anims.exists(anim)) this.play(anim, true);
         
-        (this.scene as any).playSFX('darko_special_1'); 
+        // Use the dedicated Darko special audio array
+        (this.scene as any).playSFX(this.specialAudio); 
         (this.scene as any).triggerScreenGlitch(300);
 
         const spinZone = this.scene.add.circle(this.x, this.y - 40, 140); 
@@ -304,7 +308,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         const anim = this.scene.anims.exists(`${this.characterName}-finish-move`) ? `${this.characterName}-finish-move` : `${this.characterName}-punch-2`;
         if (this.scene.anims.exists(anim)) this.play(anim, true);
         
-        (this.scene as any).playSFX('forbidden_riff'); 
+        // Use the dedicated Darko special audio array
+        (this.scene as any).playSFX(this.specialAudio); 
         (this.scene as any).triggerScreenGlitch(600); 
         
         const enemies = (this.scene as any).enemies.getChildren();
