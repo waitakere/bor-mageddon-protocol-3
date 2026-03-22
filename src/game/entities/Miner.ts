@@ -21,10 +21,6 @@ export class MainLevel extends Phaser.Scene {
     private midLayer!: Phaser.GameObjects.Image;
     private floorLayer!: Phaser.GameObjects.TileSprite;
     
-    // ==========================================
-    // KEYBOARD INPUT FIX
-    // Store keys here so they aren't recreated 60x a second!
-    // ==========================================
     private actionKeys!: {
         q: Phaser.Input.Keyboard.Key;
         w: Phaser.Input.Keyboard.Key;
@@ -87,7 +83,6 @@ export class MainLevel extends Phaser.Scene {
         this.sound.stopAll(); 
         this.sound.play('1993_ambient', { loop: true, volume: 0.4 });
 
-        // Initialize keys ONCE here
         this.actionKeys = this.input.keyboard!.addKeys({
             q: Phaser.Input.Keyboard.KeyCodes.Q,
             w: Phaser.Input.Keyboard.KeyCodes.W,
@@ -228,20 +223,21 @@ export class MainLevel extends Phaser.Scene {
         this.shadows.clear().fillStyle(0x000000, 0.5);
         this.shadows.fillEllipse(this.player.x, this.player.y, 70 * this.player.scale, 20);
         this.enemies.getChildren().forEach((e: any) => { if (!e.isDead) this.shadows.fillEllipse(e.x, e.y, e.width * 0.6, 20); });
-        
         this.breakables.getChildren().forEach((b: any) => { if (!b.isDead) this.shadows.fillEllipse(b.x, b.y, b.displayWidth * 0.7, 15); });
 
         const cursors = this.input.keyboard!.createCursorKeys();
         const ak = this.actionKeys;
 
         // ==========================================
-        // FORGIVING SIMULTANEOUS PRESS LOGIC
+        // BULLETPROOF EXACT-FRAME INPUT LOGIC
         // ==========================================
-        const specialPressed = (Phaser.Input.Keyboard.JustDown(ak.q) && ak.w.isDown) || 
-                               (Phaser.Input.Keyboard.JustDown(ak.w) && ak.q.isDown);
-                               
-        const finisherPressed = (Phaser.Input.Keyboard.JustDown(ak.a) && ak.s.isDown) || 
-                                (Phaser.Input.Keyboard.JustDown(ak.s) && ak.a.isDown);
+        const qJust = Phaser.Input.Keyboard.JustDown(ak.q);
+        const wJust = Phaser.Input.Keyboard.JustDown(ak.w);
+        const aJust = Phaser.Input.Keyboard.JustDown(ak.a);
+        const sJust = Phaser.Input.Keyboard.JustDown(ak.s);
+
+        const specialPressed = (qJust && ak.w.isDown) || (wJust && ak.q.isDown) || (qJust && wJust);
+        const finisherPressed = (aJust && ak.s.isDown) || (sJust && ak.a.isDown) || (aJust && sJust);
 
         const keys = {
             up: cursors.up.isDown, 
@@ -251,11 +247,10 @@ export class MainLevel extends Phaser.Scene {
             space: Phaser.Input.Keyboard.JustDown(ak.space),
             special: specialPressed,
             finisher: finisherPressed,
-            // If special is pressed, ignore the individual punch command for this frame
-            p1: Phaser.Input.Keyboard.JustDown(ak.q) && !specialPressed,
-            p2: Phaser.Input.Keyboard.JustDown(ak.w) && !specialPressed,
-            k1: Phaser.Input.Keyboard.JustDown(ak.a) && !finisherPressed,
-            k2: Phaser.Input.Keyboard.JustDown(ak.s) && !finisherPressed
+            p1: qJust && !specialPressed,
+            p2: wJust && !specialPressed,
+            k1: aJust && !finisherPressed,
+            k2: sJust && !finisherPressed
         };
 
         this.player.update(keys);
@@ -296,6 +291,37 @@ export class MainLevel extends Phaser.Scene {
         }
     }
 
+    // ==========================================
+    // THE RGB GLITCH EFFECT
+    // Causes the screen to violently split colors and shake!
+    // ==========================================
+    public triggerScreenGlitch(duration: number = 400) {
+        const cam = this.cameras.main;
+        cam.shake(duration, 0.02);
+        
+        try {
+            if (cam.postFX) {
+                // Add extreme RGB split
+                const fx = cam.postFX.addChromaticAberration(0.04, 0.04);
+                
+                // Snap it back into place smoothly
+                this.tweens.add({
+                    targets: fx,
+                    offsetX: 0,
+                    offsetY: 0,
+                    duration: duration,
+                    ease: 'Power2',
+                    onComplete: () => {
+                        cam.postFX.remove(fx);
+                    }
+                });
+            }
+        } catch (e) {
+            // Safe fallback if PostFX isn't supported on their device
+            cam.flash(duration, 255, 0, 0, 0.3);
+        }
+    }
+
     public spawnHitEffect(x: number, y: number) {
         const exps = ['explosion_01', 'explosion_02', 'explosion_03', 'explosion_04'];
         const key = Phaser.Utils.Array.GetRandom(exps);
@@ -332,11 +358,11 @@ export class MainLevel extends Phaser.Scene {
         this.items.add(drop);
         
         if (randomItem === 'item-pork') {
-            drop.setScale(2.6);
+            drop.setScale(2.6); 
         } else if (randomItem === 'item-beer') {
-            drop.setScale(0.65);
+            drop.setScale(0.65); 
         } else {
-            drop.setScale(1.3);
+            drop.setScale(1.3); 
         }
 
         const body = drop.body as Phaser.Physics.Arcade.Body;
