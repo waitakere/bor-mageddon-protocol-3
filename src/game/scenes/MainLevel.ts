@@ -261,6 +261,10 @@ export class MainLevel extends Phaser.Scene {
         }
     }
 
+    // ==========================================
+    // UPDATED IMPACT EFFECTS
+    // Scales are normalized and origin is centered perfectly!
+    // ==========================================
     public spawnHitEffect(x: number, y: number) {
         const exps = ['explosion_01', 'explosion_02', 'explosion_03', 'explosion_04'];
         const key = Phaser.Utils.Array.GetRandom(exps);
@@ -269,13 +273,23 @@ export class MainLevel extends Phaser.Scene {
 
         const explosion = this.add.sprite(x, y, key);
         explosion.setDepth(9999); 
-        explosion.setScale(1.5); 
+        
+        // This is the magic bullet: It pins the middle of the PNG to the exact X/Y coordinate!
+        explosion.setOrigin(0.5, 0.5); 
+        
+        // Normalizing the scales based on the PNG size
+        let baseScale = 1.0;
+        if (key === 'explosion_01') baseScale = 2.5; 
+        else if (key === 'explosion_03') baseScale = 0.6; 
+        else baseScale = 1.2; 
+
+        explosion.setScale(baseScale); 
         
         this.tweens.add({
             targets: explosion,
-            scale: 2.2, 
+            scale: baseScale * 1.3, // Expands outward from the center
             alpha: 0, 
-            duration: 200,
+            duration: 250,
             ease: 'Quad.easeOut',
             onComplete: () => explosion.destroy()
         });
@@ -289,7 +303,7 @@ export class MainLevel extends Phaser.Scene {
         drop.setOrigin(0.5, 1); 
         this.items.add(drop);
         
-        drop.setScale(1.3); // Rebalanced from 2.5 to 1.3
+        drop.setScale(1.3);
 
         const body = drop.body as Phaser.Physics.Arcade.Body;
         if (body) {
