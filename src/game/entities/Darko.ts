@@ -13,7 +13,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private currentVoice: any = null;
 
     private walkSpeed: number = 250;
-    private runSpeed: number = 460;
+    private runSpeed: number = 510; // Increased from 460
+
     private jumpVelocityX: number = 0; 
 
     private lastKey: string = '';
@@ -26,7 +27,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private grunts = ['grunt_m_1', 'grunt_m_2', 'grunt_m_3', 'grunt_m_4'];
     private agonies = ['agony_m_1', 'agony_m_2', 'agony_m_3', 'agony_m_4'];
     
-    // Dedicated special audio pool
     private specialAudio = ['darko_special_1', 'darko_special_2', 'darko-special-smf'];
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
@@ -285,7 +285,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         const anim = this.scene.anims.exists(`${this.characterName}-special-attack`) ? `${this.characterName}-special-attack` : `${this.characterName}-kick-2`;
         if (this.scene.anims.exists(anim)) this.play(anim, true);
         
-        // Use the dedicated Darko special audio array
         (this.scene as any).playSFX(this.specialAudio); 
         (this.scene as any).triggerScreenGlitch(300);
 
@@ -308,7 +307,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         const anim = this.scene.anims.exists(`${this.characterName}-finish-move`) ? `${this.characterName}-finish-move` : `${this.characterName}-punch-2`;
         if (this.scene.anims.exists(anim)) this.play(anim, true);
         
-        // Use the dedicated Darko special audio array
         (this.scene as any).playSFX(this.specialAudio); 
         (this.scene as any).triggerScreenGlitch(600); 
         

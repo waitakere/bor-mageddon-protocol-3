@@ -13,7 +13,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     private currentVoice: any = null;
 
     private walkSpeed: number = 200;
-    private runSpeed: number = 380;
+    private runSpeed: number = 430; // Increased from 380
+
     private jumpVelocityX: number = 0; 
 
     private lastKey: string = '';
@@ -76,10 +77,23 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 else if (animType === 'walk') fps = 12;
                 else if (animType === 'run') fps = 18;
                 else if (animType === 'jump') fps = 8;
+                else if (animType === 'finish-move') fps = 24; // Faster Chain Whip!
+
+                const frameConfig: Phaser.Types.Animations.AnimationFrameConfig[] = matchingFrames.map(f => {
+                    return { key: this.characterName, frame: f };
+                });
+
+                // Hold the megaphone frame longer by duplicating the final frame
+                if (animType === 'special-attack' && frameConfig.length > 0) {
+                    const lastFrame = frameConfig[frameConfig.length - 1];
+                    for (let i = 0; i < 8; i++) {
+                        frameConfig.push(lastFrame);
+                    }
+                }
 
                 anims.create({
                     key: animKey,
-                    frames: matchingFrames.map(f => ({ key: this.characterName, frame: f })),
+                    frames: frameConfig,
                     frameRate: fps,
                     repeat: (animType === 'idle' || animType === 'walk' || animType === 'run') ? -1 : 0
                 });
@@ -161,10 +175,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                     this.executeJumpAttack(requestedAction);
                 }
             } else if (!this.isJumping) {
-                // ==========================================
-                // INSTANT CANCEL SYSTEM
-                // Allows a special to instantly overwrite a basic punch/kick!
-                // ==========================================
                 if (this.isAttacking && (requestedAction === 'special' || requestedAction === 'finisher')) {
                     this.isAttacking = false; 
                     const oldZone = this.scene.children.getByName('basicAttackZone');
@@ -254,7 +264,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
 
         const hitZone = this.scene.add.zone(this.x + (this.flipX ? -80 : 80), this.y - 40, 140, 80);
-        hitZone.setName('basicAttackZone'); // Named so the cancel system can destroy it!
+        hitZone.setName('basicAttackZone');
         this.scene.physics.add.existing(hitZone);
         
         let hasHit = false;

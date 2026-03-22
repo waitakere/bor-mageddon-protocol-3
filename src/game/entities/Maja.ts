@@ -13,7 +13,8 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     private currentVoice: any = null;
 
     private walkSpeed: number = 160;
-    private runSpeed: number = 320;
+    private runSpeed: number = 370; // Increased from 320
+
     private jumpVelocityX: number = 0; 
 
     private lastKey: string = '';
