@@ -13,7 +13,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     private currentVoice: any = null;
 
     private walkSpeed: number = 160;
-    private runSpeed: number = 370; // Increased from 320
+    private runSpeed: number = 370;
 
     private jumpVelocityX: number = 0; 
 
@@ -78,9 +78,24 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 else if (animType === 'run') fps = 18;
                 else if (animType === 'jump') fps = 8; 
 
+                const frameConfig: Phaser.Types.Animations.AnimationFrameConfig[] = matchingFrames.map(f => {
+                    return { key: this.characterName, frame: f };
+                });
+
+                // ==========================================
+                // ANIMATION FIX: The Drill Hold
+                // Holds the final drill frame for an extra 0.5 seconds
+                // ==========================================
+                if (animType === 'finish-move' && frameConfig.length > 0) {
+                    const lastFrame = frameConfig[frameConfig.length - 1];
+                    for (let i = 0; i < 8; i++) {
+                        frameConfig.push(lastFrame);
+                    }
+                }
+
                 anims.create({
                     key: animKey,
-                    frames: matchingFrames.map(f => ({ key: this.characterName, frame: f })),
+                    frames: frameConfig,
                     frameRate: fps,
                     repeat: (animType === 'idle' || animType === 'walk' || animType === 'run') ? -1 : 0
                 });
@@ -280,7 +295,15 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
     private executeBalkanSuplex() {
         this.isAttacking = true; this.setVelocity(0, 0);
-        const grabZone = this.scene.add.zone(this.x + (this.flipX ? -50 : 50), this.y - 40, 70, 70);
+        
+        // ==========================================
+        // SPECIAL FIX: Always play the animation!
+        // ==========================================
+        const anim = this.scene.anims.exists(`${this.characterName}-special-attack`) ? `${this.characterName}-special-attack` : `${this.characterName}-punch-1`;
+        if (this.scene.anims.exists(anim)) this.play(anim, true);
+
+        // Expanded grab zone for better playability
+        const grabZone = this.scene.add.zone(this.x + (this.flipX ? -60 : 60), this.y - 40, 120, 80);
         this.scene.physics.add.existing(grabZone);
         
         let grabbedTarget: any = null;
@@ -291,9 +314,6 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         grabZone.destroy(); 
 
         if (grabbedTarget) {
-            const anim = this.scene.anims.exists(`${this.characterName}-special-attack`) ? `${this.characterName}-special-attack` : `${this.characterName}-punch-1`;
-            if (this.scene.anims.exists(anim)) this.play(anim, true);
-            
             if (grabbedTarget.setVelocity) grabbedTarget.setVelocity(0, 0);
             
             this.scene.time.delayedCall(200, () => { 
@@ -314,11 +334,9 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 });
                 this.scene.time.delayedCall(100, () => shockwave.destroy());
             });
-            this.once('animationcomplete', () => { this.isAttacking = false; });
-        } else { 
-            if (this.scene.anims.exists(`${this.characterName}-idle`)) this.play(`${this.characterName}-idle`, true); 
-            this.scene.time.delayedCall(300, () => { this.isAttacking = false; }); 
         }
+        
+        this.once('animationcomplete', () => { this.isAttacking = false; });
     }
 
     private executeIndustrialDrill() {
@@ -347,7 +365,18 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             });
         };
         this.scene.events.on('update', drillUpdate);
-        this.scene.time.delayedCall(600, () => { this.setVelocityX(0); drillZone.destroy(); this.scene.events.off('update', drillUpdate); this.isAttacking = false; });
+        
+        // ==========================================
+        // SYNC FIX: Dynamic Dash Duration
+        // Now waits for the extended animation to complete
+        // before cutting the physics velocity!
+        // ==========================================
+        this.once('animationcomplete', () => { 
+            this.setVelocityX(0); 
+            if (drillZone.active) drillZone.destroy(); 
+            this.scene.events.off('update', drillUpdate); 
+            this.isAttacking = false; 
+        });
     }
 
     public takeDamage(amount: number) {
