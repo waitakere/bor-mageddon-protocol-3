@@ -264,7 +264,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         this.once('animationcomplete', () => {
             if (hitZone.active) hitZone.destroy();
             if (this.queuedAction) { const next = this.queuedAction; this.queuedAction = null; this.executeAction(next); } 
-            else { this.isAttacking = false; this.smfMeter = Math.min(this.smfMeter + 5, 100); (this.scene as any).updateReactHUD(); }
+            else { this.isAttacking = false; }
         });
     }
 
@@ -274,16 +274,24 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         if (this.scene.anims.exists(anim)) this.play(anim, true);
         
         (this.scene as any).playSFX('marko_special_1'); 
+        (this.scene as any).triggerScreenGlitch(400); 
         
-        this.scene.cameras.main.shake(300, 0.01);
-        const direction = this.flipX ? -1 : 1;
-        const waveZone = this.scene.add.zone(this.x + (100 * direction), this.y - 40, 200, 100);
+        // AOE OVERHAUL: Replaced forward cone with a large, 360-degree circle to hit enemies behind him too
+        const waveZone = this.scene.add.circle(this.x, this.y - 40, 180);
         this.scene.physics.add.existing(waveZone);
         
         const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
         this.scene.physics.add.overlap(waveZone, targets, (wz, target: any) => {
             if (Math.abs(this.y - target.y) <= 60) { 
-                if (target.takeDamage) { target.takeDamage(20 * this.damageMultiplier); if (target.body && target.type !== 'obj_kiosk' && target.type !== 'obj_kontejner') target.setVelocityX(200 * direction); }
+                // Push enemies away based on which side of Marko they are on
+                const pushDir = target.x > this.x ? 1 : -1; 
+                
+                if (target.takeDamage) { 
+                    target.takeDamage(20 * this.damageMultiplier); 
+                    if (target.body && target.type !== 'obj_kiosk' && target.type !== 'obj_kontejner') {
+                        target.setVelocityX(250 * pushDir); 
+                    }
+                }
                 (this.scene as any).spawnHitEffect(target.x, target.y - 50);
             }
         });
@@ -297,8 +305,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         if (this.scene.anims.exists(anim)) this.play(anim, true);
         
         (this.scene as any).playSFX('marko_special_2'); 
+        (this.scene as any).triggerScreenGlitch(500); 
 
-        this.scene.cameras.main.shake(600, 0.02);
         const spinZone = this.scene.add.circle(this.x, this.y - 40, 150);
         this.scene.physics.add.existing(spinZone);
         

@@ -264,7 +264,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.once('animationcomplete', () => {
             if (hitZone.active) hitZone.destroy();
             if (this.queuedAction) { const next = this.queuedAction; this.queuedAction = null; this.executeAction(next); } 
-            else { this.isAttacking = false; this.smfMeter = Math.min(this.smfMeter + 5, 100); (this.scene as any).updateReactHUD(); }
+            else { this.isAttacking = false; }
         });
     }
 
@@ -287,9 +287,24 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             if (grabbedTarget.setVelocity) grabbedTarget.setVelocity(0, 0);
             
             this.scene.time.delayedCall(200, () => { 
-                this.scene.cameras.main.shake(300, 0.02); 
+                // AOE SHOCKWAVE ON IMPACT
+                (this.scene as any).triggerScreenGlitch(400);
                 (this.scene as any).spawnHitEffect(grabbedTarget.x, grabbedTarget.y - 50);
                 if(grabbedTarget.takeDamage) grabbedTarget.takeDamage(40 * this.damageMultiplier); 
+                
+                // Spawn a shockwave to hit everyone nearby
+                const shockwave = this.scene.add.circle(this.x, this.y - 40, 120);
+                this.scene.physics.add.existing(shockwave);
+                this.scene.physics.overlap(shockwave, targets, (sw, target: any) => {
+                    if (target !== grabbedTarget && Math.abs(this.y - target.y) <= 60) {
+                        if (target.takeDamage) target.takeDamage(15 * this.damageMultiplier);
+                        if (target.body && target.type !== 'obj_kiosk' && target.type !== 'obj_kontejner') {
+                            const pushDir = target.x > this.x ? 1 : -1;
+                            target.setVelocityX(200 * pushDir);
+                        }
+                    }
+                });
+                this.scene.time.delayedCall(100, () => shockwave.destroy());
             });
             this.once('animationcomplete', () => { this.isAttacking = false; });
         } else { 
@@ -303,8 +318,11 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         const anim = this.scene.anims.exists(`${this.characterName}-finish-move`) ? `${this.characterName}-finish-move` : `${this.characterName}-run`;
         if (this.scene.anims.exists(anim)) this.play(anim, true);
 
+        (this.scene as any).triggerScreenGlitch(600); // Visual FX Glitch!
+        
         const direction = this.flipX ? -1 : 1;
-        this.setVelocityX(500 * direction); this.scene.cameras.main.shake(600, 0.01);
+        this.setVelocityX(500 * direction); 
+        
         const drillZone = this.scene.add.zone(this.x, this.y, 100, 80);
         this.scene.physics.add.existing(drillZone);
         

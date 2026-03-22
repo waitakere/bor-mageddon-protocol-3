@@ -264,7 +264,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.once('animationcomplete', () => {
             if (hitZone.active) hitZone.destroy();
             if (this.queuedAction) { const next = this.queuedAction; this.queuedAction = null; this.executeAction(next); } 
-            else { this.isAttacking = false; this.smfMeter = Math.min(this.smfMeter + 5, 100); (this.scene as any).updateReactHUD(); }
+            else { this.isAttacking = false; }
         });
     }
 
@@ -274,8 +274,9 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         if (this.scene.anims.exists(anim)) this.play(anim, true);
         
         (this.scene as any).playSFX('darko_special_1'); 
+        (this.scene as any).triggerScreenGlitch(300);
 
-        const spinZone = this.scene.add.circle(this.x, this.y - 40, 100);
+        const spinZone = this.scene.add.circle(this.x, this.y - 40, 140); // Expanded radius slightly for better CC
         this.scene.physics.add.existing(spinZone);
 
         const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
@@ -295,8 +296,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         if (this.scene.anims.exists(anim)) this.play(anim, true);
         
         (this.scene as any).playSFX('forbidden_riff'); 
-
-        this.scene.cameras.main.shake(800, 0.015); this.scene.cameras.main.flash(300, 0, 255, 255);
+        (this.scene as any).triggerScreenGlitch(600); // Powerful Glitch!
         
         const enemies = (this.scene as any).enemies.getChildren();
         const breakables = (this.scene as any).breakables ? (this.scene as any).breakables.getChildren() : [];
