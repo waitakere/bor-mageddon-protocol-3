@@ -6,42 +6,31 @@ export class BootScene extends Phaser.Scene {
     }
 
     preload() {
-        // =========================================================
-        // THE CODESPACES PROXY FIX
-        // Forces Phaser to use standard browser <img> tags instead of XHR.
-        // Bypasses the GitHub "206 Partial Content" chunking issue.
-        // =========================================================
         this.load.imageLoadType = 'HTMLImageElement';
-
         this.createLoadingBar();
 
-        // ==========================================
-        // 1. STRICTLY RELATIVE AUDIO PATHS
-        // ==========================================
+        // 1. AUDIO
         this.load.audio('1993_ambient', './assets/audio/bor_streets_93.mp3');
-        
         this.load.audioSprite('sfx_atlas', './assets/audio/sfx_atlas.json', [
             './assets/audio/sfx_atlas.mp3'
         ]);
 
-        // ==========================================
-        // 2. STRICTLY RELATIVE SPRITE PATHS (Atlases)
-        // ==========================================
+        // 2. SPRITE ATLASES
         this.load.atlas('marko', './assets/sprites/marko.png', './assets/sprites/marko.json');
         this.load.atlas('darko', './assets/sprites/darko.png', './assets/sprites/darko.json');
         this.load.atlas('maja', './assets/sprites/maja.png', './assets/sprites/maja.json');
         this.load.atlas('enemies_1993', './assets/sprites/enemies_1993.png', './assets/sprites/enemies_1993.json');
 
-        // ==========================================
-        // 3. STRICTLY RELATIVE ENVIRONMENT, VFX & PROPS
-        // ==========================================
-        // Backgrounds
+        // 3. ENVIRONMENTS & PROPS
         this.load.image('part1_sky', './assets/images/environments/part1_sky.png');
         this.load.image('part1_mid', './assets/images/environments/part1_mid.png');
         this.load.image('part1_floor', './assets/images/environments/part1_floor.png');
         
-        // VFX
-        this.load.image('explosion_01', './assets/images/environments/explosion_01.png'); // Note: Spotted this in your environments folder too!
+        // VFX - 4 Random Explosions!
+        this.load.image('explosion_01', './assets/images/environments/explosion_01.png');
+        this.load.image('explosion_02', './assets/images/environments/explosion_02.png');
+        this.load.image('explosion_03', './assets/images/environments/explosion_03.png');
+        this.load.image('explosion_04', './assets/images/environments/explosion_04.png');
 
         // Health Items
         this.load.image('item-burek', './assets/images/environments/item-burek.png');
@@ -49,16 +38,12 @@ export class BootScene extends Phaser.Scene {
         this.load.image('item-pork', './assets/images/environments/item-pork.png');
         this.load.image('item-beer', './assets/images/environments/item-beer.png');
         this.load.image('item-sandwich', './assets/images/environments/item-sandwich.png');
-        this.load.image('item-rakija', './assets/images/environments/item-rakija.png'); // Added Rakija since it's there!
+        this.load.image('item-rakija', './assets/images/environments/item-rakija.png'); 
 
-        // Breakable Props (Paths fixed to match your screenshot)
+        // Breakables
         this.load.image('barrel', './assets/images/environments/barrel.png');
         this.load.image('crate', './assets/images/environments/crate.png');
         this.load.image('kontejner', './assets/images/environments/kontejner.png');
-        
-        // NOTE: kiosk.png is missing from your folder! 
-        // If you have it, drag it into the environments folder. 
-        // If not, it will still show a green box until you upload it.
         this.load.image('kiosk', './assets/images/environments/kiosk.png');
     }
 
