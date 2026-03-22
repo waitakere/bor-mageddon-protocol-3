@@ -13,8 +13,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     private currentVoice: any = null;
 
     private walkSpeed: number = 200;
-    private runSpeed: number = 430; // Increased from 380
-
+    private runSpeed: number = 430;
     private jumpVelocityX: number = 0; 
 
     private lastKey: string = '';
@@ -77,13 +76,12 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 else if (animType === 'walk') fps = 12;
                 else if (animType === 'run') fps = 18;
                 else if (animType === 'jump') fps = 8;
-                else if (animType === 'finish-move') fps = 24; // Faster Chain Whip!
+                else if (animType === 'finish-move') fps = 24; 
 
                 const frameConfig: Phaser.Types.Animations.AnimationFrameConfig[] = matchingFrames.map(f => {
                     return { key: this.characterName, frame: f };
                 });
 
-                // Hold the megaphone frame longer by duplicating the final frame
                 if (animType === 'special-attack' && frameConfig.length > 0) {
                     const lastFrame = frameConfig[frameConfig.length - 1];
                     for (let i = 0; i < 8; i++) {
@@ -236,7 +234,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
         
         this.scene.physics.add.overlap(hitZone, targets, (hz, target: any) => {
-            if (Math.abs(this.y - target.y) <= 60) { 
+            const yTol = target.isBreakable ? 140 : 60;
+            if (Math.abs(this.y - target.y) <= yTol) { 
                 if (!hasHit) {
                     (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     hasHit = true;
@@ -271,7 +270,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
 
         this.scene.physics.add.overlap(hitZone, targets, (hz, target: any) => {
-            if (Math.abs(this.y - target.y) <= 60) { 
+            const yTol = target.isBreakable ? 140 : 60;
+            if (Math.abs(this.y - target.y) <= yTol) { 
                 if (!hasHit) {
                     (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     hasHit = true;
@@ -304,7 +304,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         
         const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
         this.scene.physics.add.overlap(waveZone, targets, (wz, target: any) => {
-            if (Math.abs(this.y - target.y) <= 60) { 
+            const yTol = target.isBreakable ? 160 : 60;
+            if (Math.abs(this.y - target.y) <= yTol) { 
                 const pushDir = target.x > this.x ? 1 : -1; 
                 if (target.takeDamage) { 
                     target.takeDamage(20 * this.damageMultiplier); 
@@ -332,7 +333,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         
         const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
         this.scene.physics.overlap(spinZone, targets, (sz, target: any) => {
-            if (Math.abs(this.y - target.y) <= 80) { 
+            const yTol = target.isBreakable ? 160 : 80;
+            if (Math.abs(this.y - target.y) <= yTol) { 
                 if (target.takeDamage) { target.takeDamage(90 * this.damageMultiplier); if (target.body && target.type !== 'obj_kiosk' && target.type !== 'obj_kontejner') target.setVelocityY(-200); }
                 (this.scene as any).spawnHitEffect(target.x, target.y - 50);
             }
