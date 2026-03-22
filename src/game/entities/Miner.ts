@@ -34,11 +34,6 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
 
         const body = this.body as Phaser.Physics.Arcade.Body;
         
-        // ==========================================
-        // FIXED HITBOX: The Shambling Tank
-        // We dynamically calculate the offset so his hitbox 
-        // is 120px wide and 160px tall, anchored to his feet!
-        // ==========================================
         body.setSize(120, 160);
         body.setOffset(this.width / 2 - 60, this.height - 160); 
         
@@ -59,7 +54,13 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
         const distX = Math.abs(player.x - this.x);
         const distY = Math.abs(player.y - this.y);
 
-        this.setFlipX(player.x < this.x);
+        // ==========================================
+        // FLIP DEADZONE FIX
+        // Prevents the Miner from rapidly mirroring if you stand inside him
+        // ==========================================
+        if (distX > 10) {
+            this.setFlipX(player.x < this.x);
+        }
 
         if (distX <= this.attackRange && distY <= 30 && !this.attackCooldown) {
             this.executeHeavyMelee(player);
@@ -153,7 +154,11 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
         this.hasBeenKnockedDown = true;
         this.isHurt = true;
         
-        this.x += this.flipX ? 20 : -20; 
+        // ==========================================
+        // TELEPORT BUG FIX
+        // Removed the physical this.x manipulation. 
+        // He now falls safely exactly where he is punched!
+        // ==========================================
         (this.scene as any).playSFX(this.agonies);
         
         if (this.scene.anims.exists('miner-knockdown-get-up')) {
