@@ -160,10 +160,22 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 if (requestedAction.includes('punch') || requestedAction.includes('kick')) {
                     this.executeJumpAttack(requestedAction);
                 }
-            } else if (!this.isJumping && !this.isAttacking) {
-                this.executeAction(requestedAction);
-            } else {
-                this.queuedAction = requestedAction;
+            } else if (!this.isJumping) {
+                // ==========================================
+                // INSTANT CANCEL SYSTEM
+                // Allows a special to instantly overwrite a basic punch/kick!
+                // ==========================================
+                if (this.isAttacking && (requestedAction === 'special' || requestedAction === 'finisher')) {
+                    this.isAttacking = false; 
+                    const oldZone = this.scene.children.getByName('basicAttackZone');
+                    if (oldZone) oldZone.destroy();
+                }
+
+                if (!this.isAttacking) {
+                    this.executeAction(requestedAction);
+                } else {
+                    this.queuedAction = requestedAction;
+                }
             }
             return; 
         }
@@ -242,6 +254,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
 
         const hitZone = this.scene.add.zone(this.x + (this.flipX ? -80 : 80), this.y - 40, 140, 80);
+        hitZone.setName('basicAttackZone'); // Named so the cancel system can destroy it!
         this.scene.physics.add.existing(hitZone);
         
         let hasHit = false;
@@ -276,16 +289,13 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         (this.scene as any).playSFX('marko_special_1'); 
         (this.scene as any).triggerScreenGlitch(400); 
         
-        // AOE OVERHAUL: Replaced forward cone with a large, 360-degree circle to hit enemies behind him too
         const waveZone = this.scene.add.circle(this.x, this.y - 40, 180);
         this.scene.physics.add.existing(waveZone);
         
         const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
         this.scene.physics.add.overlap(waveZone, targets, (wz, target: any) => {
             if (Math.abs(this.y - target.y) <= 60) { 
-                // Push enemies away based on which side of Marko they are on
                 const pushDir = target.x > this.x ? 1 : -1; 
-                
                 if (target.takeDamage) { 
                     target.takeDamage(20 * this.damageMultiplier); 
                     if (target.body && target.type !== 'obj_kiosk' && target.type !== 'obj_kontejner') {

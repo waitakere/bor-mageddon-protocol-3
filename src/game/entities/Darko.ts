@@ -160,10 +160,18 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 if (requestedAction.includes('punch') || requestedAction.includes('kick')) {
                     this.executeJumpAttack(requestedAction);
                 }
-            } else if (!this.isJumping && !this.isAttacking) {
-                this.executeAction(requestedAction);
-            } else {
-                this.queuedAction = requestedAction;
+            } else if (!this.isJumping) {
+                if (this.isAttacking && (requestedAction === 'special' || requestedAction === 'finisher')) {
+                    this.isAttacking = false; 
+                    const oldZone = this.scene.children.getByName('basicAttackZone');
+                    if (oldZone) oldZone.destroy();
+                }
+
+                if (!this.isAttacking) {
+                    this.executeAction(requestedAction);
+                } else {
+                    this.queuedAction = requestedAction;
+                }
             }
             return; 
         }
@@ -242,6 +250,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
 
         const hitZone = this.scene.add.zone(this.x + (this.flipX ? -80 : 80), this.y - 40, 140, 80);
+        hitZone.setName('basicAttackZone');
         this.scene.physics.add.existing(hitZone);
         
         let hasHit = false;
@@ -276,7 +285,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         (this.scene as any).playSFX('darko_special_1'); 
         (this.scene as any).triggerScreenGlitch(300);
 
-        const spinZone = this.scene.add.circle(this.x, this.y - 40, 140); // Expanded radius slightly for better CC
+        const spinZone = this.scene.add.circle(this.x, this.y - 40, 140); 
         this.scene.physics.add.existing(spinZone);
 
         const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
@@ -296,7 +305,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         if (this.scene.anims.exists(anim)) this.play(anim, true);
         
         (this.scene as any).playSFX('forbidden_riff'); 
-        (this.scene as any).triggerScreenGlitch(600); // Powerful Glitch!
+        (this.scene as any).triggerScreenGlitch(600); 
         
         const enemies = (this.scene as any).enemies.getChildren();
         const breakables = (this.scene as any).breakables ? (this.scene as any).breakables.getChildren() : [];

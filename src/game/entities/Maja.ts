@@ -160,10 +160,18 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 if (requestedAction.includes('punch') || requestedAction.includes('kick')) {
                     this.executeJumpAttack(requestedAction);
                 }
-            } else if (!this.isJumping && !this.isAttacking) {
-                this.executeAction(requestedAction);
-            } else {
-                this.queuedAction = requestedAction;
+            } else if (!this.isJumping) {
+                if (this.isAttacking && (requestedAction === 'special' || requestedAction === 'finisher')) {
+                    this.isAttacking = false; 
+                    const oldZone = this.scene.children.getByName('basicAttackZone');
+                    if (oldZone) oldZone.destroy();
+                }
+
+                if (!this.isAttacking) {
+                    this.executeAction(requestedAction);
+                } else {
+                    this.queuedAction = requestedAction;
+                }
             }
             return; 
         }
@@ -242,6 +250,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
 
         const hitZone = this.scene.add.zone(this.x + (this.flipX ? -80 : 80), this.y - 40, 140, 80);
+        hitZone.setName('basicAttackZone');
         this.scene.physics.add.existing(hitZone);
         
         let hasHit = false;
@@ -287,12 +296,10 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             if (grabbedTarget.setVelocity) grabbedTarget.setVelocity(0, 0);
             
             this.scene.time.delayedCall(200, () => { 
-                // AOE SHOCKWAVE ON IMPACT
                 (this.scene as any).triggerScreenGlitch(400);
                 (this.scene as any).spawnHitEffect(grabbedTarget.x, grabbedTarget.y - 50);
                 if(grabbedTarget.takeDamage) grabbedTarget.takeDamage(40 * this.damageMultiplier); 
                 
-                // Spawn a shockwave to hit everyone nearby
                 const shockwave = this.scene.add.circle(this.x, this.y - 40, 120);
                 this.scene.physics.add.existing(shockwave);
                 this.scene.physics.overlap(shockwave, targets, (sw, target: any) => {
@@ -318,7 +325,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         const anim = this.scene.anims.exists(`${this.characterName}-finish-move`) ? `${this.characterName}-finish-move` : `${this.characterName}-run`;
         if (this.scene.anims.exists(anim)) this.play(anim, true);
 
-        (this.scene as any).triggerScreenGlitch(600); // Visual FX Glitch!
+        (this.scene as any).triggerScreenGlitch(600); 
         
         const direction = this.flipX ? -1 : 1;
         this.setVelocityX(500 * direction); 
