@@ -20,7 +20,6 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
     private agonies = ['agony_m_1', 'agony_m_2', 'agony_m_3', 'agony_m_4'];
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
-        // FIXED: The fallback is allFrames (a string), not allFrames (an array)!
         const texture = scene.textures.get('enemies_1993');
         const allFrames = texture ? texture.getFrameNames() : [];
         const firstFrame = allFrames.find(f => f.includes('miner-walk/frame_000')) || allFrames;
@@ -34,8 +33,14 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
         this.setOrigin(0.5, 1);
 
         const body = this.body as Phaser.Physics.Arcade.Body;
-        body.setSize(80, 40);
-        body.setOffset(88, 216); 
+        
+        // ==========================================
+        // FIXED HITBOX: The Shambling Tank
+        // We dynamically calculate the offset so his hitbox 
+        // is 120px wide and 160px tall, anchored to his feet!
+        // ==========================================
+        body.setSize(120, 160);
+        body.setOffset(this.width / 2 - 60, this.height - 160); 
         
         body.setCollideWorldBounds(true);
         body.setAllowGravity(false); 
