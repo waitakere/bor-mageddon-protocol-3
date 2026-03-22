@@ -135,8 +135,6 @@ export class MainLevel extends Phaser.Scene {
     }
 
     private scatterBreakables() {
-        // Adjusted Y coordinates to sit nicely on the street pavement
-        // Only one Kiosk exists per your design rules!
         const props = [
             { x: 600, y: 880, type: 'barrel' },
             { x: 1200, y: 1000, type: 'crate' },
@@ -211,7 +209,6 @@ export class MainLevel extends Phaser.Scene {
         this.shadows.fillEllipse(this.player.x, this.player.y, 70 * this.player.scale, 20);
         this.enemies.getChildren().forEach((e: any) => { if (!e.isDead) this.shadows.fillEllipse(e.x, e.y, e.width * 0.6, 20); });
         
-        // Shrink breakable shadows slightly so they don't look like huge voids
         this.breakables.getChildren().forEach((b: any) => { if (!b.isDead) this.shadows.fillEllipse(b.x, b.y, b.displayWidth * 0.7, 15); });
 
         const cursors = this.input.keyboard!.createCursorKeys();
@@ -284,13 +281,16 @@ export class MainLevel extends Phaser.Scene {
         const drop = this.physics.add.sprite(x, y - 40, randomItem);
         drop.setOrigin(0.5, 1); 
         this.items.add(drop);
-        drop.setScale(0.5);
+        
+        // FIXED SCALE: Boosted from 0.5 to 2.5 so it is visible!
+        drop.setScale(2.5);
 
         const body = drop.body as Phaser.Physics.Arcade.Body;
         if (body) {
             body.setSize(drop.width, 20);
             body.setOffset(0, drop.height - 20);
         }
+        
         this.tweens.add({ targets: drop, alpha: 0.2, duration: 100, yoyo: true, repeat: 5, ease: 'Linear' });
         this.tweens.add({ targets: drop, y: y, duration: 350, ease: 'Bounce.easeOut' });
     }
