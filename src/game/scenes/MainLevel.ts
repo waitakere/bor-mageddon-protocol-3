@@ -154,7 +154,8 @@ export class MainLevel extends Phaser.Scene {
             { x: 600, y: 880, type: 'barrel' },
             { x: 1200, y: 1000, type: 'crate' },
             { x: 1800, y: 920, type: 'kontejner' },
-            { x: 2600, y: 840, type: 'kiosk' }, 
+            // KIOSK Y FIXED: Dropped down from 840 to 980 so it sits on the street!
+            { x: 2600, y: 980, type: 'kiosk' }, 
             { x: 3200, y: 1040, type: 'barrel' },
             { x: 3700, y: 900, type: 'crate' }
         ];
@@ -233,9 +234,6 @@ export class MainLevel extends Phaser.Scene {
         const aJust = Phaser.Input.Keyboard.JustDown(ak.a);
         const sJust = Phaser.Input.Keyboard.JustDown(ak.s);
 
-        // ==========================================
-        // COMBO FIX: Highly forgiving input
-        // ==========================================
         const specialPressed = (ak.q.isDown && ak.w.isDown) && (qJust || wJust);
         const finisherPressed = (ak.a.isDown && ak.s.isDown) && (aJust || sJust);
 
@@ -349,9 +347,6 @@ export class MainLevel extends Phaser.Scene {
         drop.setOrigin(0.5, 1); 
         this.items.add(drop);
         
-        // ==========================================
-        // ITEM SCALE FIXES
-        // ==========================================
         if (randomItem === 'item-pork') {
             drop.setScale(3.5); 
         } else if (randomItem === 'item-rakija') {
@@ -368,8 +363,6 @@ export class MainLevel extends Phaser.Scene {
 
         const body = drop.body as Phaser.Physics.Arcade.Body;
         if (body) {
-            // FIXED PHYSICS BODY: Use original unscaled width/height so Phaser 
-            // naturally scales the hitbox with the sprite! This makes it grabbable.
             body.setSize(drop.width, drop.height);
             body.setOffset(0, 0);
         }
@@ -379,9 +372,6 @@ export class MainLevel extends Phaser.Scene {
     }
 
     private collectItem(player: any, item: any) {
-        // ==========================================
-        // PICKUP FIX: Expanded tolerance to 80px 
-        // ==========================================
         if (Math.abs(player.y - item.y) > 80) return; 
         
         item.destroy();
