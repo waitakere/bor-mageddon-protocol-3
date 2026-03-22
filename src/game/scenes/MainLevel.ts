@@ -66,9 +66,13 @@ export class MainLevel extends Phaser.Scene {
     }
 
     create(data: any) {
+        // Core Event Listeners
         window.addEventListener('request-scene-restart', this.handleRestart);
+        window.addEventListener('request-continue', this.handleContinue as EventListener);
+        
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
             window.removeEventListener('request-scene-restart', this.handleRestart);
+            window.removeEventListener('request-continue', this.handleContinue as EventListener);
         });
 
         this.events.on(Phaser.Scenes.Events.PAUSE, () => this.sound.pauseAll());
@@ -118,43 +122,83 @@ export class MainLevel extends Phaser.Scene {
         } else if (window.localStorage.getItem('selectedCharacter')) {
             charKey = window.localStorage.getItem('selectedCharacter') || 'marko';
         }
-        charKey = charKey.toLowerCase();
         
-        switch(charKey) {
-            case 'maja': this.player = new Maja(this, 200, 950); break;
-            case 'darko': this.player = new Darko(this, 200, 950); break;
-            default: this.player = new Marko(this, 200, 950); break;
-        }
-
-        this.player.setScale(1.7);
+        // Spawn the initial player
+        this.spawnPlayer(charKey, 200, 950);
         
         const firstEnemy = new Dizel(this, 1000, 950);
         this.enemies.add(firstEnemy);
 
         this.scatterBreakables();
 
-        this.physics.add.collider(this.player, this.enemies);
-        this.physics.add.collider(this.enemies, this.enemies);
-        
-        this.physics.add.collider(this.player, this.breakables);
-        this.physics.add.collider(this.enemies, this.breakables);
-        
-        this.physics.add.overlap(this.player, this.items, this.collectItem, undefined, this);
-
         this.cameras.main.setBounds(0, 0, 6000, 1080);
-        this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
         this.updateReactHUD();
 
         this.scene.pause();
         window.dispatchEvent(new CustomEvent('phaser-ready'));
     }
 
+    // ==========================================
+    // PLAYER SPAWNING HELPER
+    // Abstracts player creation so we can hot-swap them!
+    // ==========================================
+    private spawnPlayer(charKey: string, x: number, y: number) {
+        if (this.player) this.player.destroy();
+
+        switch(charKey.toLowerCase()) {
+            case 'maja': this.player = new Maja(this, x, y); break;
+            case 'darko': this.player = new Darko(this, x, y); break;
+            default: this.player = new Marko(this, x, y); break;
+        }
+
+        this.player.setScale(1.7);
+        
+        // Re-bind all physics colliders
+        this.physics.add.collider(this.player, this.enemies);
+        this.physics.add.collider(this.enemies, this.enemies);
+        this.physics.add.collider(this.player, this.breakables);
+        this.physics.add.collider(this.enemies, this.breakables);
+        this.physics.add.overlap(this.player, this.items, this.collectItem, undefined, this);
+
+        this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+    }
+
+    // ==========================================
+    // THE CONTINUE MECHANIC: "Drop-In Nuke"
+    // ==========================================
+    private handleContinue = (e: CustomEvent) => {
+        const newChar = e.detail?.character || 'marko';
+        const spawnX = this.player.x;
+        const spawnY = this.player.y;
+
+        // 1. Hot-swap the character at the exact death coordinate
+        this.spawnPlayer(newChar, spawnX, spawnY);
+
+        // 2. Play heavy entrance FX
+        this.triggerScreenGlitch(800);
+        this.spawnHitEffect(spawnX, spawnY - 50);
+        this.playSFX(['explosion_01', 'Break_1']);
+
+        // 3. Nuke all active enemies (15 DMG + Forced Knockdown)
+        this.enemies.getChildren().forEach((enemy: any) => {
+            if (!enemy.isDead) {
+                if (enemy.takeDamage) enemy.takeDamage(15);
+                
+                // If the damage didn't already trigger a knockdown or kill them, force it!
+                if (!enemy.isDead && !enemy.isKnockedDown && enemy.takeKnockdown) {
+                    enemy.takeKnockdown();
+                }
+            }
+        });
+
+        this.updateReactHUD();
+    };
+
     private scatterBreakables() {
         const props = [
             { x: 600, y: 880, type: 'barrel' },
             { x: 1200, y: 1000, type: 'crate' },
             { x: 1800, y: 920, type: 'kontejner' },
-            // KIOSK Y FIXED: Dropped down from 840 to 980 so it sits on the street!
             { x: 2600, y: 980, type: 'kiosk' }, 
             { x: 3200, y: 1040, type: 'barrel' },
             { x: 3700, y: 900, type: 'crate' }
