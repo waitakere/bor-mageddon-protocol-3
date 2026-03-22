@@ -261,10 +261,6 @@ export class MainLevel extends Phaser.Scene {
         }
     }
 
-    // ==========================================
-    // UPDATED IMPACT EFFECTS
-    // Scales are normalized and origin is centered perfectly!
-    // ==========================================
     public spawnHitEffect(x: number, y: number) {
         const exps = ['explosion_01', 'explosion_02', 'explosion_03', 'explosion_04'];
         const key = Phaser.Utils.Array.GetRandom(exps);
@@ -273,11 +269,8 @@ export class MainLevel extends Phaser.Scene {
 
         const explosion = this.add.sprite(x, y, key);
         explosion.setDepth(9999); 
-        
-        // This is the magic bullet: It pins the middle of the PNG to the exact X/Y coordinate!
         explosion.setOrigin(0.5, 0.5); 
         
-        // Normalizing the scales based on the PNG size
         let baseScale = 1.0;
         if (key === 'explosion_01') baseScale = 2.5; 
         else if (key === 'explosion_03') baseScale = 0.6; 
@@ -287,7 +280,7 @@ export class MainLevel extends Phaser.Scene {
         
         this.tweens.add({
             targets: explosion,
-            scale: baseScale * 1.3, // Expands outward from the center
+            scale: baseScale * 1.3, 
             alpha: 0, 
             duration: 250,
             ease: 'Quad.easeOut',
@@ -303,12 +296,23 @@ export class MainLevel extends Phaser.Scene {
         drop.setOrigin(0.5, 1); 
         this.items.add(drop);
         
-        drop.setScale(1.3);
+        // ==========================================
+        // DYNAMIC ITEM SCALING FIX
+        // Adjusts the scale based on the wildly different base resolutions!
+        // ==========================================
+        if (randomItem === 'item-pork') {
+            drop.setScale(2.6); // Base is 64x64 (needs 2x boost)
+        } else if (randomItem === 'item-beer') {
+            drop.setScale(0.65); // Base is 264x264 (needs reduction)
+        } else {
+            drop.setScale(1.3); // Default standard
+        }
 
         const body = drop.body as Phaser.Physics.Arcade.Body;
         if (body) {
-            body.setSize(drop.width, 20);
-            body.setOffset(0, drop.height - 20);
+            // Recalculate physics body *after* the custom scale is applied
+            body.setSize(drop.displayWidth, 20);
+            body.setOffset(0, drop.displayHeight - 20);
         }
         
         this.tweens.add({ targets: drop, alpha: 0.2, duration: 100, yoyo: true, repeat: 5, ease: 'Linear' });
