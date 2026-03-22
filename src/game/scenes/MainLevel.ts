@@ -21,6 +21,14 @@ export class MainLevel extends Phaser.Scene {
     private midLayer!: Phaser.GameObjects.Image;
     private floorLayer!: Phaser.GameObjects.TileSprite;
     
+    private actionKeys!: {
+        q: Phaser.Input.Keyboard.Key;
+        w: Phaser.Input.Keyboard.Key;
+        a: Phaser.Input.Keyboard.Key;
+        s: Phaser.Input.Keyboard.Key;
+        space: Phaser.Input.Keyboard.Key;
+    };
+
     private sectors = [
         { triggerX: 1000, totalEnemies: 4, maxActive: 2, isBossWave: false },  
         { triggerX: 2000, totalEnemies: 6, maxActive: 3, isBossWave: false }, 
@@ -74,6 +82,14 @@ export class MainLevel extends Phaser.Scene {
 
         this.sound.stopAll(); 
         this.sound.play('1993_ambient', { loop: true, volume: 0.4 });
+
+        this.actionKeys = this.input.keyboard!.addKeys({
+            q: Phaser.Input.Keyboard.KeyCodes.Q,
+            w: Phaser.Input.Keyboard.KeyCodes.W,
+            a: Phaser.Input.Keyboard.KeyCodes.A,
+            s: Phaser.Input.Keyboard.KeyCodes.S,
+            space: Phaser.Input.Keyboard.KeyCodes.SPACE
+        }) as any;
 
         this.physics.world.setBounds(0, 750, 6000, 330); 
         
@@ -207,20 +223,31 @@ export class MainLevel extends Phaser.Scene {
         this.shadows.clear().fillStyle(0x000000, 0.5);
         this.shadows.fillEllipse(this.player.x, this.player.y, 70 * this.player.scale, 20);
         this.enemies.getChildren().forEach((e: any) => { if (!e.isDead) this.shadows.fillEllipse(e.x, e.y, e.width * 0.6, 20); });
-        
         this.breakables.getChildren().forEach((b: any) => { if (!b.isDead) this.shadows.fillEllipse(b.x, b.y, b.displayWidth * 0.7, 15); });
 
         const cursors = this.input.keyboard!.createCursorKeys();
-        const kb = this.input.keyboard!;
-        const q = kb.addKey('Q'); const w = kb.addKey('W'); const a = kb.addKey('A'); const s = kb.addKey('S');
+        const ak = this.actionKeys;
+
+        const qJust = Phaser.Input.Keyboard.JustDown(ak.q);
+        const wJust = Phaser.Input.Keyboard.JustDown(ak.w);
+        const aJust = Phaser.Input.Keyboard.JustDown(ak.a);
+        const sJust = Phaser.Input.Keyboard.JustDown(ak.s);
+
+        const specialPressed = (qJust && ak.w.isDown) || (wJust && ak.q.isDown) || (qJust && wJust);
+        const finisherPressed = (aJust && ak.s.isDown) || (sJust && ak.a.isDown) || (aJust && sJust);
 
         const keys = {
-            up: cursors.up.isDown, down: cursors.down.isDown, left: cursors.left.isDown, right: cursors.right.isDown,
-            space: Phaser.Input.Keyboard.JustDown(kb.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)),
-            p1: Phaser.Input.Keyboard.JustDown(q), p2: Phaser.Input.Keyboard.JustDown(w),
-            k1: Phaser.Input.Keyboard.JustDown(a), k2: Phaser.Input.Keyboard.JustDown(s),
-            special: (Phaser.Input.Keyboard.JustDown(q) && w.isDown) || (Phaser.Input.Keyboard.JustDown(w) && q.isDown),
-            finisher: (Phaser.Input.Keyboard.JustDown(a) && s.isDown) || (Phaser.Input.Keyboard.JustDown(s) && a.isDown)
+            up: cursors.up.isDown, 
+            down: cursors.down.isDown, 
+            left: cursors.left.isDown, 
+            right: cursors.right.isDown,
+            space: Phaser.Input.Keyboard.JustDown(ak.space),
+            special: specialPressed,
+            finisher: finisherPressed,
+            p1: qJust && !specialPressed,
+            p2: wJust && !specialPressed,
+            k1: aJust && !finisherPressed,
+            k2: sJust && !finisherPressed
         };
 
         this.player.update(keys);
@@ -261,6 +288,29 @@ export class MainLevel extends Phaser.Scene {
         }
     }
 
+    public triggerScreenGlitch(duration: number = 400) {
+        const cam = this.cameras.main;
+        cam.shake(duration, 0.02);
+        
+        try {
+            if (cam.postFX) {
+                const fx = cam.postFX.addChromaticAberration(0.04, 0.04);
+                this.tweens.add({
+                    targets: fx,
+                    offsetX: 0,
+                    offsetY: 0,
+                    duration: duration,
+                    ease: 'Power2',
+                    onComplete: () => {
+                        cam.postFX.remove(fx);
+                    }
+                });
+            }
+        } catch (e) {
+            cam.flash(duration, 255, 0, 0, 0.3);
+        }
+    }
+
     public spawnHitEffect(x: number, y: number) {
         const exps = ['explosion_01', 'explosion_02', 'explosion_03', 'explosion_04'];
         const key = Phaser.Utils.Array.GetRandom(exps);
@@ -297,20 +347,22 @@ export class MainLevel extends Phaser.Scene {
         this.items.add(drop);
         
         // ==========================================
-        // DYNAMIC ITEM SCALING FIX
-        // Adjusts the scale based on the wildly different base resolutions!
+        // FIXED SIZES: Highly tuned object scaling
         // ==========================================
         if (randomItem === 'item-pork') {
-            drop.setScale(2.6); // Base is 64x64 (needs 2x boost)
+            drop.setScale(2.6); 
         } else if (randomItem === 'item-beer') {
-            drop.setScale(0.65); // Base is 264x264 (needs reduction)
+            drop.setScale(0.65); 
+        } else if (randomItem === 'item-sandwich') {
+            drop.setScale(0.8); // Sandwich reduced
+        } else if (randomItem === 'item-burek') {
+            drop.setScale(1.2); 
         } else {
-            drop.setScale(1.3); // Default standard
+            drop.setScale(1.3); 
         }
 
         const body = drop.body as Phaser.Physics.Arcade.Body;
         if (body) {
-            // Recalculate physics body *after* the custom scale is applied
             body.setSize(drop.displayWidth, 20);
             body.setOffset(0, drop.displayHeight - 20);
         }
@@ -320,7 +372,12 @@ export class MainLevel extends Phaser.Scene {
     }
 
     private collectItem(player: any, item: any) {
-        if (Math.abs(player.y - item.y) > 30) return;
+        // ==========================================
+        // PICKUP FIX: Expanded tolerance to 80px 
+        // Ensures you can grab it while it's bouncing!
+        // ==========================================
+        if (Math.abs(player.y - item.y) > 80) return; 
+        
         item.destroy();
         this.playSFX(['melee_1', 'Metal-Impact-Shield'], 0.8); 
         if (player.playPickupAnim) player.playPickupAnim();
