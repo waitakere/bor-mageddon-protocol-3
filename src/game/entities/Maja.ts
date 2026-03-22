@@ -82,10 +82,6 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                     return { key: this.characterName, frame: f };
                 });
 
-                // ==========================================
-                // ANIMATION FIX: The Drill Hold
-                // Holds the final drill frame for an extra 0.5 seconds
-                // ==========================================
                 if (animType === 'finish-move' && frameConfig.length > 0) {
                     const lastFrame = frameConfig[frameConfig.length - 1];
                     for (let i = 0; i < 8; i++) {
@@ -238,7 +234,8 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
 
         this.scene.physics.add.overlap(hitZone, targets, (hz, target: any) => {
-            if (Math.abs(this.y - target.y) <= 60) { 
+            const yTol = target.isBreakable ? 140 : 60;
+            if (Math.abs(this.y - target.y) <= yTol) { 
                 if (!hasHit) {
                     (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     hasHit = true;
@@ -273,7 +270,8 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
 
         this.scene.physics.add.overlap(hitZone, targets, (hz, target: any) => {
-            if (Math.abs(this.y - target.y) <= 60) { 
+            const yTol = target.isBreakable ? 140 : 60;
+            if (Math.abs(this.y - target.y) <= yTol) { 
                 if (!hasHit) {
                     (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     hasHit = true;
@@ -296,20 +294,17 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     private executeBalkanSuplex() {
         this.isAttacking = true; this.setVelocity(0, 0);
         
-        // ==========================================
-        // SPECIAL FIX: Always play the animation!
-        // ==========================================
         const anim = this.scene.anims.exists(`${this.characterName}-special-attack`) ? `${this.characterName}-special-attack` : `${this.characterName}-punch-1`;
         if (this.scene.anims.exists(anim)) this.play(anim, true);
 
-        // Expanded grab zone for better playability
         const grabZone = this.scene.add.zone(this.x + (this.flipX ? -60 : 60), this.y - 40, 120, 80);
         this.scene.physics.add.existing(grabZone);
         
         let grabbedTarget: any = null;
         const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
         this.scene.physics.overlap(grabZone, targets, (gz, target: any) => { 
-            if (!grabbedTarget && !target.isDead && Math.abs(this.y - target.y) <= 60) grabbedTarget = target; 
+            const yTol = target.isBreakable ? 160 : 60;
+            if (!grabbedTarget && !target.isDead && Math.abs(this.y - target.y) <= yTol) grabbedTarget = target; 
         });
         grabZone.destroy(); 
 
@@ -324,7 +319,8 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 const shockwave = this.scene.add.circle(this.x, this.y - 40, 120);
                 this.scene.physics.add.existing(shockwave);
                 this.scene.physics.overlap(shockwave, targets, (sw, target: any) => {
-                    if (target !== grabbedTarget && Math.abs(this.y - target.y) <= 60) {
+                    const yTolTarget = target.isBreakable ? 160 : 60;
+                    if (target !== grabbedTarget && Math.abs(this.y - target.y) <= yTolTarget) {
                         if (target.takeDamage) target.takeDamage(15 * this.damageMultiplier);
                         if (target.body && target.type !== 'obj_kiosk' && target.type !== 'obj_kontejner') {
                             const pushDir = target.x > this.x ? 1 : -1;
@@ -358,7 +354,8 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             if (!drillZone.active) return;
             drillZone.setPosition(this.x + (60 * direction), this.y - 40);
             this.scene.physics.overlap(drillZone, targets, (dz, target: any) => { 
-                if (Math.abs(this.y - target.y) <= 60) {
+                const yTol = target.isBreakable ? 140 : 60;
+                if (Math.abs(this.y - target.y) <= yTol) {
                     (this.scene as any).spawnHitEffect(target.x, target.y - 50);
                     if (target.takeDamage) target.takeDamage(5); 
                 }
@@ -366,11 +363,6 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         };
         this.scene.events.on('update', drillUpdate);
         
-        // ==========================================
-        // SYNC FIX: Dynamic Dash Duration
-        // Now waits for the extended animation to complete
-        // before cutting the physics velocity!
-        // ==========================================
         this.once('animationcomplete', () => { 
             this.setVelocityX(0); 
             if (drillZone.active) drillZone.destroy(); 

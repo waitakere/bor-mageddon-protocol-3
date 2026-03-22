@@ -13,7 +13,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private currentVoice: any = null;
 
     private walkSpeed: number = 250;
-    private runSpeed: number = 510; // Increased from 460
+    private runSpeed: number = 510; 
 
     private jumpVelocityX: number = 0; 
 
@@ -225,7 +225,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
 
         this.scene.physics.add.overlap(hitZone, targets, (hz, target: any) => {
-            if (Math.abs(this.y - target.y) <= 60) { 
+            const yTol = target.isBreakable ? 140 : 60;
+            if (Math.abs(this.y - target.y) <= yTol) { 
                 if (!hasHit) {
                     (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     hasHit = true;
@@ -260,7 +261,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
 
         this.scene.physics.add.overlap(hitZone, targets, (hz, target: any) => {
-            if (Math.abs(this.y - target.y) <= 60) { 
+            const yTol = target.isBreakable ? 140 : 60;
+            if (Math.abs(this.y - target.y) <= yTol) { 
                 if (!hasHit) {
                     (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     hasHit = true;
@@ -293,7 +295,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
         const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
         this.scene.physics.add.overlap(spinZone, targets, (sz, target: any) => {
-            if (Math.abs(this.y - target.y) <= 60) {
+            const yTol = target.isBreakable ? 160 : 60;
+            if (Math.abs(this.y - target.y) <= yTol) {
                 if (target.takeDamage) { target.takeDamage(20 * this.damageMultiplier); const pushDir = target.x > this.x ? 1 : -1; if (target.body && target.type !== 'obj_kiosk' && target.type !== 'obj_kontejner') target.setVelocityX(300 * pushDir); }
                 (this.scene as any).spawnHitEffect(target.x, target.y - 50);
             }
@@ -313,7 +316,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         const enemies = (this.scene as any).enemies.getChildren();
         const breakables = (this.scene as any).breakables ? (this.scene as any).breakables.getChildren() : [];
         [...enemies, ...breakables].forEach((target: any) => {
-            if (!target.isDead && Math.abs(this.y - target.y) <= 100) { 
+            const yTol = target.isBreakable ? 160 : 100;
+            if (!target.isDead && Math.abs(this.y - target.y) <= yTol) { 
                 if (target.takeDamage) target.takeDamage(100); 
                 target.setTint(0x00ffff); this.scene.time.delayedCall(200, () => target.clearTint());
                 (this.scene as any).spawnHitEffect(target.x, target.y - 50);
