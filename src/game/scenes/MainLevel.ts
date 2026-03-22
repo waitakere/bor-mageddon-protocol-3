@@ -115,7 +115,6 @@ export class MainLevel extends Phaser.Scene {
         const firstEnemy = new Dizel(this, 1000, 950);
         this.enemies.add(firstEnemy);
 
-        // Scatter Breakables across the map
         this.scatterBreakables();
 
         this.physics.add.collider(this.player, this.enemies);
@@ -263,12 +262,20 @@ export class MainLevel extends Phaser.Scene {
     }
 
     public spawnHitEffect(x: number, y: number) {
-        const explosion = this.add.sprite(x, y, 'explosion_01');
+        const exps = ['explosion_01', 'explosion_02', 'explosion_03', 'explosion_04'];
+        const key = Phaser.Utils.Array.GetRandom(exps);
+
+        if (!this.textures.exists(key)) return;
+
+        const explosion = this.add.sprite(x, y, key);
         explosion.setDepth(9999); 
         explosion.setScale(1.5); 
+        
         this.tweens.add({
             targets: explosion,
-            scale: 2.0, alpha: 0, duration: 250,
+            scale: 2.2, 
+            alpha: 0, 
+            duration: 200,
             ease: 'Quad.easeOut',
             onComplete: () => explosion.destroy()
         });
@@ -282,8 +289,7 @@ export class MainLevel extends Phaser.Scene {
         drop.setOrigin(0.5, 1); 
         this.items.add(drop);
         
-        // FIXED SCALE: Boosted from 0.5 to 2.5 so it is visible!
-        drop.setScale(2.5);
+        drop.setScale(1.3); // Rebalanced from 2.5 to 1.3
 
         const body = drop.body as Phaser.Physics.Arcade.Body;
         if (body) {

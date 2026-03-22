@@ -98,17 +98,16 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         this.isAttacking = true;
         this.setVelocity(0, 0);
 
-        const animKey = `${this.characterName}-pick-up`;
-        
-        if (this.scene.anims.exists(animKey)) {
-            this.play(animKey, true);
-            this.once('animationcomplete', () => {
-                this.isAttacking = false;
-            });
-        } else {
-            if (this.scene.anims.exists(`${this.characterName}-idle`)) this.play(`${this.characterName}-idle`, true);
-            this.scene.time.delayedCall(300, () => { this.isAttacking = false; });
+        if (this.scene.anims.exists(`${this.characterName}-idle`)) {
+            this.play(`${this.characterName}-idle`, true);
         }
+        
+        this.setTintFill(0x39ff14); 
+        this.scene.time.delayedCall(100, () => this.clearTint());
+
+        this.scene.time.delayedCall(300, () => {
+            this.isAttacking = false;
+        });
     }
 
     public update(input: any) {
