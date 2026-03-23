@@ -23,6 +23,7 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
     constructor(scene: Phaser.Scene, x: number, y: number) {
         const texture = scene.textures.get('enemies_1993');
         const allFrames = texture ? texture.getFrameNames() : [];
+        // Fixed the missing array index fallback here:
         const firstFrame = allFrames.find(f => f.includes('slobodan-walk/frame_000')) || allFrames;
 
         super(scene, x, y, 'enemies_1993', firstFrame);
@@ -34,9 +35,15 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
         this.setOrigin(0.5, 1);
 
         const body = this.body as Phaser.Physics.Arcade.Body;
-        body.setSize(50, 30);
-        body.setOffset(this.width/2 - 25, this.height - 30);
-        body.setImmovable(true); 
+        
+        // ==========================================
+        // PHYSICS FIX: Expanded Hitbox & Removed Immovable
+        // So the player can easily punch him, and he doesn't 
+        // glitch out when overlapping with attacks!
+        // ==========================================
+        body.setSize(120, 220);
+        body.setOffset(this.width/2 - 60, this.height - 220);
+        body.setAllowGravity(false);
 
         this.createBossHitboxes();
         
@@ -68,7 +75,11 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
     }
 
     private handleBossCombat(player: any) {
-        const speed = this.isPhaseTwo ? 85 : 45;
+        // ==========================================
+        // SPEED BUFF: Slobodan is now a massive threat
+        // ==========================================
+        const speed = this.isPhaseTwo ? 220 : 140; 
+        
         const distX = player.x - this.x;
         const distY = player.y - this.y;
 
@@ -230,7 +241,7 @@ export class SlobodanCEO extends Phaser.Physics.Arcade.Sprite {
         this.isDead = true;
         this.setVelocity(0, 0);
         
-        (this.body as ArcadePhysics.Body).enable = false;
+        (this.body as Phaser.Physics.Arcade.Body).enable = false;
         this.headHitbox.destroy();
         this.torsoHitbox.destroy();
         
