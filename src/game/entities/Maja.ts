@@ -16,9 +16,9 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     public weaponHitsTaken: number = 0;
     private weaponSprite: Phaser.GameObjects.Sprite | null = null;
     
-    // Base static offsets
+    // Adjusted static offsets: y-coordinate raised (-135) to match raised handle and correct pivot point fix.
     private weaponOffsets: Record<string, {x: number, y: number, angle: number}> = {
-        'idle': { x: 20, y: -85, angle: 15 },
+        'idle': { x: 20, y: -135, angle: 15 },
         'jump': { x: 15, y: -90, angle: -20 },
         'shoot':{ x: 40, y: -85, angle: 0 }
     };
@@ -122,18 +122,21 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.weaponSprite = this.scene.add.sprite(this.x, this.y, weaponKey);
         (this.weaponSprite as any).isWeaponSprite = true; 
         
-        // Pivot the weapon around the handle/stock
+        // Use the refined handle-origin logic to pivot around grip point
         if (weaponKey === 'M70-FINAL rev') {
             this.weaponSprite.setScale(0.45);
-            this.weaponSprite.setOrigin(0.3, 0.5); 
+            this.weaponSprite.setOrigin(0.3, 0.5); // Pivot at rifle grip
         } else {
             this.weaponSprite.setScale(1.3);
-            this.weaponSprite.setOrigin(0.5, 0.8); 
+            this.weaponSprite.setOrigin(0.5, 0.8); // Pivot at baseball bat handle grip
         }
     }
 
     private positionWeaponSprite() {
         if (!this.weaponSprite || !this.equippedWeapon) return;
+        
+        // Reset visibility flag at start of function to prevent sticking hidden
+        this.weaponSprite.visible = true;
 
         const currentAnimKey = this.anims.currentAnim?.key.replace(`${this.characterName}-`, '') || 'idle';
         const currentFrameName = this.anims.currentFrame?.textureFrame as string || '';
@@ -143,12 +146,22 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         let targetX = this.x;
         let targetY = this.y + jumpVisualOffset;
         let targetAngle = 0;
-        let targetDepth = this.depth + 1; 
+        let targetDepth = this.depth + 1; // Default to in front
 
         // ==========================================
-        // DYNAMIC WALK PENDULUM
+        // DYNAMIC ATTACK & MOVEMENT TRACKING
+        // Translates exact placement and depth based on the current frame and hand movement!
         // ==========================================
-        if (currentAnimKey === 'walk') {
+        
+        // --- HIDE WEAPON ON KICK 2 ---
+        if (currentAnimKey === 'kick-2') {
+            // Spinning hook kick move: explicitly hide weapon sprite.
+            this.weaponSprite.visible = false;
+            return; // Don't process other logic if hiding
+        }
+        
+        // --- PENDULUM WALK/RUN ---
+        else if (currentAnimKey === 'walk') {
             if (currentFrameName.includes('001') || currentFrameName.includes('002') || currentFrameName.includes('003')) {
                 // Front arm swings forward
                 targetX += (28 * dirX);
@@ -166,9 +179,6 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 targetAngle = 5 * dirX;
             }
         }
-        // ==========================================
-        // DYNAMIC RUN PENDULUM (Exaggerated Arm Pump)
-        // ==========================================
         else if (currentAnimKey === 'run') {
             if (currentFrameName.includes('001') || currentFrameName.includes('002')) {
                 // Front arm is swung far backward
@@ -187,62 +197,88 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 targetAngle = 10 * dirX;
             }
         }
-        // ==========================================
-        // BEHIND-THE-BACK MELEE STRIKE
-        // ==========================================
+
+        // --- DETAILED ATTACK TRACKING ---
         else if (currentAnimKey === 'melee') {
+            // Melee swing: defined refined behind-the-back draw tracking
             if (currentFrameName.includes('000') || currentFrameName.includes('001')) {
-                // WINDUP: Hidden behind back
+                // WINDUP: Paste behind back. Render behind.
                 targetX += (-15 * dirX); 
-                targetY -= 85;          
+                targetY -= 130;          
                 targetAngle = -45 * dirX;
-                targetDepth = this.depth - 1; 
+                targetDepth = this.depth - 1; // Renders behind character sprite
             } 
             else if (currentFrameName.includes('002')) {
-                // DRAWING: Past hip
+                // PAST HIP: Paste Pasteur paste hip. Pasteur.
                 targetX += (0 * dirX);  
-                targetY -= 85;          
+                targetY -= 135;          
                 targetAngle = 45 * dirX;  
             } 
             else if (currentFrameName.includes('003') || currentFrameName.includes('004')) {
-                // EXTENSION: Thrust out
+                // EXTENDED IMPACT: Straight out forward. Handle in hand, bat forward.
                 targetX += (45 * dirX);  
-                targetY -= 85;          
+                targetY -= 145;          
                 targetAngle = 100 * dirX; 
+                targetDepth = this.depth + 1; // back to forward
             }
             else if (currentFrameName.includes('005') || currentFrameName.includes('006')) {
-                // PULL BACK
+                // PULL BACK: Follow hand back.
                 targetX += (25 * dirX);  
-                targetY -= 85;           
+                targetY -= 135;           
                 targetAngle = 45 * dirX; 
+                targetDepth = this.depth + 1;
             }
             else {
+                // Def mid-swing interpolation
                 targetX += (20 * dirX);
-                targetY -= 85;
+                targetY -= 125;
                 targetAngle = 15 * dirX;
+                targetDepth = this.depth + 1;
             }
         } 
-        // ==========================================
-        // KICK FIX: Store weapon on back
-        // ==========================================
         else if (currentAnimKey === 'kick-1') {
-            if (currentFrameName.includes('000') || currentFrameName.includes('001') || currentFrameName.includes('002') || currentFrameName.includes('003')) {
+            // Detiled frame tracking for side-kick hand movements
+            // Paste correct behind-the-back placement for phases when hands are busy or awkwardly positioned.
+
+            // windup & setup: put on back during leg cock
+            if (currentFrameName.includes('frame_000.png') || currentFrameName.includes('frame_001.png') || currentFrameName.includes('frame_002.png')) {
+                // Place on back. Tilted. Render BEHIND character.
                 targetX += (-25 * dirX); 
-                targetY -= 110;          
-                targetAngle = -45 * dirX; 
-                targetDepth = this.depth - 1; // Renders behind her
-            } else {
-                targetX += (10 * dirX);  
-                targetY -= 90;          
-                targetAngle = 0;  
+                targetY -= 170;          
+                targetAngle = 10 * dirX; 
+                targetDepth = this.depth - 1; 
+            }
+            // extended impact: thrust with extended hand (tracked to specific image filename)
+            else if (currentFrameName.includes('maja-kick-1/frame_003.png')) {
+                // Thrust weapon forward with extended hand. Correct height for grip.
+                targetX += (85 * dirX); 
+                targetY -= 140; // track handle origin logic
+                targetAngle = 0; 
+                targetDepth = this.depth + 1; // back to forward
+            }
+            // retract: back to back during pull back
+            else if (currentFrameName.includes('frame_004.png') || currentFrameName.includes('frame_005.png')) {
+                // Place back on back during pullback phase. Correct coordinates.
+                targetX += (-25 * dirX); 
+                targetY -= 170;          
+                targetAngle = 0; 
+                targetDepth = this.depth - 1; // Renders behind character
+            }
+            else {
+                // Neutral recovery state hold. Position casually below hand at rest.
+                targetX += (25 * dirX);  
+                targetY -= 140;          
+                targetAngle = -15 * dirX;  
+                targetDepth = this.depth + 1; 
             }
         }
-        // Normal states
         else {
+            // Normal states
             const offset = this.weaponOffsets[currentAnimKey] || this.weaponOffsets['idle'];
             targetX += (offset.x * dirX);
             targetY += offset.y;
             targetAngle = offset.angle * dirX;
+            targetDepth = this.depth + 1;
         }
 
         this.weaponSprite.setPosition(targetX, targetY);
