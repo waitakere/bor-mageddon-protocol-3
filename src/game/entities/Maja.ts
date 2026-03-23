@@ -16,11 +16,11 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     public weaponHitsTaken: number = 0;
     private weaponSprite: Phaser.GameObjects.Sprite | null = null;
     
-    // Raised Y offsets globally by ~35px so the handle aligns with her hand
+    // PERFECTED OFFSETS: Raised to -175 to sit exactly in her hand
     private weaponOffsets: Record<string, {x: number, y: number, angle: number}> = {
-        'idle': { x: 20, y: -120, angle: 15 },
-        'jump': { x: 15, y: -125, angle: -20 },
-        'shoot':{ x: 40, y: -120, angle: 0 }
+        'idle': { x: 20, y: -175, angle: 15 },
+        'jump': { x: 15, y: -180, angle: -20 },
+        'shoot':{ x: 40, y: -175, angle: 0 }
     };
 
     private currentVoice: any = null;
@@ -122,6 +122,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.weaponSprite = this.scene.add.sprite(this.x, this.y, weaponKey);
         (this.weaponSprite as any).isWeaponSprite = true; 
         
+        // Pivot weapon around the handle/stock
         if (weaponKey === 'M70-FINAL rev') {
             this.weaponSprite.setScale(0.45);
             this.weaponSprite.setOrigin(0.3, 0.5); 
@@ -148,7 +149,6 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
         // ==========================================
         // HIDE WEAPON DURING COMPLEX MOVES
-        // Weapons remain safely out of sight during kicks & specials
         // ==========================================
         if (['kick-2', 'special-attack', 'finish-move'].includes(currentAnimKey)) {
             this.weaponSprite.visible = false;
@@ -159,30 +159,30 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         else if (currentAnimKey === 'walk') {
             if (currentFrameName.includes('001') || currentFrameName.includes('002') || currentFrameName.includes('003')) {
                 targetX += (28 * dirX);
-                targetY -= 120;
+                targetY -= 175;
                 targetAngle = 25 * dirX;
             } else if (currentFrameName.includes('005') || currentFrameName.includes('006') || currentFrameName.includes('007')) {
                 targetX += (-10 * dirX);
-                targetY -= 120;
+                targetY -= 175;
                 targetAngle = -10 * dirX;
             } else {
                 targetX += (15 * dirX);
-                targetY -= 120;
+                targetY -= 175;
                 targetAngle = 5 * dirX;
             }
         }
         else if (currentAnimKey === 'run') {
             if (currentFrameName.includes('001') || currentFrameName.includes('002')) {
                 targetX += (-15 * dirX);
-                targetY -= 120;
+                targetY -= 175;
                 targetAngle = -25 * dirX;
             } else if (currentFrameName.includes('005') || currentFrameName.includes('006') || currentFrameName.includes('007')) {
                 targetX += (35 * dirX);
-                targetY -= 130;
+                targetY -= 185;
                 targetAngle = 45 * dirX;
             } else {
                 targetX += (10 * dirX);
-                targetY -= 120;
+                targetY -= 175;
                 targetAngle = 10 * dirX;
             }
         }
@@ -191,30 +191,30 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         else if (currentAnimKey === 'melee') {
             if (currentFrameName.includes('000') || currentFrameName.includes('001')) {
                 targetX += (-15 * dirX); 
-                targetY -= 160;          
+                targetY -= 185;          
                 targetAngle = -45 * dirX;
                 targetDepth = this.depth - 1; 
             } 
             else if (currentFrameName.includes('002')) {
                 targetX += (0 * dirX);  
-                targetY -= 165;          
+                targetY -= 185;          
                 targetAngle = 45 * dirX;  
             } 
             else if (currentFrameName.includes('003') || currentFrameName.includes('004')) {
-                targetX += (45 * dirX);  
+                targetX += (55 * dirX);  
                 targetY -= 175;          
                 targetAngle = 100 * dirX; 
                 targetDepth = this.depth + 1; 
             }
             else if (currentFrameName.includes('005') || currentFrameName.includes('006')) {
                 targetX += (25 * dirX);  
-                targetY -= 165;           
+                targetY -= 175;           
                 targetAngle = 45 * dirX; 
                 targetDepth = this.depth + 1;
             }
             else {
                 targetX += (20 * dirX);
-                targetY -= 155;
+                targetY -= 175;
                 targetAngle = 15 * dirX;
                 targetDepth = this.depth + 1;
             }
@@ -228,7 +228,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             }
             else if (currentFrameName.includes('maja-kick-1/frame_003.png')) {
                 targetX += (85 * dirX); 
-                targetY -= 170; 
+                targetY -= 175; 
                 targetAngle = 0; 
                 targetDepth = this.depth + 1; 
             }
@@ -240,7 +240,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             }
             else {
                 targetX += (25 * dirX);  
-                targetY -= 170;          
+                targetY -= 175;          
                 targetAngle = -15 * dirX;  
                 targetDepth = this.depth + 1; 
             }
@@ -283,10 +283,10 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             }
             
             const dirX = this.flipX ? -1 : 1;
-            (this.scene as any).spawnProjectile(this.x + (80 * dirX), this.y - 120, 'bullet', dirX, 30, false);
+            (this.scene as any).spawnProjectile(this.x + (80 * dirX), this.y - 175, 'bullet', dirX, 30, false);
             
             if (this.scene.textures.exists('muzzle-flash-m70')) {
-                const flash = this.scene.add.sprite(this.x + (110 * dirX), this.y - 120, 'muzzle-flash-m70');
+                const flash = this.scene.add.sprite(this.x + (110 * dirX), this.y - 175, 'muzzle-flash-m70');
                 flash.setDepth(this.depth + 2);
                 flash.setFlipX(!this.flipX);
                 flash.setScale(0.6);
