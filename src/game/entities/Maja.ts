@@ -16,10 +16,9 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     public weaponHitsTaken: number = 0;
     private weaponSprite: Phaser.GameObjects.Sprite | null = null;
     
-    // With the new Handle Origin (0.8), the Y coordinate tracks her hand perfectly at -85!
+    // Base static offsets
     private weaponOffsets: Record<string, {x: number, y: number, angle: number}> = {
         'idle': { x: 20, y: -85, angle: 15 },
-        'run':  { x: 30, y: -85, angle: 30 },
         'jump': { x: 15, y: -90, angle: -20 },
         'shoot':{ x: 40, y: -85, angle: 0 }
     };
@@ -123,15 +122,13 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.weaponSprite = this.scene.add.sprite(this.x, this.y, weaponKey);
         (this.weaponSprite as any).isWeaponSprite = true; 
         
-        // ==========================================
-        // ORIGIN FIX: Pivot around the handle/stock!
-        // ==========================================
+        // Pivot the weapon around the handle/stock
         if (weaponKey === 'M70-FINAL rev') {
             this.weaponSprite.setScale(0.45);
-            this.weaponSprite.setOrigin(0.3, 0.5); // Hold by the rifle stock
+            this.weaponSprite.setOrigin(0.3, 0.5); 
         } else {
             this.weaponSprite.setScale(1.3);
-            this.weaponSprite.setOrigin(0.5, 0.8); // Hold by the handle!
+            this.weaponSprite.setOrigin(0.5, 0.8); 
         }
     }
 
@@ -149,7 +146,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         let targetDepth = this.depth + 1; 
 
         // ==========================================
-        // DYNAMIC WALK PENDULUM (Based on Frames 000-008)
+        // DYNAMIC WALK PENDULUM
         // ==========================================
         if (currentAnimKey === 'walk') {
             if (currentFrameName.includes('001') || currentFrameName.includes('002') || currentFrameName.includes('003')) {
@@ -167,6 +164,27 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 targetX += (15 * dirX);
                 targetY -= 85;
                 targetAngle = 5 * dirX;
+            }
+        }
+        // ==========================================
+        // DYNAMIC RUN PENDULUM (Exaggerated Arm Pump)
+        // ==========================================
+        else if (currentAnimKey === 'run') {
+            if (currentFrameName.includes('001') || currentFrameName.includes('002')) {
+                // Front arm is swung far backward
+                targetX += (-15 * dirX);
+                targetY -= 85;
+                targetAngle = -25 * dirX;
+            } else if (currentFrameName.includes('005') || currentFrameName.includes('006') || currentFrameName.includes('007')) {
+                // Front arm is thrust far forward
+                targetX += (35 * dirX);
+                targetY -= 95;
+                targetAngle = 45 * dirX;
+            } else {
+                // Neutral passing frame
+                targetX += (10 * dirX);
+                targetY -= 85;
+                targetAngle = 10 * dirX;
             }
         }
         // ==========================================
@@ -256,7 +274,6 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             }
             
             const dirX = this.flipX ? -1 : 1;
-            // Adjusted bullet spawn slightly to account for the new M70 origin point
             (this.scene as any).spawnProjectile(this.x + (80 * dirX), this.y - 85, 'bullet', dirX, 30, false);
             
             if (this.scene.textures.exists('muzzle-flash-m70')) {
