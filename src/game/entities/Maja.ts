@@ -10,13 +10,25 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     public isDead: boolean = false;
     public isJumping: boolean = false;
 
-    private currentVoice: any = null;
+    // Weapon System
+    public equippedWeapon: string | null = null;
+    public weaponDurability: number = 0;
+    public weaponHitsTaken: number = 0;
+    private weaponSprite: Phaser.GameObjects.Sprite | null = null;
+    
+    private weaponOffsets: Record<string, {x: number, y: number, angle: number}> = {
+        'idle': { x: 25, y: -45, angle: 0 },
+        'walk': { x: 30, y: -45, angle: 10 },
+        'run':  { x: 40, y: -40, angle: 25 },
+        'jump': { x: 20, y: -60, angle: -10 },
+        'melee':{ x: 50, y: -60, angle: 90 }, 
+        'shoot':{ x: 45, y: -55, angle: 0 }
+    };
 
+    private currentVoice: any = null;
     private walkSpeed: number = 160;
     private runSpeed: number = 370;
-
     private jumpVelocityX: number = 0; 
-
     private lastKey: string = '';
     private lastKeyTime: number = 0;
     private isRunning: boolean = false;
@@ -99,6 +111,113 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         });
     }
 
+    public equipWeapon(weaponKey: string) {
+        if (this.weaponSprite) this.weaponSprite.destroy();
+
+        this.equippedWeapon = weaponKey;
+        this.weaponDurability = 4;
+        this.weaponHitsTaken = 0;
+
+        this.weaponSprite = this.scene.add.sprite(this.x, this.y, weaponKey);
+        (this.weaponSprite as any).isWeaponSprite = true; 
+        
+        if (weaponKey === 'M70-FINAL rev') this.weaponSprite.setScale(0.3);
+        else this.weaponSprite.setScale(0.8);
+    }
+
+    private positionWeaponSprite() {
+        if (!this.weaponSprite || !this.equippedWeapon) return;
+
+        const currentAnim = this.anims.currentAnim?.key.replace(`${this.characterName}-`, '') || 'idle';
+        const offset = this.weaponOffsets[currentAnim] || this.weaponOffsets['idle'];
+        const dirX = this.flipX ? -1 : 1;
+        
+        this.weaponSprite.setPosition(this.x + (offset.x * dirX), this.y + offset.y);
+        this.weaponSprite.setAngle(offset.angle * dirX);
+        this.weaponSprite.setFlipX(this.flipX);
+        this.weaponSprite.setDepth(this.depth + 1);
+    }
+
+    private throwWeapon() {
+        if (!this.equippedWeapon) return;
+
+        const dirX = this.flipX ? -1 : 1;
+        (this.scene as any).spawnProjectile(this.x, this.y - 50, this.equippedWeapon, dirX, 50, true);
+
+        this.equippedWeapon = null;
+        if (this.weaponSprite) {
+            this.weaponSprite.destroy();
+            this.weaponSprite = null;
+        }
+    }
+
+    private executeWeaponAttack() {
+        this.isAttacking = true;
+        this.setVelocity(0, 0);
+
+        if (this.equippedWeapon === 'M70-FINAL rev') {
+            if (this.scene.anims.exists(`${this.characterName}-shoot`)) {
+                this.play(`${this.characterName}-shoot`, true);
+            }
+            
+            const dirX = this.flipX ? -1 : 1;
+            (this.scene as any).spawnProjectile(this.x + (60 * dirX), this.y - 55, 'bullet', dirX, 30, false);
+            
+            if (this.scene.textures.exists('muzzle-flash-m70')) {
+                const flash = this.scene.add.sprite(this.x + (80 * dirX), this.y - 55, 'muzzle-flash-m70');
+                flash.setDepth(this.depth + 2);
+                flash.setFlipX(!this.flipX);
+                flash.setScale(0.5);
+                flash.setBlendMode(Phaser.BlendModes.ADD);
+                this.scene.tweens.add({ targets: flash, alpha: 0, duration: 80, onComplete: () => flash.destroy() });
+            }
+
+            this.scene.cameras.main.shake(100, 0.01);
+            
+            this.weaponDurability--;
+            if (this.weaponDurability <= 0) {
+                this.scene.time.delayedCall(200, () => this.throwWeapon());
+            }
+
+            this.scene.time.delayedCall(300, () => { this.isAttacking = false; });
+
+        } else {
+            const animToPlay = this.scene.anims.exists(`${this.characterName}-melee`) ? `${this.characterName}-melee` : `${this.characterName}-punch-2`;
+            this.play(animToPlay, true);
+
+            const hitZone = this.scene.add.zone(this.x + (this.flipX ? -80 : 80), this.y - 40, 160, 80);
+            this.scene.physics.add.existing(hitZone);
+            
+            let hasHit = false;
+            const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
+
+            this.scene.physics.add.overlap(hitZone, targets, (hz, target: any) => {
+                const yTol = target.isBreakable ? 140 : 60;
+                if (Math.abs(this.y - target.y) <= yTol) { 
+                    if (!hasHit) {
+                        (this.scene as any).playSFX(['punch_4', 'punch_5']); 
+                        hasHit = true;
+                        
+                        this.weaponDurability--;
+                        if (this.weaponDurability <= 0) {
+                            this.scene.time.delayedCall(300, () => this.throwWeapon());
+                        }
+                    }
+                    
+                    const hitX = (this.x + target.x) / 2;
+                    (this.scene as any).spawnBlood(hitX, target.y - 50); 
+                    if (target.takeDamage) target.takeDamage(25 * this.damageMultiplier); 
+                    if (hitZone.body) hitZone.body.enable = false; 
+                }
+            });
+
+            this.once('animationcomplete', () => {
+                if (hitZone.active) hitZone.destroy();
+                this.isAttacking = false;
+            });
+        }
+    }
+
     private playVoice(marker: string | string[]) {
         if (this.currentVoice && this.currentVoice.isPlaying) this.currentVoice.stop();
         this.currentVoice = (this.scene as any).playSFX(marker);
@@ -125,6 +244,8 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     public update(input: any) {
         if (this.isDead) return;
         this.setAngle(0);
+
+        this.positionWeaponSprite();
 
         if (input.space && !this.isJumping && !this.isAttacking) {
             this.isJumping = true;
@@ -180,7 +301,11 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 }
 
                 if (!this.isAttacking) {
-                    this.executeAction(requestedAction);
+                    if (this.equippedWeapon && (requestedAction === 'punch-1' || requestedAction === 'punch-2')) {
+                        this.executeWeaponAttack();
+                    } else {
+                        this.executeAction(requestedAction);
+                    }
                 } else {
                     this.queuedAction = requestedAction;
                 }
@@ -189,8 +314,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         }
 
         if (!this.isAttacking) {
-            let vx = 0;
-            let vy = 0;
+            let vx = 0; let vy = 0;
 
             if (this.isJumping) {
                 vx = this.jumpVelocityX;
@@ -377,6 +501,20 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         (this.scene as any).spawnHitEffect(this.x, this.y - 40);
         (this.scene as any).lastPlayerHitTime = Date.now();
 
+        if (this.equippedWeapon) {
+            this.weaponHitsTaken++;
+            if (this.weaponHitsTaken >= 2) {
+                const drop = this.scene.physics.add.sprite(this.x, this.y - 40, this.equippedWeapon);
+                (drop as any).isWeaponPickup = true;
+                (drop as any).weaponType = this.equippedWeapon;
+                if (this.equippedWeapon === 'M70-FINAL rev') drop.setScale(0.3); else drop.setScale(0.8);
+                (this.scene as any).items.add(drop);
+                
+                this.equippedWeapon = null;
+                if (this.weaponSprite) { this.weaponSprite.destroy(); this.weaponSprite = null; }
+            }
+        }
+
         if (this.health <= 0) { 
             (this.scene as any).playSFX(this.agonies);
             this.die(); 
@@ -399,5 +537,6 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         } else {
             this.setTint(0xff0000);
         }
+        if (this.weaponSprite) this.weaponSprite.destroy();
     }
 }

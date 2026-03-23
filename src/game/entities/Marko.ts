@@ -9,30 +9,28 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     public isAttacking: boolean = false;
     public isDead: boolean = false;
     public isJumping: boolean = false;
-    
-    // ==========================================
-    // WEAPON SYSTEM PROPERTIES
-    // ==========================================
+
+    // Weapon System
     public equippedWeapon: string | null = null;
-    public weaponDurability: number = 0; // 4 hits for melee, 4 shots for rifle
-    public weaponHitsTaken: number = 0;  // Drops at 2
+    public weaponDurability: number = 0;
+    public weaponHitsTaken: number = 0;
     private weaponSprite: Phaser.GameObjects.Sprite | null = null;
     
-    // Dynamic Dictionary for pinning the weapon to the hand
-    // Adjust these X/Y values to fit the exact pixel locations of your sprite!
     private weaponOffsets: Record<string, {x: number, y: number, angle: number}> = {
         'idle': { x: 25, y: -45, angle: 0 },
         'walk': { x: 30, y: -45, angle: 10 },
         'run':  { x: 40, y: -40, angle: 25 },
         'jump': { x: 20, y: -60, angle: -10 },
-        'melee':{ x: 50, y: -60, angle: 90 }, // During the swing!
+        'melee':{ x: 50, y: -60, angle: 90 }, 
         'shoot':{ x: 45, y: -55, angle: 0 }
     };
-
+    
     private currentVoice: any = null;
+
     private walkSpeed: number = 200;
     private runSpeed: number = 430;
     private jumpVelocityX: number = 0; 
+
     private lastKey: string = '';
     private lastKeyTime: number = 0;
     private isRunning: boolean = false;
@@ -73,7 +71,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
 
         const allFrames = texture.getFrameNames();
         
-        // Added 'melee' for weapon swinging
         const animTypes = [
             'idle', 'walk', 'run', 'jump', 'punch-1', 'punch-2', 'kick-1', 'kick-2', 
             'melee', 'jump-punch', 'jump-kick', 'special-attack', 'finish-move', 
@@ -117,9 +114,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         });
     }
 
-    // ==========================================
-    // WEAPON LOGIC
-    // ==========================================
     public equipWeapon(weaponKey: string) {
         if (this.weaponSprite) this.weaponSprite.destroy();
 
@@ -128,7 +122,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         this.weaponHitsTaken = 0;
 
         this.weaponSprite = this.scene.add.sprite(this.x, this.y, weaponKey);
-        (this.weaponSprite as any).isWeaponSprite = true; // Exclude from depth sorting
+        (this.weaponSprite as any).isWeaponSprite = true; 
         
         if (weaponKey === 'M70-FINAL rev') this.weaponSprite.setScale(0.3);
         else this.weaponSprite.setScale(0.8);
@@ -137,28 +131,22 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     private positionWeaponSprite() {
         if (!this.weaponSprite || !this.equippedWeapon) return;
 
-        // Parse what animation is currently playing
         const currentAnim = this.anims.currentAnim?.key.replace(`${this.characterName}-`, '') || 'idle';
-        
-        // Find the offset, or default to idle
         const offset = this.weaponOffsets[currentAnim] || this.weaponOffsets['idle'];
-
         const dirX = this.flipX ? -1 : 1;
         
         this.weaponSprite.setPosition(this.x + (offset.x * dirX), this.y + offset.y);
         this.weaponSprite.setAngle(offset.angle * dirX);
         this.weaponSprite.setFlipX(this.flipX);
-        this.weaponSprite.setDepth(this.depth + 1); // Render in front of player
+        this.weaponSprite.setDepth(this.depth + 1);
     }
 
     private throwWeapon() {
         if (!this.equippedWeapon) return;
 
         const dirX = this.flipX ? -1 : 1;
-        // Spawn spinning projectile dealing 50 damage
         (this.scene as any).spawnProjectile(this.x, this.y - 50, this.equippedWeapon, dirX, 50, true);
 
-        // Clear Weapon
         this.equippedWeapon = null;
         if (this.weaponSprite) {
             this.weaponSprite.destroy();
@@ -171,22 +159,19 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         this.setVelocity(0, 0);
 
         if (this.equippedWeapon === 'M70-FINAL rev') {
-            // FIRE RIFLE
             if (this.scene.anims.exists(`${this.characterName}-shoot`)) {
                 this.play(`${this.characterName}-shoot`, true);
             }
             
             const dirX = this.flipX ? -1 : 1;
-            
-            // Spawn bullet (1500 speed, 30 dmg)
             (this.scene as any).spawnProjectile(this.x + (60 * dirX), this.y - 55, 'bullet', dirX, 30, false);
             
-            // Muzzle Flash
             if (this.scene.textures.exists('muzzle-flash-m70')) {
                 const flash = this.scene.add.sprite(this.x + (80 * dirX), this.y - 55, 'muzzle-flash-m70');
                 flash.setDepth(this.depth + 2);
                 flash.setFlipX(!this.flipX);
                 flash.setScale(0.5);
+                flash.setBlendMode(Phaser.BlendModes.ADD);
                 this.scene.tweens.add({ targets: flash, alpha: 0, duration: 80, onComplete: () => flash.destroy() });
             }
 
@@ -200,7 +185,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             this.scene.time.delayedCall(300, () => { this.isAttacking = false; });
 
         } else {
-            // SWING MELEE (Axe, Bat, Crowbar)
             const animToPlay = this.scene.anims.exists(`${this.characterName}-melee`) ? `${this.characterName}-melee` : `${this.characterName}-punch-2`;
             this.play(animToPlay, true);
 
@@ -214,7 +198,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 const yTol = target.isBreakable ? 140 : 60;
                 if (Math.abs(this.y - target.y) <= yTol) { 
                     if (!hasHit) {
-                        (this.scene as any).playSFX(['punch_4', 'punch_5']); // Use heavy hit sounds
+                        (this.scene as any).playSFX(['punch_4', 'punch_5']); 
                         hasHit = true;
                         
                         this.weaponDurability--;
@@ -223,9 +207,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                         }
                     }
                     
-                    // Damage is standard 25 for all melee weapons per PRD
                     const hitX = (this.x + target.x) / 2;
-                    (this.scene as any).spawnBlood(hitX, target.y - 50); // Use blood splat
+                    (this.scene as any).spawnBlood(hitX, target.y - 50); 
                     if (target.takeDamage) target.takeDamage(25 * this.damageMultiplier); 
                     if (hitZone.body) hitZone.body.enable = false; 
                 }
@@ -238,11 +221,33 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
+    private playVoice(marker: string | string[]) {
+        if (this.currentVoice && this.currentVoice.isPlaying) this.currentVoice.stop();
+        this.currentVoice = (this.scene as any).playSFX(marker);
+    }
+
+    public playPickupAnim() {
+        if (this.isDead || this.isJumping || this.isAttacking) return;
+        
+        this.isAttacking = true;
+        this.setVelocity(0, 0);
+
+        if (this.scene.anims.exists(`${this.characterName}-idle`)) {
+            this.play(`${this.characterName}-idle`, true);
+        }
+        
+        this.setTintFill(0x39ff14); 
+        this.scene.time.delayedCall(100, () => this.clearTint());
+
+        this.scene.time.delayedCall(300, () => {
+            this.isAttacking = false;
+        });
+    }
+
     public update(input: any) {
         if (this.isDead) return;
         this.setAngle(0);
 
-        // Update the visual weapon sprite position every frame!
         this.positionWeaponSprite();
 
         if (input.space && !this.isJumping && !this.isAttacking) {
@@ -299,10 +304,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 }
 
                 if (!this.isAttacking) {
-                    // ==========================================
-                    // WEAPON OVERRIDE
-                    // Intercepts normal punches if a weapon is held
-                    // ==========================================
                     if (this.equippedWeapon && (requestedAction === 'punch-1' || requestedAction === 'punch-2')) {
                         this.executeWeaponAttack();
                     } else {
@@ -316,7 +317,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         }
 
         if (!this.isAttacking) {
-            let vx = 0; let vy = 0;
+            let vx = 0;
+            let vy = 0;
 
             if (this.isJumping) {
                 vx = this.jumpVelocityX;
@@ -339,30 +341,145 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 }
             }
         } else {
-            if (this.isJumping) this.setVelocity(this.jumpVelocityX, 0);
+            if (this.isJumping) {
+                this.setVelocity(this.jumpVelocityX, 0);
+            }
         }
     }
 
-    private executeJumpAttack(action: string) { /* Same as before */ }
-    private executeAction(action: string) { /* Same as before */ }
-    private executeMegaphoneScream() { /* Same as before */ }
-    private executeChainWhip() { /* Same as before */ }
+    private executeJumpAttack(action: string) {
+        this.isAttacking = true;
+        const type = action.includes('punch') ? 'jump-punch' : 'jump-kick';
+        const animToPlay = `${this.characterName}-${type}`;
+        
+        if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
+        else if (this.scene.anims.exists(`${this.characterName}-kick-1`)) this.play(`${this.characterName}-kick-1`, true); 
+
+        const hitZone = this.scene.add.zone(this.x + (this.flipX ? -60 : 60), this.y - 100, 140, 90);
+        this.scene.physics.add.existing(hitZone);
+        
+        let hasHit = false;
+        const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
+        
+        this.scene.physics.add.overlap(hitZone, targets, (hz, target: any) => {
+            const yTol = target.isBreakable ? 140 : 60;
+            if (Math.abs(this.y - target.y) <= yTol) { 
+                if (!hasHit) {
+                    (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
+                    hasHit = true;
+                }
+                const damage = 15 * this.damageMultiplier;
+                const hitX = (this.x + target.x) / 2;
+                (this.scene as any).spawnHitEffect(hitX, target.y - 80);
+                if (target.takeDamage) target.takeDamage(damage); 
+                if (hitZone.body) hitZone.body.enable = false; 
+            }
+        });
+
+        this.once('animationcomplete', () => {
+            if (hitZone.active) hitZone.destroy();
+            this.isAttacking = false;
+        });
+    }
+
+    private executeAction(action: string) {
+        if (action === 'special') { this.executeMegaphoneScream(); return; }
+        if (action === 'finisher') { this.executeChainWhip(); return; }
+
+        this.isAttacking = true; this.setVelocity(0, 0);
+        const animToPlay = `${this.characterName}-${action}`;
+        if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
+
+        const hitZone = this.scene.add.zone(this.x + (this.flipX ? -80 : 80), this.y - 40, 140, 80);
+        hitZone.setName('basicAttackZone');
+        this.scene.physics.add.existing(hitZone);
+        
+        let hasHit = false;
+        const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
+
+        this.scene.physics.add.overlap(hitZone, targets, (hz, target: any) => {
+            const yTol = target.isBreakable ? 140 : 60;
+            if (Math.abs(this.y - target.y) <= yTol) { 
+                if (!hasHit) {
+                    (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
+                    hasHit = true;
+                }
+                const damage = (action.includes('2') ? 15 : 10) * this.damageMultiplier;
+                const hitX = (this.x + target.x) / 2;
+                (this.scene as any).spawnHitEffect(hitX, target.y - 50);
+                if (target.takeDamage) target.takeDamage(damage); 
+                if (hitZone.body) hitZone.body.enable = false; 
+            }
+        });
+
+        this.once('animationcomplete', () => {
+            if (hitZone.active) hitZone.destroy();
+            if (this.queuedAction) { const next = this.queuedAction; this.queuedAction = null; this.executeAction(next); } 
+            else { this.isAttacking = false; }
+        });
+    }
+
+    private executeMegaphoneScream() {
+        this.isAttacking = true; this.setVelocity(0, 0);
+        const anim = this.scene.anims.exists(`${this.characterName}-special-attack`) ? `${this.characterName}-special-attack` : `${this.characterName}-punch-2`;
+        if (this.scene.anims.exists(anim)) this.play(anim, true);
+        
+        (this.scene as any).playSFX('marko_special_1'); 
+        (this.scene as any).triggerScreenGlitch(400); 
+        
+        const waveZone = this.scene.add.circle(this.x, this.y - 40, 180);
+        this.scene.physics.add.existing(waveZone);
+        
+        const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
+        this.scene.physics.add.overlap(waveZone, targets, (wz, target: any) => {
+            const yTol = target.isBreakable ? 160 : 60;
+            if (Math.abs(this.y - target.y) <= yTol) { 
+                const pushDir = target.x > this.x ? 1 : -1; 
+                if (target.takeDamage) { 
+                    target.takeDamage(20 * this.damageMultiplier); 
+                    if (target.body && target.type !== 'obj_kiosk' && target.type !== 'obj_kontejner') {
+                        target.setVelocityX(250 * pushDir); 
+                    }
+                }
+                (this.scene as any).spawnHitEffect(target.x, target.y - 50);
+            }
+        });
+        this.scene.time.delayedCall(250, () => { if (waveZone.active) waveZone.destroy(); });
+        this.once('animationcomplete', () => { this.isAttacking = false; });
+    }
+
+    private executeChainWhip() {
+        this.isAttacking = true;
+        const anim = this.scene.anims.exists(`${this.characterName}-finish-move`) ? `${this.characterName}-finish-move` : `${this.characterName}-kick-2`;
+        if (this.scene.anims.exists(anim)) this.play(anim, true);
+        
+        (this.scene as any).playSFX('marko_special_2'); 
+        (this.scene as any).triggerScreenGlitch(500); 
+
+        const spinZone = this.scene.add.circle(this.x, this.y - 40, 150);
+        this.scene.physics.add.existing(spinZone);
+        
+        const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
+        this.scene.physics.overlap(spinZone, targets, (sz, target: any) => {
+            const yTol = target.isBreakable ? 160 : 80;
+            if (Math.abs(this.y - target.y) <= yTol) { 
+                if (target.takeDamage) { target.takeDamage(90 * this.damageMultiplier); if (target.body && target.type !== 'obj_kiosk' && target.type !== 'obj_kontejner') target.setVelocityY(-200); }
+                (this.scene as any).spawnHitEffect(target.x, target.y - 50);
+            }
+        });
+        this.scene.time.delayedCall(200, () => { if (spinZone.active) spinZone.destroy(); });
+        this.once('animationcomplete', () => { this.isAttacking = false; });
+    }
 
     public takeDamage(amount: number) {
-        this.health -= amount; 
-        this.queuedAction = null;
+        this.health -= amount; this.queuedAction = null;
         
         (this.scene as any).spawnHitEffect(this.x, this.y - 40);
         (this.scene as any).lastPlayerHitTime = Date.now();
 
-        // ==========================================
-        // 2-HIT PENALTY SYSTEM
-        // Drops weapon on the ground if hit twice while holding it
-        // ==========================================
         if (this.equippedWeapon) {
             this.weaponHitsTaken++;
             if (this.weaponHitsTaken >= 2) {
-                // Drop a fresh item on the floor for them to pick back up
                 const drop = this.scene.physics.add.sprite(this.x, this.y - 40, this.equippedWeapon);
                 (drop as any).isWeaponPickup = true;
                 (drop as any).weaponType = this.equippedWeapon;
@@ -391,7 +508,11 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         this.isDead = true; 
         this.setVelocity(0, 0); 
         const dieAnim = `${this.characterName}-dying`; 
-        if (this.scene.anims.exists(dieAnim)) { this.play(dieAnim, true); } else { this.setTint(0xff0000); }
+        if (this.scene.anims.exists(dieAnim)) {
+            this.play(dieAnim, true); 
+        } else {
+            this.setTint(0xff0000);
+        }
         if (this.weaponSprite) this.weaponSprite.destroy();
     }
 }
