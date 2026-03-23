@@ -16,13 +16,13 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     public weaponHitsTaken: number = 0;
     private weaponSprite: Phaser.GameObjects.Sprite | null = null;
     
+    // Adjusted slightly lower than Marko to match her sprite proportions
     private weaponOffsets: Record<string, {x: number, y: number, angle: number}> = {
-        'idle': { x: 30, y: -110, angle: -15 },
-        'walk': { x: 35, y: -115, angle: -5 },
-        'run':  { x: 45, y: -110, angle: 15 },
-        'jump': { x: 25, y: -120, angle: -30 },
-        'melee':{ x: 70, y: -110, angle: 80 }, 
-        'shoot':{ x: 60, y: -105, angle: 0 }
+        'idle': { x: 25, y: -95, angle: -15 },
+        'walk': { x: 30, y: -95, angle: -5 },
+        'run':  { x: 40, y: -90, angle: 15 },
+        'jump': { x: 20, y: -100, angle: -30 },
+        'shoot':{ x: 50, y: -90, angle: 0 }
     };
 
     private currentVoice: any = null;
@@ -131,16 +131,64 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     private positionWeaponSprite() {
         if (!this.weaponSprite || !this.equippedWeapon) return;
 
-        const currentAnim = this.anims.currentAnim?.key.replace(`${this.characterName}-`, '') || 'idle';
-        const offset = this.weaponOffsets[currentAnim] || this.weaponOffsets['idle'];
+        const currentAnimKey = this.anims.currentAnim?.key.replace(`${this.characterName}-`, '') || 'idle';
+        const currentFrameName = this.anims.currentFrame?.textureFrame as string || '';
         const dirX = this.flipX ? -1 : 1;
-        
         const jumpVisualOffset = this.height - this.displayOriginY;
 
-        this.weaponSprite.setPosition(this.x + (offset.x * dirX), this.y + offset.y + jumpVisualOffset);
-        this.weaponSprite.setAngle(offset.angle * dirX);
+        let targetX = this.x;
+        let targetY = this.y + jumpVisualOffset;
+        let targetAngle = 0;
+        let targetDepth = this.depth + 1; // Default to rendering in front of Maja
+
+        // ==========================================
+        // MAJA'S DYNAMIC MELEE TRACKING (Behind-the-back draw)
+        // ==========================================
+        if (currentAnimKey === 'melee') {
+            if (currentFrameName.includes('000') || currentFrameName.includes('001')) {
+                // WINDUP: Reaching behind back. Render weapon BEHIND character!
+                targetX += (-15 * dirX); 
+                targetY -= 90;          
+                targetAngle = -30 * dirX;
+                targetDepth = this.depth - 1; 
+            } 
+            else if (currentFrameName.includes('002')) {
+                // DRAWING: Pulling forward past hip
+                targetX += (5 * dirX);  
+                targetY -= 95;          
+                targetAngle = 0;  
+            } 
+            else if (currentFrameName.includes('003') || currentFrameName.includes('004')) {
+                // EXTENSION: Thrust straight out
+                targetX += (75 * dirX);  
+                targetY -= 105;          
+                targetAngle = 90 * dirX; 
+            }
+            else if (currentFrameName.includes('005') || currentFrameName.includes('006')) {
+                // PULL BACK: Returning to chest
+                targetX += (45 * dirX);  
+                targetY -= 95;           
+                targetAngle = 45 * dirX; 
+            }
+            else {
+                // RECOVERY/IDLE (007, 008)
+                targetX += (30 * dirX);
+                targetY -= 85;
+                targetAngle = 15 * dirX;
+            }
+        } 
+        else {
+            // Normal states
+            const offset = this.weaponOffsets[currentAnimKey] || this.weaponOffsets['idle'];
+            targetX += (offset.x * dirX);
+            targetY += offset.y;
+            targetAngle = offset.angle * dirX;
+        }
+
+        this.weaponSprite.setPosition(targetX, targetY);
+        this.weaponSprite.setAngle(targetAngle);
         this.weaponSprite.setFlipX(this.flipX);
-        this.weaponSprite.setDepth(this.depth + 1);
+        this.weaponSprite.setDepth(targetDepth);
     }
 
     private throwWeapon() {
@@ -166,10 +214,10 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             }
             
             const dirX = this.flipX ? -1 : 1;
-            (this.scene as any).spawnProjectile(this.x + (60 * dirX), this.y - 100, 'bullet', dirX, 30, false);
+            (this.scene as any).spawnProjectile(this.x + (60 * dirX), this.y - 95, 'bullet', dirX, 30, false);
             
             if (this.scene.textures.exists('muzzle-flash-m70')) {
-                const flash = this.scene.add.sprite(this.x + (90 * dirX), this.y - 100, 'muzzle-flash-m70');
+                const flash = this.scene.add.sprite(this.x + (90 * dirX), this.y - 95, 'muzzle-flash-m70');
                 flash.setDepth(this.depth + 2);
                 flash.setFlipX(!this.flipX);
                 flash.setScale(0.6);
@@ -319,7 +367,8 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         }
 
         if (!this.isAttacking) {
-            let vx = 0; let vy = 0;
+            let vx = 0;
+            let vy = 0;
 
             if (this.isJumping) {
                 vx = this.jumpVelocityX;
