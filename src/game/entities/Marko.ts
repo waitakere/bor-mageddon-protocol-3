@@ -27,8 +27,10 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     
     private currentVoice: any = null;
 
-    private walkSpeed: number = 200;
-    private runSpeed: number = 430;
+    // Movement Speeds (Slightly Faster!)
+    private walkSpeed: number = 230; 
+    private runSpeed: number = 480; 
+    
     private jumpVelocityX: number = 0; 
 
     private lastKey: string = '';

@@ -27,8 +27,10 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
     private currentVoice: any = null;
 
-    private walkSpeed: number = 250;
-    private runSpeed: number = 510; 
+    // Movement Speeds (Slightly Faster!)
+    private walkSpeed: number = 280; 
+    private runSpeed: number = 560; 
+    
     private jumpVelocityX: number = 0; 
 
     private lastKey: string = '';
@@ -307,7 +309,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         }
 
         if (!this.isAttacking) {
-            let vx = 0; let vy = 0;
+            let vx = 0;
+            let vy = 0;
 
             if (this.isJumping) {
                 vx = this.jumpVelocityX;
