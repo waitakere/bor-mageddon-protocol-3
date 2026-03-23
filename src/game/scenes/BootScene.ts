@@ -26,7 +26,7 @@ export class BootScene extends Phaser.Scene {
         this.load.image('part1_mid', './assets/images/environments/part1_mid.png');
         this.load.image('part1_floor', './assets/images/environments/part1_floor.png');
         
-        // VFX - 4 Random Explosions!
+        // VFX - Explosions
         this.load.image('explosion_01', './assets/images/environments/explosion_01.png');
         this.load.image('explosion_02', './assets/images/environments/explosion_02.png');
         this.load.image('explosion_03', './assets/images/environments/explosion_03.png');
@@ -45,6 +45,18 @@ export class BootScene extends Phaser.Scene {
         this.load.image('crate', './assets/images/environments/crate.png');
         this.load.image('kontejner', './assets/images/environments/kontejner.png');
         this.load.image('kiosk', './assets/images/environments/kiosk.png');
+
+        // ==========================================
+        // WEAPONS & COMBAT VFX
+        // ==========================================
+        this.load.image('axe', './assets/images/environments/axe.png');
+        this.load.image('bat-2', './assets/images/environments/bat-2.png');
+        this.load.image('bat-3', './assets/images/environments/bat-3.png');
+        this.load.image('crowbar-1', './assets/images/environments/crowbar-1.png');
+        this.load.image('M70-FINAL rev', './assets/images/environments/M70-FINAL rev.png');
+        this.load.image('bullet', './assets/images/environments/bullet.png');
+        this.load.image('blood_splat', './assets/images/environments/blood_splat.png');
+        this.load.image('muzzle-flash-m70', './assets/images/environments/muzzle-flash-m70.png');
     }
 
     create() {
