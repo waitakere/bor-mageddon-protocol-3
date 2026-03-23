@@ -17,17 +17,16 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     private weaponSprite: Phaser.GameObjects.Sprite | null = null;
     
     private weaponOffsets: Record<string, {x: number, y: number, angle: number}> = {
-        'idle': { x: 25, y: -45, angle: 0 },
-        'walk': { x: 30, y: -45, angle: 10 },
-        'run':  { x: 40, y: -40, angle: 25 },
-        'jump': { x: 20, y: -60, angle: -10 },
-        'melee':{ x: 50, y: -60, angle: 90 }, 
-        'shoot':{ x: 45, y: -55, angle: 0 }
+        'idle': { x: 30, y: -110, angle: -15 },
+        'walk': { x: 35, y: -115, angle: -5 },
+        'run':  { x: 45, y: -110, angle: 15 },
+        'jump': { x: 25, y: -120, angle: -30 },
+        'melee':{ x: 70, y: -110, angle: 80 }, 
+        'shoot':{ x: 60, y: -105, angle: 0 }
     };
 
     private currentVoice: any = null;
 
-    // Movement Speeds (Slightly Faster!)
     private walkSpeed: number = 190; 
     private runSpeed: number = 420; 
 
@@ -125,8 +124,8 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.weaponSprite = this.scene.add.sprite(this.x, this.y, weaponKey);
         (this.weaponSprite as any).isWeaponSprite = true; 
         
-        if (weaponKey === 'M70-FINAL rev') this.weaponSprite.setScale(0.3);
-        else this.weaponSprite.setScale(0.8);
+        if (weaponKey === 'M70-FINAL rev') this.weaponSprite.setScale(0.45);
+        else this.weaponSprite.setScale(1.3);
     }
 
     private positionWeaponSprite() {
@@ -136,7 +135,9 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         const offset = this.weaponOffsets[currentAnim] || this.weaponOffsets['idle'];
         const dirX = this.flipX ? -1 : 1;
         
-        this.weaponSprite.setPosition(this.x + (offset.x * dirX), this.y + offset.y);
+        const jumpVisualOffset = this.height - this.displayOriginY;
+
+        this.weaponSprite.setPosition(this.x + (offset.x * dirX), this.y + offset.y + jumpVisualOffset);
         this.weaponSprite.setAngle(offset.angle * dirX);
         this.weaponSprite.setFlipX(this.flipX);
         this.weaponSprite.setDepth(this.depth + 1);
@@ -165,13 +166,13 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             }
             
             const dirX = this.flipX ? -1 : 1;
-            (this.scene as any).spawnProjectile(this.x + (60 * dirX), this.y - 55, 'bullet', dirX, 30, false);
+            (this.scene as any).spawnProjectile(this.x + (60 * dirX), this.y - 100, 'bullet', dirX, 30, false);
             
             if (this.scene.textures.exists('muzzle-flash-m70')) {
-                const flash = this.scene.add.sprite(this.x + (80 * dirX), this.y - 55, 'muzzle-flash-m70');
+                const flash = this.scene.add.sprite(this.x + (90 * dirX), this.y - 100, 'muzzle-flash-m70');
                 flash.setDepth(this.depth + 2);
                 flash.setFlipX(!this.flipX);
-                flash.setScale(0.5);
+                flash.setScale(0.6);
                 flash.setBlendMode(Phaser.BlendModes.ADD);
                 this.scene.tweens.add({ targets: flash, alpha: 0, duration: 80, onComplete: () => flash.destroy() });
             }
@@ -189,7 +190,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             const animToPlay = this.scene.anims.exists(`${this.characterName}-melee`) ? `${this.characterName}-melee` : `${this.characterName}-punch-2`;
             this.play(animToPlay, true);
 
-            const hitZone = this.scene.add.zone(this.x + (this.flipX ? -80 : 80), this.y - 40, 160, 80);
+            const hitZone = this.scene.add.zone(this.x + (this.flipX ? -80 : 80), this.y - 60, 160, 100);
             this.scene.physics.add.existing(hitZone);
             
             let hasHit = false;
@@ -511,7 +512,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 const drop = this.scene.physics.add.sprite(this.x, this.y - 40, this.equippedWeapon);
                 (drop as any).isWeaponPickup = true;
                 (drop as any).weaponType = this.equippedWeapon;
-                if (this.equippedWeapon === 'M70-FINAL rev') drop.setScale(0.3); else drop.setScale(0.8);
+                if (this.equippedWeapon === 'M70-FINAL rev') drop.setScale(0.45); else drop.setScale(1.3);
                 (this.scene as any).items.add(drop);
                 
                 this.equippedWeapon = null;
