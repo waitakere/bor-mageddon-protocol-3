@@ -16,13 +16,13 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     public weaponHitsTaken: number = 0;
     private weaponSprite: Phaser.GameObjects.Sprite | null = null;
     
-    // Adjusted slightly lower than Marko to match her sprite proportions
+    // Adjusted offsets: significantly lower (y-coordinates closer to hands) to place the axe in her hand during idle.
     private weaponOffsets: Record<string, {x: number, y: number, angle: number}> = {
-        'idle': { x: 25, y: -95, angle: -15 },
-        'walk': { x: 30, y: -95, angle: -5 },
-        'run':  { x: 40, y: -90, angle: 15 },
-        'jump': { x: 20, y: -100, angle: -30 },
-        'shoot':{ x: 50, y: -90, angle: 0 }
+        'idle': { x: 25, y: -135, angle: -15 },
+        'walk': { x: 30, y: -135, angle: -5 },
+        'run':  { x: 40, y: -130, angle: 15 },
+        'jump': { x: 20, y: -130, angle: -30 },
+        'shoot':{ x: 50, y: -130, angle: 0 }
     };
 
     private currentVoice: any = null;
@@ -142,41 +142,61 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         let targetDepth = this.depth + 1; // Default to rendering in front of Maja
 
         // ==========================================
-        // MAJA'S DYNAMIC MELEE TRACKING (Behind-the-back draw)
+        // DYNAMIC ATTACK TRACKING
+        // Translates exact pixel locations based on the current frame of the attack!
         // ==========================================
         if (currentAnimKey === 'melee') {
             if (currentFrameName.includes('000') || currentFrameName.includes('001')) {
                 // WINDUP: Reaching behind back. Render weapon BEHIND character!
                 targetX += (-15 * dirX); 
-                targetY -= 90;          
+                targetY -= 130;          
                 targetAngle = -30 * dirX;
                 targetDepth = this.depth - 1; 
             } 
             else if (currentFrameName.includes('002')) {
                 // DRAWING: Pulling forward past hip
                 targetX += (5 * dirX);  
-                targetY -= 95;          
+                targetY -= 135;          
                 targetAngle = 0;  
             } 
             else if (currentFrameName.includes('003') || currentFrameName.includes('004')) {
                 // EXTENSION: Thrust straight out
                 targetX += (75 * dirX);  
-                targetY -= 105;          
+                targetY -= 145;          
                 targetAngle = 90 * dirX; 
             }
             else if (currentFrameName.includes('005') || currentFrameName.includes('006')) {
                 // PULL BACK: Returning to chest
                 targetX += (45 * dirX);  
-                targetY -= 95;           
+                targetY -= 135;           
                 targetAngle = 45 * dirX; 
             }
             else {
-                // RECOVERY/IDLE (007, 008)
+                // Default mid-swing interpolation
                 targetX += (30 * dirX);
-                targetY -= 85;
+                targetY -= 125;
                 targetAngle = 15 * dirX;
             }
         } 
+        else if (currentAnimKey === 'kick-1') {
+            // Check frames where arms are widely spread and disconnected.
+            const frameRangeStart = 0; // Assuming kick frames are named like frame_000.png, frame_001.png etc.
+            const frameRangeEnd = 3; 
+
+            // I'll need to define a Frame Ranges to work since I don't have exact frame names, but the dynamic coordinate logic will look like this.
+            if (currentFrameName.includes('000') || currentFrameName.includes('001') || currentFrameName.includes('002') || currentFrameName.includes('003')) {
+                // KICK DURATION: Arms spread wide. Place weapon on her back. Render BEHIND character.
+                targetX += (-35 * dirX); 
+                targetY -= 170;          
+                targetAngle = 10 * dirX; 
+                targetDepth = this.depth - 1;
+            } else {
+                // RECOVERY: Bringing it back towards her hand. Depth back to normal.
+                targetX += (25 * dirX);  
+                targetY -= 140;          
+                targetAngle = -15 * dirX;  
+            }
+        }
         else {
             // Normal states
             const offset = this.weaponOffsets[currentAnimKey] || this.weaponOffsets['idle'];
@@ -214,10 +234,10 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             }
             
             const dirX = this.flipX ? -1 : 1;
-            (this.scene as any).spawnProjectile(this.x + (60 * dirX), this.y - 95, 'bullet', dirX, 30, false);
+            (this.scene as any).spawnProjectile(this.x + (60 * dirX), this.y - 135, 'bullet', dirX, 30, false);
             
             if (this.scene.textures.exists('muzzle-flash-m70')) {
-                const flash = this.scene.add.sprite(this.x + (90 * dirX), this.y - 95, 'muzzle-flash-m70');
+                const flash = this.scene.add.sprite(this.x + (90 * dirX), this.y - 135, 'muzzle-flash-m70');
                 flash.setDepth(this.depth + 2);
                 flash.setFlipX(!this.flipX);
                 flash.setScale(0.6);
