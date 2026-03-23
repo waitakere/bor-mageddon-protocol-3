@@ -3,31 +3,26 @@ import { Marko } from '../entities/Marko';
 import { Maja } from '../entities/Maja';
 import { Darko } from '../entities/Darko';
 import { Enemy } from '../entities/Enemy';
-
 import { Dizel } from '../entities/Dizel';
 import { Dizelcic } from '../entities/Dizelcic';
 import { Miner } from '../entities/Miner';
 import { SlobodanCEO } from '../entities/SlobodanCEO'; 
 import { BreakableObject, BreakableType } from '../entities/BreakableObject';
+import { Projectile } from '../entities/Projectile';
 
 export class MainLevel extends Phaser.Scene {
     public player!: any; 
     public enemies!: Phaser.Physics.Arcade.Group;
     public breakables!: Phaser.Physics.Arcade.Group; 
     public items!: Phaser.Physics.Arcade.Group;
+    public projectiles!: Phaser.Physics.Arcade.Group; 
     private shadows!: Phaser.GameObjects.Graphics;
     
     private skyLayer!: Phaser.GameObjects.Image;
     private midLayer!: Phaser.GameObjects.Image;
     private floorLayer!: Phaser.GameObjects.TileSprite;
     
-    private actionKeys!: {
-        q: Phaser.Input.Keyboard.Key;
-        w: Phaser.Input.Keyboard.Key;
-        a: Phaser.Input.Keyboard.Key;
-        s: Phaser.Input.Keyboard.Key;
-        space: Phaser.Input.Keyboard.Key;
-    };
+    private actionKeys!: any;
 
     private sectors = [
         { triggerX: 1000, totalEnemies: 4, maxActive: 2, isBossWave: false },  
@@ -47,26 +42,18 @@ export class MainLevel extends Phaser.Scene {
     public lastPlayerHitTime!: number;
     public lastEnemyHitTime!: number;
 
-    constructor() { 
-        super({ key: 'MainLevel' }); 
-    }
+    constructor() { super({ key: 'MainLevel' }); }
 
     init() {
         this.currentSectorIndex = 0;
         this.isLocked = false;
         this.spawnedThisWave = 0;
-        this.killedThisWave = 0;
-        this.bossSpawned = false;
         this.score = 0;
         this.lastEngagedEnemy = null;
-        this.lastPlayerHitTime = 0;
-        this.lastEnemyHitTime = 0;
-
         this.createEnemyAnimations();
     }
 
     create(data: any) {
-        // Core Event Listeners
         window.addEventListener('request-scene-restart', this.handleRestart);
         window.addEventListener('request-continue', this.handleContinue as EventListener);
         
@@ -74,15 +61,6 @@ export class MainLevel extends Phaser.Scene {
             window.removeEventListener('request-scene-restart', this.handleRestart);
             window.removeEventListener('request-continue', this.handleContinue as EventListener);
         });
-
-        this.events.on(Phaser.Scenes.Events.PAUSE, () => this.sound.pauseAll());
-        this.events.on(Phaser.Scenes.Events.RESUME, () => this.sound.resumeAll());
-
-        const unlockAudio = () => {
-            if (this.sound.context.state === 'suspended') this.sound.context.resume();
-        };
-        this.input.on('pointerdown', unlockAudio);
-        this.input.keyboard?.on('keydown', unlockAudio);
 
         this.sound.stopAll(); 
         this.sound.play('1993_ambient', { loop: true, volume: 0.4 });
@@ -96,118 +74,122 @@ export class MainLevel extends Phaser.Scene {
         }) as any;
 
         this.physics.world.setBounds(0, 750, 6000, 330); 
-        
         const camW = this.cameras.main.width;
 
-        this.skyLayer = this.add.image(0, 0, 'part1_sky')
-            .setOrigin(0, 0).setDisplaySize(4000, 1080).setScrollFactor(0.1).setDepth(-300);
-            
-        this.midLayer = this.add.image(0, 750, 'part1_mid')
-            .setOrigin(0, 1).setDisplaySize(4000, 650).setScrollFactor(0.5).setDepth(-200);
-            
-        this.floorLayer = this.add.tileSprite(0, 1080, camW, 330, 'part1_floor')
-            .setOrigin(0, 1).setScrollFactor(0).setDepth(-100);
+        this.skyLayer = this.add.image(0, 0, 'part1_sky').setOrigin(0, 0).setDisplaySize(4000, 1080).setScrollFactor(0.1).setDepth(-300);
+        this.midLayer = this.add.image(0, 750, 'part1_mid').setOrigin(0, 1).setDisplaySize(4000, 650).setScrollFactor(0.5).setDepth(-200);
+        this.floorLayer = this.add.tileSprite(0, 1080, camW, 330, 'part1_floor').setOrigin(0, 1).setScrollFactor(0).setDepth(-100);
 
         this.shadows = this.add.graphics().setAlpha(0.4).setDepth(-50);
         
         this.items = this.physics.add.group();
         this.enemies = this.physics.add.group();
         this.breakables = this.physics.add.group(); 
+        this.projectiles = this.physics.add.group(); 
 
-        let charKey = 'marko';
-        if (this.registry.has('selectedCharacter')) {
-            charKey = this.registry.get('selectedCharacter');
-        } else if (data && data.selectedCharacter) {
-            charKey = data.selectedCharacter;
-        } else if (window.localStorage.getItem('selectedCharacter')) {
-            charKey = window.localStorage.getItem('selectedCharacter') || 'marko';
-        }
-        
-        // Spawn the initial player
+        let charKey = this.registry.get('selectedCharacter') || data?.selectedCharacter || window.localStorage.getItem('selectedCharacter') || 'marko';
         this.spawnPlayer(charKey, 200, 950);
         
-        const firstEnemy = new Dizel(this, 1000, 950);
-        this.enemies.add(firstEnemy);
+        // ==========================================
+        // GUARANTEED EARLY WEAPON
+        // ==========================================
+        const startWeapon = this.physics.add.sprite(500, 950, 'bat-2');
+        startWeapon.setScale(0.8);
+        (startWeapon as any).isWeaponPickup = true;
+        (startWeapon as any).weaponType = 'bat-2';
+        this.items.add(startWeapon);
 
+        this.enemies.add(new Dizel(this, 1000, 950));
         this.scatterBreakables();
 
         this.cameras.main.setBounds(0, 0, 6000, 1080);
         this.updateReactHUD();
-
         this.scene.pause();
         window.dispatchEvent(new CustomEvent('phaser-ready'));
     }
 
-    // ==========================================
-    // PLAYER SPAWNING HELPER
-    // Abstracts player creation so we can hot-swap them!
-    // ==========================================
     private spawnPlayer(charKey: string, x: number, y: number) {
         if (this.player) this.player.destroy();
-
         switch(charKey.toLowerCase()) {
             case 'maja': this.player = new Maja(this, x, y); break;
             case 'darko': this.player = new Darko(this, x, y); break;
             default: this.player = new Marko(this, x, y); break;
         }
-
         this.player.setScale(1.7);
         
-        // Re-bind all physics colliders
         this.physics.add.collider(this.player, this.enemies);
-        this.physics.add.collider(this.enemies, this.enemies);
         this.physics.add.collider(this.player, this.breakables);
-        this.physics.add.collider(this.enemies, this.breakables);
+
         this.physics.add.overlap(this.player, this.items, this.collectItem, undefined, this);
+        
+        this.physics.add.overlap(this.projectiles, this.enemies, (proj: any, enemy: any) => {
+            if (enemy.isDead || Math.abs(proj.y - enemy.y) > 60) return;
+            proj.hit();
+            this.spawnBlood(enemy.x, enemy.y - 50);
+            if (enemy.takeDamage) enemy.takeDamage(proj.damage);
+            if (proj.isThrownWeapon && enemy.takeKnockdown) enemy.takeKnockdown();
+        });
+
+        this.physics.add.overlap(this.projectiles, this.breakables, (proj: any, prop: any) => {
+            if (prop.isDead || Math.abs(proj.y - prop.y) > 100) return;
+            proj.hit();
+            this.spawnHitEffect(prop.x, prop.y - 50);
+            if (prop.takeDamage) prop.takeDamage(proj.damage);
+        });
 
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
     }
 
-    // ==========================================
-    // THE CONTINUE MECHANIC: "Drop-In Nuke"
-    // ==========================================
+    public spawnProjectile(x: number, y: number, key: string, direction: number, damage: number, isThrown: boolean) {
+        const proj = new Projectile(this, x, y, key, direction, damage, isThrown);
+        this.projectiles.add(proj);
+    }
+
+    public spawnBlood(x: number, y: number) {
+        if (!this.textures.exists('blood_splat')) return;
+        const splat = this.add.sprite(x, y, 'blood_splat');
+        splat.setDepth(9999);
+        splat.setScale(0.3); 
+        this.tweens.add({
+            targets: splat,
+            y: y + 20,
+            alpha: 0,
+            duration: 600,
+            ease: 'Sine.easeIn',
+            onComplete: () => splat.destroy()
+        });
+    }
+
     private handleContinue = (e: CustomEvent) => {
         const newChar = e.detail?.character || 'marko';
         const spawnX = this.player.x;
         const spawnY = this.player.y;
-
-        // 1. Hot-swap the character at the exact death coordinate
         this.spawnPlayer(newChar, spawnX, spawnY);
-
-        // 2. Play heavy entrance FX
         this.triggerScreenGlitch(800);
         this.spawnHitEffect(spawnX, spawnY - 50);
         this.playSFX(['explosion_01', 'Break_1']);
-
-        // 3. Nuke all active enemies (15 DMG + Forced Knockdown)
         this.enemies.getChildren().forEach((enemy: any) => {
             if (!enemy.isDead) {
                 if (enemy.takeDamage) enemy.takeDamage(15);
-                
-                // If the damage didn't already trigger a knockdown or kill them, force it!
-                if (!enemy.isDead && !enemy.isKnockedDown && enemy.takeKnockdown) {
-                    enemy.takeKnockdown();
-                }
+                if (!enemy.isDead && !enemy.isKnockedDown && enemy.takeKnockdown) enemy.takeKnockdown();
             }
         });
-
         this.updateReactHUD();
     };
 
     private scatterBreakables() {
         const props = [
-            { x: 600, y: 880, type: 'barrel' },
+            { x: 600, y: 880, type: 'barrel' }, 
             { x: 1200, y: 1000, type: 'crate' },
-            { x: 1800, y: 920, type: 'kontejner' },
+            { x: 1800, y: 920, type: 'kontejner' }, 
             { x: 2600, y: 980, type: 'kiosk' }, 
-            { x: 3200, y: 1040, type: 'barrel' },
-            { x: 3700, y: 900, type: 'crate' }
+            { x: 3200, y: 1040, type: 'barrel' }, 
+            { x: 3700, y: 900, type: 'crate' },
+            { x: 4100, y: 950, type: 'barrel' }, 
+            { x: 4400, y: 880, type: 'crate' },
+            { x: 4800, y: 1000, type: 'crate' }
         ];
-
-        props.forEach(p => {
-            const obj = new BreakableObject(this, p.x, p.y, p.type as BreakableType);
-            this.breakables.add(obj);
-        });
+        props.forEach(p => { this.breakables.add(new BreakableObject(this, p.x, p.y, p.type as BreakableType)); });
     }
 
     private createEnemyAnimations() {
@@ -250,20 +232,14 @@ export class MainLevel extends Phaser.Scene {
         });
     }
 
-    private handleRestart = () => {
-        this.scene.restart();
-    };
+    private handleRestart = () => { this.scene.restart(); };
 
     update() {
         if (!this.player || this.player.isDead) return;
-
         this.handleWaveManager();
-
         this.floorLayer.tilePositionX = this.cameras.main.scrollX;
 
-        this.children.each((child: any) => {
-            if (child.body && child.type === 'Sprite') { child.setAngle(0); child.rotation = 0; }
-        });
+        this.children.each((c: any) => { if (c.body && c.type === 'Sprite') { c.setAngle(0); c.rotation = 0; } });
 
         this.shadows.clear().fillStyle(0x000000, 0.5);
         this.shadows.fillEllipse(this.player.x, this.player.y, 70 * this.player.scale, 20);
@@ -272,7 +248,6 @@ export class MainLevel extends Phaser.Scene {
 
         const cursors = this.input.keyboard!.createCursorKeys();
         const ak = this.actionKeys;
-
         const qJust = Phaser.Input.Keyboard.JustDown(ak.q);
         const wJust = Phaser.Input.Keyboard.JustDown(ak.w);
         const aJust = Phaser.Input.Keyboard.JustDown(ak.a);
@@ -282,31 +257,24 @@ export class MainLevel extends Phaser.Scene {
         const finisherPressed = (ak.a.isDown && ak.s.isDown) && (aJust || sJust);
 
         const keys = {
-            up: cursors.up.isDown, 
-            down: cursors.down.isDown, 
-            left: cursors.left.isDown, 
-            right: cursors.right.isDown,
+            up: cursors.up.isDown, down: cursors.down.isDown, left: cursors.left.isDown, right: cursors.right.isDown,
             space: Phaser.Input.Keyboard.JustDown(ak.space),
-            special: specialPressed,
-            finisher: finisherPressed,
-            p1: qJust && !specialPressed,
-            p2: wJust && !specialPressed,
-            k1: aJust && !finisherPressed,
-            k2: sJust && !finisherPressed
+            special: specialPressed, finisher: finisherPressed,
+            p1: qJust && !specialPressed, p2: wJust && !specialPressed,
+            k1: aJust && !finisherPressed, k2: sJust && !finisherPressed
         };
 
         this.player.update(keys);
         this.enemies.getChildren().forEach((e: any) => { if (e.updateAI && !e.isDead) e.updateAI(this.player); });
         
         this.children.each((c: any) => { 
-            if (c.y && c.type !== 'Image' && c.type !== 'Graphics' && c.type !== 'TileSprite') {
+            if (c.y && c.type !== 'Image' && c.type !== 'Graphics' && c.type !== 'TileSprite' && !c.isWeaponSprite && !(c instanceof Projectile)) {
                 c.setDepth(c.y); 
             } 
         });
         
         if (this.lastEngagedEnemy && (!this.lastEngagedEnemy.active || this.lastEngagedEnemy.isDead)) {
-            this.lastEngagedEnemy = null;
-            this.updateReactHUD();
+            this.lastEngagedEnemy = null; this.updateReactHUD();
         }
     }
 
@@ -336,24 +304,12 @@ export class MainLevel extends Phaser.Scene {
     public triggerScreenGlitch(duration: number = 400) {
         const cam = this.cameras.main;
         cam.shake(duration, 0.02);
-        
         try {
             if (cam.postFX) {
                 const fx = cam.postFX.addChromaticAberration(0.04, 0.04);
-                this.tweens.add({
-                    targets: fx,
-                    offsetX: 0,
-                    offsetY: 0,
-                    duration: duration,
-                    ease: 'Power2',
-                    onComplete: () => {
-                        cam.postFX.remove(fx);
-                    }
-                });
+                this.tweens.add({ targets: fx, offsetX: 0, offsetY: 0, duration: duration, ease: 'Power2', onComplete: () => cam.postFX.remove(fx) });
             }
-        } catch (e) {
-            cam.flash(duration, 255, 0, 0, 0.3);
-        }
+        } catch (e) { cam.flash(duration, 255, 0, 0, 0.3); }
     }
 
     public spawnHitEffect(x: number, y: number) {
@@ -384,33 +340,48 @@ export class MainLevel extends Phaser.Scene {
     }
 
     public dropItem(x: number, y: number) {
+        const isLateGame = this.player.x > 3000;
+        
+        // Weapon Drop Probability: Increased to 50%
+        if (Math.random() < 0.50) {
+            let weapons = ['axe', 'bat-2', 'bat-3', 'crowbar-1'];
+            if (isLateGame) weapons.push('M70-FINAL rev'); 
+            
+            const randomWeapon = Phaser.Utils.Array.GetRandom(weapons);
+            const drop = this.physics.add.sprite(x, y - 40, randomWeapon);
+            drop.setOrigin(0.5, 0.5);
+            
+            if (randomWeapon === 'M70-FINAL rev') drop.setScale(0.3);
+            else drop.setScale(0.8);
+
+            (drop as any).isWeaponPickup = true;
+            (drop as any).weaponType = randomWeapon;
+
+            this.items.add(drop);
+            const body = drop.body as Phaser.Physics.Arcade.Body;
+            if (body) { body.setSize(drop.displayWidth, 20); body.setOffset(0, drop.displayHeight / 2); }
+            
+            this.tweens.add({ targets: drop, alpha: 0.2, duration: 100, yoyo: true, repeat: 5, ease: 'Linear' });
+            this.tweens.add({ targets: drop, y: y, duration: 350, ease: 'Bounce.easeOut' });
+            return; 
+        }
+
         const items = ['item-burek', 'item-coffee', 'item-pork', 'item-beer', 'item-sandwich', 'item-rakija'];
         const randomItem = items[Math.floor(Math.random() * items.length)];
-        
         const drop = this.physics.add.sprite(x, y - 40, randomItem);
         drop.setOrigin(0.5, 1); 
         this.items.add(drop);
         
-        if (randomItem === 'item-pork') {
-            drop.setScale(3.5); 
-        } else if (randomItem === 'item-rakija') {
-            drop.setScale(3.0); 
-        } else if (randomItem === 'item-burek') {
-            drop.setScale(2.5); 
-        } else if (randomItem === 'item-beer') {
-            drop.setScale(0.45); 
-        } else if (randomItem === 'item-sandwich') {
-            drop.setScale(0.8);
-        } else {
-            drop.setScale(1.5); 
-        }
+        if (randomItem === 'item-pork') drop.setScale(3.5); 
+        else if (randomItem === 'item-rakija') drop.setScale(3.0); 
+        else if (randomItem === 'item-burek') drop.setScale(2.5); 
+        else if (randomItem === 'item-beer') drop.setScale(0.45); 
+        else if (randomItem === 'item-sandwich') drop.setScale(0.8);
+        else if (randomItem === 'item-coffee') drop.setScale(2.5); // COFFEE FIX: SCALED UP
+        else drop.setScale(1.5); 
 
         const body = drop.body as Phaser.Physics.Arcade.Body;
-        if (body) {
-            body.setSize(drop.width, drop.height);
-            body.setOffset(0, 0);
-        }
-        
+        if (body) { body.setSize(drop.width, drop.height); body.setOffset(0, 0); }
         this.tweens.add({ targets: drop, alpha: 0.2, duration: 100, yoyo: true, repeat: 5, ease: 'Linear' });
         this.tweens.add({ targets: drop, y: y, duration: 350, ease: 'Bounce.easeOut' });
     }
@@ -418,10 +389,16 @@ export class MainLevel extends Phaser.Scene {
     private collectItem(player: any, item: any) {
         if (Math.abs(player.y - item.y) > 80) return; 
         
+        if (item.isWeaponPickup) {
+            player.equipWeapon(item.weaponType);
+            item.destroy();
+            this.playSFX('pickup_weapon');
+            return;
+        }
+
         item.destroy();
         this.playSFX(['melee_1', 'Metal-Impact-Shield'], 0.8); 
         if (player.playPickupAnim) player.playPickupAnim();
-        
         this.player.health = Math.min(this.player.health + 30, this.player.maxHealth || 150);
         const healText = this.add.text(this.player.x, this.player.y - 80, '+HP', { font: '900 20px "Space Mono"', color: '#00ff00' }).setOrigin(0.5);
         this.tweens.add({ targets: healText, y: healText.y - 30, alpha: 0, duration: 1000, onComplete: () => healText.destroy() });
@@ -530,7 +507,7 @@ export class MainLevel extends Phaser.Scene {
     public updateReactHUD() {
         let eMaxHealth = 100;
         if (this.lastEngagedEnemy) {
-            eMaxHealth = this.lastEngagedEnemy.skinPrefix === 'slobodan' ? 600 : 100;
+            eMaxHealth = this.lastEngagedEnemy.skinPrefix === 'slobodan' ? 500 : 100;
         }
 
         window.dispatchEvent(new CustomEvent('update-phaser-hud', {
