@@ -21,7 +21,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         'walk': { x: 35, y: -115, angle: -5 },
         'run':  { x: 45, y: -110, angle: 15 },
         'jump': { x: 25, y: -120, angle: -30 },
-        'melee':{ x: 70, y: -110, angle: 80 }, 
         'shoot':{ x: 60, y: -105, angle: 0 }
     };
 
@@ -94,6 +93,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 else if (animType === 'walk') fps = 12;
                 else if (animType === 'run') fps = 18;
                 else if (animType === 'jump') fps = 8;
+                else if (animType === 'melee') fps = 18; // Slightly faster swing for his overhand attack
 
                 anims.create({
                     key: animKey,
@@ -122,14 +122,60 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private positionWeaponSprite() {
         if (!this.weaponSprite || !this.equippedWeapon) return;
 
-        const currentAnim = this.anims.currentAnim?.key.replace(`${this.characterName}-`, '') || 'idle';
-        const offset = this.weaponOffsets[currentAnim] || this.weaponOffsets['idle'];
+        const currentAnimKey = this.anims.currentAnim?.key.replace(`${this.characterName}-`, '') || 'idle';
+        const currentFrameName = this.anims.currentFrame?.textureFrame as string || '';
         const dirX = this.flipX ? -1 : 1;
-        
         const jumpVisualOffset = this.height - this.displayOriginY;
 
-        this.weaponSprite.setPosition(this.x + (offset.x * dirX), this.y + offset.y + jumpVisualOffset);
-        this.weaponSprite.setAngle(offset.angle * dirX);
+        let targetX = this.x;
+        let targetY = this.y + jumpVisualOffset;
+        let targetAngle = 0;
+
+        // ==========================================
+        // DARKO'S DYNAMIC MELEE TRACKING (Overhand Swing)
+        // ==========================================
+        if (currentAnimKey === 'melee') {
+            
+            if (currentFrameName.includes('018') || currentFrameName.includes('019') || currentFrameName.includes('020')) {
+                // WINDUP: Pulled behind back
+                targetX += (-30 * dirX); 
+                targetY -= 120;          
+                targetAngle = -30 * dirX; 
+            } 
+            else if (currentFrameName.includes('004') || currentFrameName.includes('005') || currentFrameName.includes('006')) {
+                // APEX: High above head
+                targetX += (-10 * dirX);  
+                targetY -= 170;          
+                targetAngle = 30 * dirX;  
+            } 
+            else if (currentFrameName.includes('021') || currentFrameName.includes('022') || currentFrameName.includes('023')) {
+                // EXTENSION: Thrust forward
+                targetX += (85 * dirX);  
+                targetY -= 105;          
+                targetAngle = 85 * dirX; 
+            }
+            else if (currentFrameName.includes('028') || currentFrameName.includes('029') || currentFrameName.includes('030')) {
+                // FOLLOW THROUGH: Down by knees
+                targetX += (65 * dirX);  
+                targetY -= 75;           
+                targetAngle = 135 * dirX; 
+            }
+            else {
+                // Default mid-swing interpolation
+                targetX += (40 * dirX);
+                targetY -= 135;
+                targetAngle = 55 * dirX;
+            }
+        } 
+        else {
+            const offset = this.weaponOffsets[currentAnimKey] || this.weaponOffsets['idle'];
+            targetX += (offset.x * dirX);
+            targetY += offset.y;
+            targetAngle = offset.angle * dirX;
+        }
+
+        this.weaponSprite.setPosition(targetX, targetY);
+        this.weaponSprite.setAngle(targetAngle);
         this.weaponSprite.setFlipX(this.flipX);
         this.weaponSprite.setDepth(this.depth + 1);
     }
