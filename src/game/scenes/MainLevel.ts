@@ -94,7 +94,7 @@ export class MainLevel extends Phaser.Scene {
         // GUARANTEED EARLY WEAPON
         // ==========================================
         const startWeapon = this.physics.add.sprite(500, 950, 'bat-2');
-        startWeapon.setScale(0.8);
+        startWeapon.setScale(1.3); // Spawn at the correct new massive size!
         (startWeapon as any).isWeaponPickup = true;
         (startWeapon as any).weaponType = 'bat-2';
         this.items.add(startWeapon);
@@ -351,8 +351,8 @@ export class MainLevel extends Phaser.Scene {
             const drop = this.physics.add.sprite(x, y - 40, randomWeapon);
             drop.setOrigin(0.5, 0.5);
             
-            if (randomWeapon === 'M70-FINAL rev') drop.setScale(0.3);
-            else drop.setScale(0.8);
+            if (randomWeapon === 'M70-FINAL rev') drop.setScale(0.45);
+            else drop.setScale(1.3); // MELEE SCALED UP TO 1.3
 
             (drop as any).isWeaponPickup = true;
             (drop as any).weaponType = randomWeapon;
@@ -377,7 +377,7 @@ export class MainLevel extends Phaser.Scene {
         else if (randomItem === 'item-burek') drop.setScale(2.5); 
         else if (randomItem === 'item-beer') drop.setScale(0.45); 
         else if (randomItem === 'item-sandwich') drop.setScale(0.8);
-        else if (randomItem === 'item-coffee') drop.setScale(2.5); // COFFEE FIX: SCALED UP
+        else if (randomItem === 'item-coffee') drop.setScale(2.5); // COFFEE FIX
         else drop.setScale(1.5); 
 
         const body = drop.body as Phaser.Physics.Arcade.Body;
@@ -405,7 +405,7 @@ export class MainLevel extends Phaser.Scene {
         this.updateReactHUD();
     }
 
-    private handleWaveManager() {
+    private handleWaveManager() { /* [Same as previous] */
         const cam = this.cameras.main;
 
         if (!this.isLocked && this.currentSectorIndex < this.sectors.length) {
