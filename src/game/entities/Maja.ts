@@ -16,10 +16,10 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     public weaponHitsTaken: number = 0;
     private weaponSprite: Phaser.GameObjects.Sprite | null = null;
     
-    // PERFECTED OFFSETS: Raised Jump Y drastically to account for tucked knees
+    // PERFECTED OFFSETS: Raised to -175 to sit exactly in her hand
     private weaponOffsets: Record<string, {x: number, y: number, angle: number}> = {
         'idle': { x: 20, y: -175, angle: 15 },
-        'jump': { x: 20, y: -215, angle: -10 },
+        'jump': { x: 15, y: -180, angle: -20 },
         'shoot':{ x: 40, y: -175, angle: 0 }
     };
 
@@ -148,9 +148,9 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         let targetDepth = this.depth + 1; 
 
         // ==========================================
-        // HIDE WEAPON DURING COMPLEX MOVES
+        // HIDE WEAPON DURING COMPLEX MOVES & JUMP ATTACKS
         // ==========================================
-        if (['kick-2', 'special-attack', 'finish-move'].includes(currentAnimKey)) {
+        if (['kick-2', 'special-attack', 'finish-move', 'jump-punch', 'jump-kick'].includes(currentAnimKey)) {
             this.weaponSprite.visible = false;
             return; 
         }
@@ -187,37 +187,32 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             }
         }
 
-        // --- DETAILED ATTACK TRACKING (FLAT THRUST) ---
+        // --- DETAILED ATTACK TRACKING ---
         else if (currentAnimKey === 'melee') {
             if (currentFrameName.includes('000') || currentFrameName.includes('001')) {
-                // WINDUP: Pulled far behind back horizontally
-                targetX += (-25 * dirX); 
+                targetX += (-15 * dirX); 
                 targetY -= 185;          
-                targetAngle = -75 * dirX;
+                targetAngle = -45 * dirX;
                 targetDepth = this.depth - 1; 
             } 
             else if (currentFrameName.includes('002')) {
-                // DRAWING: Past hip, pointing upwards
-                targetX += (5 * dirX);  
-                targetY -= 175;          
-                targetAngle = 0;  
+                targetX += (0 * dirX);  
+                targetY -= 185;          
+                targetAngle = 45 * dirX;  
             } 
             else if (currentFrameName.includes('003') || currentFrameName.includes('004')) {
-                // EXTENSION: FLAT HORIZONTAL THRUST! Pushed way out.
-                targetX += (90 * dirX);  
-                targetY -= 160;          
-                targetAngle = 90 * dirX; // 90 degrees lays it completely flat
+                targetX += (55 * dirX);  
+                targetY -= 175;          
+                targetAngle = 100 * dirX; 
                 targetDepth = this.depth + 1; 
             }
             else if (currentFrameName.includes('005') || currentFrameName.includes('006')) {
-                // PULL BACK
-                targetX += (35 * dirX);  
-                targetY -= 170;           
+                targetX += (25 * dirX);  
+                targetY -= 175;           
                 targetAngle = 45 * dirX; 
                 targetDepth = this.depth + 1;
             }
             else {
-                // Return to idle
                 targetX += (20 * dirX);
                 targetY -= 175;
                 targetAngle = 15 * dirX;
