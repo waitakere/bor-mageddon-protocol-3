@@ -16,13 +16,12 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     public weaponHitsTaken: number = 0;
     private weaponSprite: Phaser.GameObjects.Sprite | null = null;
     
-    // Adjusted offsets: significantly lower (y-coordinates closer to hands) to place the axe in her hand during idle.
+    // With the new Handle Origin (0.8), the Y coordinate tracks her hand perfectly at -85!
     private weaponOffsets: Record<string, {x: number, y: number, angle: number}> = {
-        'idle': { x: 25, y: -135, angle: -15 },
-        'walk': { x: 30, y: -135, angle: -5 },
-        'run':  { x: 40, y: -130, angle: 15 },
-        'jump': { x: 20, y: -130, angle: -30 },
-        'shoot':{ x: 50, y: -130, angle: 0 }
+        'idle': { x: 20, y: -85, angle: 15 },
+        'run':  { x: 30, y: -85, angle: 30 },
+        'jump': { x: 15, y: -90, angle: -20 },
+        'shoot':{ x: 40, y: -85, angle: 0 }
     };
 
     private currentVoice: any = null;
@@ -124,8 +123,16 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.weaponSprite = this.scene.add.sprite(this.x, this.y, weaponKey);
         (this.weaponSprite as any).isWeaponSprite = true; 
         
-        if (weaponKey === 'M70-FINAL rev') this.weaponSprite.setScale(0.45);
-        else this.weaponSprite.setScale(1.3);
+        // ==========================================
+        // ORIGIN FIX: Pivot around the handle/stock!
+        // ==========================================
+        if (weaponKey === 'M70-FINAL rev') {
+            this.weaponSprite.setScale(0.45);
+            this.weaponSprite.setOrigin(0.3, 0.5); // Hold by the rifle stock
+        } else {
+            this.weaponSprite.setScale(1.3);
+            this.weaponSprite.setOrigin(0.5, 0.8); // Hold by the handle!
+        }
     }
 
     private positionWeaponSprite() {
@@ -139,66 +146,81 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         let targetX = this.x;
         let targetY = this.y + jumpVisualOffset;
         let targetAngle = 0;
-        let targetDepth = this.depth + 1; // Default to rendering in front of Maja
+        let targetDepth = this.depth + 1; 
 
         // ==========================================
-        // DYNAMIC ATTACK TRACKING
-        // Translates exact pixel locations based on the current frame of the attack!
+        // DYNAMIC WALK PENDULUM (Based on Frames 000-008)
         // ==========================================
-        if (currentAnimKey === 'melee') {
+        if (currentAnimKey === 'walk') {
+            if (currentFrameName.includes('001') || currentFrameName.includes('002') || currentFrameName.includes('003')) {
+                // Front arm swings forward
+                targetX += (28 * dirX);
+                targetY -= 85;
+                targetAngle = 25 * dirX;
+            } else if (currentFrameName.includes('005') || currentFrameName.includes('006') || currentFrameName.includes('007')) {
+                // Front arm swings back
+                targetX += (-10 * dirX);
+                targetY -= 85;
+                targetAngle = -10 * dirX;
+            } else {
+                // Neutral passing frame
+                targetX += (15 * dirX);
+                targetY -= 85;
+                targetAngle = 5 * dirX;
+            }
+        }
+        // ==========================================
+        // BEHIND-THE-BACK MELEE STRIKE
+        // ==========================================
+        else if (currentAnimKey === 'melee') {
             if (currentFrameName.includes('000') || currentFrameName.includes('001')) {
-                // WINDUP: Reaching behind back. Render weapon BEHIND character!
+                // WINDUP: Hidden behind back
                 targetX += (-15 * dirX); 
-                targetY -= 130;          
-                targetAngle = -30 * dirX;
+                targetY -= 85;          
+                targetAngle = -45 * dirX;
                 targetDepth = this.depth - 1; 
             } 
             else if (currentFrameName.includes('002')) {
-                // DRAWING: Pulling forward past hip
-                targetX += (5 * dirX);  
-                targetY -= 135;          
-                targetAngle = 0;  
+                // DRAWING: Past hip
+                targetX += (0 * dirX);  
+                targetY -= 85;          
+                targetAngle = 45 * dirX;  
             } 
             else if (currentFrameName.includes('003') || currentFrameName.includes('004')) {
-                // EXTENSION: Thrust straight out
-                targetX += (75 * dirX);  
-                targetY -= 145;          
-                targetAngle = 90 * dirX; 
+                // EXTENSION: Thrust out
+                targetX += (45 * dirX);  
+                targetY -= 85;          
+                targetAngle = 100 * dirX; 
             }
             else if (currentFrameName.includes('005') || currentFrameName.includes('006')) {
-                // PULL BACK: Returning to chest
-                targetX += (45 * dirX);  
-                targetY -= 135;           
+                // PULL BACK
+                targetX += (25 * dirX);  
+                targetY -= 85;           
                 targetAngle = 45 * dirX; 
             }
             else {
-                // Default mid-swing interpolation
-                targetX += (30 * dirX);
-                targetY -= 125;
+                targetX += (20 * dirX);
+                targetY -= 85;
                 targetAngle = 15 * dirX;
             }
         } 
+        // ==========================================
+        // KICK FIX: Store weapon on back
+        // ==========================================
         else if (currentAnimKey === 'kick-1') {
-            // Check frames where arms are widely spread and disconnected.
-            const frameRangeStart = 0; // Assuming kick frames are named like frame_000.png, frame_001.png etc.
-            const frameRangeEnd = 3; 
-
-            // I'll need to define a Frame Ranges to work since I don't have exact frame names, but the dynamic coordinate logic will look like this.
             if (currentFrameName.includes('000') || currentFrameName.includes('001') || currentFrameName.includes('002') || currentFrameName.includes('003')) {
-                // KICK DURATION: Arms spread wide. Place weapon on her back. Render BEHIND character.
-                targetX += (-35 * dirX); 
-                targetY -= 170;          
-                targetAngle = 10 * dirX; 
-                targetDepth = this.depth - 1;
+                targetX += (-25 * dirX); 
+                targetY -= 110;          
+                targetAngle = -45 * dirX; 
+                targetDepth = this.depth - 1; // Renders behind her
             } else {
-                // RECOVERY: Bringing it back towards her hand. Depth back to normal.
-                targetX += (25 * dirX);  
-                targetY -= 140;          
-                targetAngle = -15 * dirX;  
+                targetX += (10 * dirX);  
+                targetY -= 90;          
+                targetAngle = 0;  
             }
         }
+        // Normal states
         else {
-            // Normal states
             const offset = this.weaponOffsets[currentAnimKey] || this.weaponOffsets['idle'];
             targetX += (offset.x * dirX);
             targetY += offset.y;
@@ -234,10 +256,11 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             }
             
             const dirX = this.flipX ? -1 : 1;
-            (this.scene as any).spawnProjectile(this.x + (60 * dirX), this.y - 135, 'bullet', dirX, 30, false);
+            // Adjusted bullet spawn slightly to account for the new M70 origin point
+            (this.scene as any).spawnProjectile(this.x + (80 * dirX), this.y - 85, 'bullet', dirX, 30, false);
             
             if (this.scene.textures.exists('muzzle-flash-m70')) {
-                const flash = this.scene.add.sprite(this.x + (90 * dirX), this.y - 135, 'muzzle-flash-m70');
+                const flash = this.scene.add.sprite(this.x + (110 * dirX), this.y - 85, 'muzzle-flash-m70');
                 flash.setDepth(this.depth + 2);
                 flash.setFlipX(!this.flipX);
                 flash.setScale(0.6);
@@ -387,8 +410,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         }
 
         if (!this.isAttacking) {
-            let vx = 0;
-            let vy = 0;
+            let vx = 0; let vy = 0;
 
             if (this.isJumping) {
                 vx = this.jumpVelocityX;
