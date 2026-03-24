@@ -89,7 +89,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 else if (animType === 'run') fps = 18;
                 else if (animType === 'jump') fps = 8;
                 else if (animType === 'finish-move') fps = 24; 
-                else if (animType === 'throw') fps = 18; // Speed up throw slightly for punchiness
+                else if (animType === 'throw') fps = 18; 
 
                 const frameConfig: Phaser.Types.Animations.AnimationFrameConfig[] = matchingFrames.map(f => {
                     return { key: this.characterName, frame: f };
@@ -116,20 +116,39 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         if (this.weaponSprite) this.weaponSprite.destroy();
 
         this.equippedWeapon = weaponKey;
-        // FIXED: Durability set to exactly 5 swings
         this.weaponDurability = 5;
         this.weaponHitsTaken = 0;
 
         this.weaponSprite = this.scene.add.sprite(this.x, this.y, weaponKey);
         (this.weaponSprite as any).isWeaponSprite = true; 
         
-        // ORIGIN PIVOT FIX: Rotate around the handle, not the center
         if (weaponKey === 'M70-FINAL rev') {
             this.weaponSprite.setScale(0.45);
             this.weaponSprite.setOrigin(0.3, 0.5);
         } else {
             this.weaponSprite.setScale(1.3);
             this.weaponSprite.setOrigin(0.5, 0.8);
+        }
+    }
+
+    public dropCurrentWeapon() {
+        if (!this.equippedWeapon) return;
+
+        // Spawn a new pickup sprite matching the current weapon
+        const drop = this.scene.physics.add.sprite(this.x, this.y - 40, this.equippedWeapon);
+        (drop as any).isWeaponPickup = true;
+        (drop as any).weaponType = this.equippedWeapon;
+        
+        if (this.equippedWeapon === 'M70-FINAL rev') drop.setScale(0.45); 
+        else drop.setScale(1.3);
+        
+        (this.scene as any).items.add(drop);
+        
+        // Clean up internal references
+        this.equippedWeapon = null;
+        if (this.weaponSprite) { 
+            this.weaponSprite.destroy(); 
+            this.weaponSprite = null; 
         }
     }
 
@@ -151,7 +170,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         // ==========================================
         // HIDE WEAPON DURING COMPLEX MOVES 
         // ==========================================
-        if (['special-attack', 'finish-move', 'jump-punch', 'jump-kick', 'shoot-with-rifle'].includes(currentAnimKey)) {
+        if (['special-attack', 'finish-move', 'jump-punch', 'jump-kick', 'shoot-with-rifle', 'knockdown-get-up'].includes(currentAnimKey)) {
             this.weaponSprite.visible = false;
             return; 
         }
@@ -161,28 +180,24 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         // ==========================================
         else if (currentAnimKey === 'throw') {
             if (currentFrameName.includes('000') || currentFrameName.includes('001') || currentFrameName.includes('002') || currentFrameName.includes('003') || currentFrameName.includes('004')) {
-                // Hand raising and pulling back
                 targetX += (-10 * dirX);
                 targetY -= 170;
                 targetAngle = -30 * dirX;
-                targetDepth = this.depth - 1; // Send behind his head
+                targetDepth = this.depth - 1; 
             } else if (currentFrameName.includes('005') || currentFrameName.includes('006') || currentFrameName.includes('007') || currentFrameName.includes('008') || currentFrameName.includes('009') || currentFrameName.includes('010') || currentFrameName.includes('011') || currentFrameName.includes('012') || currentFrameName.includes('013') || currentFrameName.includes('014') || currentFrameName.includes('015')) {
-                // Hand cocked way back behind head
                 targetX += (-30 * dirX);
                 targetY -= 180;
                 targetAngle = -60 * dirX;
                 targetDepth = this.depth - 1;
             } else if (currentFrameName.includes('016') || currentFrameName.includes('017') || currentFrameName.includes('018') || currentFrameName.includes('019')) {
-                // Arm swinging forcefully forward over shoulder
                 targetX += (20 * dirX);
                 targetY -= 170;
                 targetAngle = 45 * dirX;
-                targetDepth = this.depth + 1; // Pop back to front
+                targetDepth = this.depth + 1; 
             } else {
-                // Frame 020+ Extension and Release
                 targetX += (70 * dirX);
                 targetY -= 150;
-                targetAngle = 90 * dirX; // Flat horizontal on release
+                targetAngle = 90 * dirX; 
                 targetDepth = this.depth + 1;
             }
         }
@@ -230,7 +245,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         }
 
         // ==========================================
-        // DYNAMIC JUMP TRACKING (Tucked Knees)
+        // DYNAMIC JUMP TRACKING 
         // ==========================================
         else if (currentAnimKey === 'jump') {
             if (currentFrameName.includes('002') || currentFrameName.includes('003') || currentFrameName.includes('004')) {
@@ -254,7 +269,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             targetDepth = this.depth + 1;
         }
         
-        // Apply calculated coordinates
         this.weaponSprite.setPosition(targetX, targetY);
         this.weaponSprite.setAngle(targetAngle);
         this.weaponSprite.setFlipX(this.flipX);
@@ -265,7 +279,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         if (!this.equippedWeapon) return;
 
         const dirX = this.flipX ? -1 : 1;
-        // Raised spawn Y slightly to match the overhand throw release point
         (this.scene as any).spawnProjectile(this.x + (20 * dirX), this.y - 120, this.equippedWeapon, dirX, 50, true); 
 
         this.equippedWeapon = null;
@@ -308,24 +321,21 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             this.scene.time.delayedCall(300, () => { this.isAttacking = false; });
 
         } else {
-            // FIXED: Decrement weapon durability immediately upon swinging, regardless of hit
             this.weaponDurability--;
 
             if (this.weaponDurability <= 0) {
-                // Out of swings! Play throw animation and launch the weapon
                 if (this.scene.anims.exists(`${this.characterName}-throw`)) {
                     this.play(`${this.characterName}-throw`, true);
                 } else {
                     this.play(`${this.characterName}-punch-2`, true);
                 }
 
-                // Wait ~500ms to spawn the projectile, aligning with Frame 020 (the release frame)
                 this.scene.time.delayedCall(500, () => this.throwWeapon());
                 
                 this.once('animationcomplete', () => {
                     this.isAttacking = false;
                 });
-                return; // Exit early to skip the melee hit zone logic
+                return; 
             }
 
             const animToPlay = this.scene.anims.exists(`${this.characterName}-melee`) ? `${this.characterName}-melee` : `${this.characterName}-punch-2`;
@@ -344,7 +354,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                     if (!hasHit) {
                         (this.scene as any).playSFX(['punch_4', 'punch_5']); 
                         hasHit = true;
-                        // Durability is no longer dropped here!
                     }
                     
                     const hitX = (this.x + target.x) / 2;
@@ -622,14 +631,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         if (this.equippedWeapon) {
             this.weaponHitsTaken++;
             if (this.weaponHitsTaken >= 2) {
-                const drop = this.scene.physics.add.sprite(this.x, this.y - 40, this.equippedWeapon);
-                (drop as any).isWeaponPickup = true;
-                (drop as any).weaponType = this.equippedWeapon;
-                if (this.equippedWeapon === 'M70-FINAL rev') drop.setScale(0.45); else drop.setScale(1.3);
-                (this.scene as any).items.add(drop);
-                
-                this.equippedWeapon = null;
-                if (this.weaponSprite) { this.weaponSprite.destroy(); this.weaponSprite = null; }
+                this.dropCurrentWeapon();
             }
         }
 
@@ -642,6 +644,36 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             const dmgAnim = `${this.characterName}-damage`;
             if (this.scene.anims.exists(dmgAnim)) { this.isAttacking = true; this.play(dmgAnim, true); this.once('animationcomplete', () => { this.isAttacking = false; }); } 
             else { this.setTint(0xff0000); this.scene.time.delayedCall(200, () => this.clearTint()); }
+        }
+        (this.scene as any).updateReactHUD();
+    }
+
+    // NEW KNOCKDOWN METHOD: Forces weapon drop immediately
+    public takeKnockdown(amount: number = 15) {
+        this.health -= amount;
+        this.queuedAction = null;
+        
+        (this.scene as any).spawnHitEffect(this.x, this.y - 40);
+        (this.scene as any).lastPlayerHitTime = Date.now();
+
+        if (this.equippedWeapon) {
+            this.dropCurrentWeapon();
+        }
+
+        if (this.health <= 0) { 
+            (this.scene as any).playSFX(this.agonies);
+            this.die(); 
+        } else {
+            (this.scene as any).playSFX(this.grunts);
+            const anim = `${this.characterName}-knockdown-get-up`;
+            if (this.scene.anims.exists(anim)) { 
+                this.isAttacking = true; 
+                this.play(anim, true); 
+                this.once('animationcomplete', () => { this.isAttacking = false; }); 
+            } else {
+                this.setTint(0xff0000); 
+                this.scene.time.delayedCall(200, () => this.clearTint());
+            }
         }
         (this.scene as any).updateReactHUD();
     }
