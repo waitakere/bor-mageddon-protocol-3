@@ -16,9 +16,9 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     public weaponHitsTaken: number = 0;
     private weaponSprite: Phaser.GameObjects.Sprite | null = null;
     
-    // ADJUSTED OFFSETS: Tuned X and Y to perfectly center the grip in his idle hand
+    // ADJUSTED OFFSETS: Raised to ~ -160 to match the new handle-origin pivot fix
     private weaponOffsets: Record<string, {x: number, y: number, angle: number}> = {
-        'idle': { x: 25, y: -155, angle: 15 },
+        'idle': { x: 30, y: -160, angle: 15 },
         'shoot':{ x: 60, y: -160, angle: 0 }
     };
     
@@ -68,7 +68,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
 
         const allFrames = texture.getFrameNames();
         
-        // Includes 'shoot-with-rifle'
         const animTypes = [
             'idle', 'walk', 'run', 'jump', 'punch-1', 'punch-2', 'kick-1', 'kick-2', 
             'melee', 'jump-punch', 'jump-kick', 'special-attack', 'finish-move', 
@@ -90,6 +89,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 else if (animType === 'run') fps = 18;
                 else if (animType === 'jump') fps = 8;
                 else if (animType === 'finish-move') fps = 24; 
+                else if (animType === 'throw') fps = 18; // Speed up throw slightly for punchiness
 
                 const frameConfig: Phaser.Types.Animations.AnimationFrameConfig[] = matchingFrames.map(f => {
                     return { key: this.characterName, frame: f };
@@ -116,7 +116,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         if (this.weaponSprite) this.weaponSprite.destroy();
 
         this.equippedWeapon = weaponKey;
-        this.weaponDurability = 4;
+        // FIXED: Durability set to exactly 5 swings
+        this.weaponDurability = 5;
         this.weaponHitsTaken = 0;
 
         this.weaponSprite = this.scene.add.sprite(this.x, this.y, weaponKey);
@@ -148,7 +149,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         let targetDepth = this.depth + 1;
 
         // ==========================================
-        // HIDE WEAPON DURING COMPLEX MOVES & DEDICATED RIFLE FRAME
+        // HIDE WEAPON DURING COMPLEX MOVES 
         // ==========================================
         if (['special-attack', 'finish-move', 'jump-punch', 'jump-kick', 'shoot-with-rifle'].includes(currentAnimKey)) {
             this.weaponSprite.visible = false;
@@ -156,25 +157,53 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         }
 
         // ==========================================
+        // DYNAMIC THROW TRACKING
+        // ==========================================
+        else if (currentAnimKey === 'throw') {
+            if (currentFrameName.includes('000') || currentFrameName.includes('001') || currentFrameName.includes('002') || currentFrameName.includes('003') || currentFrameName.includes('004')) {
+                // Hand raising and pulling back
+                targetX += (-10 * dirX);
+                targetY -= 170;
+                targetAngle = -30 * dirX;
+                targetDepth = this.depth - 1; // Send behind his head
+            } else if (currentFrameName.includes('005') || currentFrameName.includes('006') || currentFrameName.includes('007') || currentFrameName.includes('008') || currentFrameName.includes('009') || currentFrameName.includes('010') || currentFrameName.includes('011') || currentFrameName.includes('012') || currentFrameName.includes('013') || currentFrameName.includes('014') || currentFrameName.includes('015')) {
+                // Hand cocked way back behind head
+                targetX += (-30 * dirX);
+                targetY -= 180;
+                targetAngle = -60 * dirX;
+                targetDepth = this.depth - 1;
+            } else if (currentFrameName.includes('016') || currentFrameName.includes('017') || currentFrameName.includes('018') || currentFrameName.includes('019')) {
+                // Arm swinging forcefully forward over shoulder
+                targetX += (20 * dirX);
+                targetY -= 170;
+                targetAngle = 45 * dirX;
+                targetDepth = this.depth + 1; // Pop back to front
+            } else {
+                // Frame 020+ Extension and Release
+                targetX += (70 * dirX);
+                targetY -= 150;
+                targetAngle = 90 * dirX; // Flat horizontal on release
+                targetDepth = this.depth + 1;
+            }
+        }
+
+        // ==========================================
         // DYNAMIC WALK PENDULUM 
         // ==========================================
         else if (currentAnimKey === 'walk') {
             if (currentFrameName.includes('002') || currentFrameName.includes('003') || currentFrameName.includes('004')) {
-                // Front arm swings slightly forward
                 targetX += (40 * dirX);
-                targetY -= 155;
+                targetY -= 160;
                 targetAngle = 25 * dirX;
             } 
             else if (currentFrameName.includes('006') || currentFrameName.includes('007') || currentFrameName.includes('008')) {
-                // Front arm swings slightly back
-                targetX += (15 * dirX);
-                targetY -= 155;
+                targetX += (20 * dirX);
+                targetY -= 160;
                 targetAngle = 5 * dirX;
             } 
             else {
-                // Neutral passing frame
-                targetX += (25 * dirX);
-                targetY -= 155;
+                targetX += (30 * dirX);
+                targetY -= 160;
                 targetAngle = 15 * dirX;
             }
         } 
@@ -184,19 +213,16 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         // ==========================================
         else if (currentAnimKey === 'run') {
             if (currentFrameName.includes('003') || currentFrameName.includes('004') || currentFrameName.includes('005')) {
-                // Arm swings forward
                 targetX += (45 * dirX);
                 targetY -= 165;
                 targetAngle = 35 * dirX;
             } 
             else if (currentFrameName.includes('007') || currentFrameName.includes('008') || currentFrameName.includes('009') || currentFrameName.includes('000')) {
-                // Arm swings back
                 targetX += (-5 * dirX);
                 targetY -= 160;
                 targetAngle = -15 * dirX;
             } 
             else {
-                // Neutral passing frame
                 targetX += (20 * dirX);
                 targetY -= 160;
                 targetAngle = 10 * dirX;
@@ -208,22 +234,19 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         // ==========================================
         else if (currentAnimKey === 'jump') {
             if (currentFrameName.includes('002') || currentFrameName.includes('003') || currentFrameName.includes('004')) {
-                // Apex of jump: Knees tucked, hand raised higher on the sprite
                 targetX += (25 * dirX);
                 targetY -= 195;
                 targetAngle = -15 * dirX;
             } else {
-                // Liftoff and Landing: Knees bent, hand lower
                 targetX += (30 * dirX);
                 targetY -= 155;
                 targetAngle = 15 * dirX;
             }
         }
 
-        // --- (Melee logic placeholder - will be updated once frames are provided) ---
+        // --- (Melee logic placeholder) ---
 
         else {
-            // Normal fallback states
             const offset = this.weaponOffsets[currentAnimKey] || this.weaponOffsets['idle'];
             targetX += (offset.x * dirX);
             targetY += offset.y;
@@ -242,7 +265,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         if (!this.equippedWeapon) return;
 
         const dirX = this.flipX ? -1 : 1;
-        (this.scene as any).spawnProjectile(this.x, this.y - 50, this.equippedWeapon, dirX, 50, true);
+        // Raised spawn Y slightly to match the overhand throw release point
+        (this.scene as any).spawnProjectile(this.x + (20 * dirX), this.y - 120, this.equippedWeapon, dirX, 50, true); 
 
         this.equippedWeapon = null;
         if (this.weaponSprite) {
@@ -256,7 +280,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         this.setVelocity(0, 0);
 
         if (this.equippedWeapon === 'M70-FINAL rev') {
-            // Prioritize the newly baked-in rifle frame!
             if (this.scene.anims.exists(`${this.characterName}-shoot-with-rifle`)) {
                 this.play(`${this.characterName}-shoot-with-rifle`, true);
             } else if (this.scene.anims.exists(`${this.characterName}-shoot`)) {
@@ -285,9 +308,28 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             this.scene.time.delayedCall(300, () => { this.isAttacking = false; });
 
         } else {
+            // FIXED: Decrement weapon durability immediately upon swinging, regardless of hit
+            this.weaponDurability--;
+
+            if (this.weaponDurability <= 0) {
+                // Out of swings! Play throw animation and launch the weapon
+                if (this.scene.anims.exists(`${this.characterName}-throw`)) {
+                    this.play(`${this.characterName}-throw`, true);
+                } else {
+                    this.play(`${this.characterName}-punch-2`, true);
+                }
+
+                // Wait ~500ms to spawn the projectile, aligning with Frame 020 (the release frame)
+                this.scene.time.delayedCall(500, () => this.throwWeapon());
+                
+                this.once('animationcomplete', () => {
+                    this.isAttacking = false;
+                });
+                return; // Exit early to skip the melee hit zone logic
+            }
+
             const animToPlay = this.scene.anims.exists(`${this.characterName}-melee`) ? `${this.characterName}-melee` : `${this.characterName}-punch-2`;
             
-            // Start the swing animation!
             this.play(animToPlay, true);
 
             const hitZone = this.scene.add.zone(this.x + (this.flipX ? -80 : 80), this.y - 60, 160, 100);
@@ -302,11 +344,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                     if (!hasHit) {
                         (this.scene as any).playSFX(['punch_4', 'punch_5']); 
                         hasHit = true;
-                        
-                        this.weaponDurability--;
-                        if (this.weaponDurability <= 0) {
-                            this.scene.time.delayedCall(300, () => this.throwWeapon());
-                        }
+                        // Durability is no longer dropped here!
                     }
                     
                     const hitX = (this.x + target.x) / 2;
