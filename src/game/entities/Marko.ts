@@ -16,13 +16,11 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     public weaponHitsTaken: number = 0;
     private weaponSprite: Phaser.GameObjects.Sprite | null = null;
     
-    // Base offsets for standard movement states
+    // ADJUSTED OFFSETS: Raised to ~ -160 to match the new handle-origin pivot fix
     private weaponOffsets: Record<string, {x: number, y: number, angle: number}> = {
-        'idle': { x: 30, y: -110, angle: -15 },
-        'walk': { x: 35, y: -115, angle: -5 },
-        'run':  { x: 45, y: -110, angle: 15 },
-        'jump': { x: 25, y: -120, angle: -30 },
-        'shoot':{ x: 60, y: -105, angle: 0 }
+        'idle': { x: 30, y: -160, angle: 15 },
+        'jump': { x: 25, y: -160, angle: -30 },
+        'shoot':{ x: 60, y: -160, angle: 0 }
     };
     
     private currentVoice: any = null;
@@ -124,12 +122,20 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         this.weaponSprite = this.scene.add.sprite(this.x, this.y, weaponKey);
         (this.weaponSprite as any).isWeaponSprite = true; 
         
-        if (weaponKey === 'M70-FINAL rev') this.weaponSprite.setScale(0.45);
-        else this.weaponSprite.setScale(1.3);
+        // ORIGIN PIVOT FIX: Rotate around the handle, not the center
+        if (weaponKey === 'M70-FINAL rev') {
+            this.weaponSprite.setScale(0.45);
+            this.weaponSprite.setOrigin(0.3, 0.5);
+        } else {
+            this.weaponSprite.setScale(1.3);
+            this.weaponSprite.setOrigin(0.5, 0.8);
+        }
     }
 
     private positionWeaponSprite() {
         if (!this.weaponSprite || !this.equippedWeapon) return;
+        
+        this.weaponSprite.visible = true;
 
         const currentAnimKey = this.anims.currentAnim?.key.replace(`${this.characterName}-`, '') || 'idle';
         const currentFrameName = this.anims.currentFrame?.textureFrame as string || '';
@@ -139,51 +145,80 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         let targetX = this.x;
         let targetY = this.y + jumpVisualOffset;
         let targetAngle = 0;
+        let targetDepth = this.depth + 1;
 
         // ==========================================
-        // DYNAMIC MELEE TRACKING
-        // Translates exact pixel locations based on the current frame of the swing!
+        // HIDE WEAPON DURING COMPLEX MOVES
         // ==========================================
-        if (currentAnimKey === 'melee') {
-            // Check which part of the swing animation we are currently rendering
-            if (currentFrameName.includes('011') || currentFrameName.includes('012') || currentFrameName.includes('013')) {
-                // WINDUP: Pulled back by shoulder
-                targetX += (-30 * dirX); 
-                targetY -= 125;          
-                targetAngle = -30 * dirX; 
+        if (['special-attack', 'finish-move', 'jump-punch', 'jump-kick'].includes(currentAnimKey)) {
+            this.weaponSprite.visible = false;
+            return; 
+        }
+
+        // ==========================================
+        // DYNAMIC WALK PENDULUM 
+        // ==========================================
+        else if (currentAnimKey === 'walk') {
+            if (currentFrameName.includes('002') || currentFrameName.includes('003') || currentFrameName.includes('004')) {
+                // Front arm swings slightly forward
+                targetX += (40 * dirX);
+                targetY -= 160;
+                targetAngle = 25 * dirX;
             } 
-            else if (currentFrameName.includes('021') || currentFrameName.includes('022') || currentFrameName.includes('023')) {
-                // EXTENSION: Thrust forward across chest
-                targetX += (85 * dirX);  
-                targetY -= 105;          
-                targetAngle = 80 * dirX;  
-            } 
-            else if (currentFrameName.includes('024') || currentFrameName.includes('025')) {
-                // FOLLOW THROUGH: Wrapped around waist
-                targetX += (60 * dirX);  
-                targetY -= 90;           
-                targetAngle = 110 * dirX; 
+            else if (currentFrameName.includes('006') || currentFrameName.includes('007') || currentFrameName.includes('008')) {
+                // Front arm swings slightly back
+                targetX += (20 * dirX);
+                targetY -= 160;
+                targetAngle = 5 * dirX;
             } 
             else {
-                // Default mid-swing interpolation
-                targetX += (40 * dirX);
-                targetY -= 115;
-                targetAngle = 45 * dirX;
+                // Neutral passing frame (000, 001, 005, 009)
+                targetX += (30 * dirX);
+                targetY -= 160;
+                targetAngle = 15 * dirX;
             }
         } 
-        // Standard idle/run/walk tracking
+        
+        // ==========================================
+        // DYNAMIC RUN PENDULUM 
+        // ==========================================
+        else if (currentAnimKey === 'run') {
+            if (currentFrameName.includes('003') || currentFrameName.includes('004') || currentFrameName.includes('005')) {
+                // Arm swings forward
+                targetX += (45 * dirX);
+                targetY -= 165;
+                targetAngle = 35 * dirX;
+            } 
+            else if (currentFrameName.includes('007') || currentFrameName.includes('008') || currentFrameName.includes('009') || currentFrameName.includes('000')) {
+                // Arm swings back
+                targetX += (-5 * dirX);
+                targetY -= 160;
+                targetAngle = -15 * dirX;
+            } 
+            else {
+                // Neutral passing frame (001, 002, 006, etc.)
+                targetX += (20 * dirX);
+                targetY -= 160;
+                targetAngle = 10 * dirX;
+            }
+        }
+
+        // --- (Melee logic placeholder - will be updated once frames are provided) ---
+
         else {
+            // Normal fallback states
             const offset = this.weaponOffsets[currentAnimKey] || this.weaponOffsets['idle'];
             targetX += (offset.x * dirX);
             targetY += offset.y;
             targetAngle = offset.angle * dirX;
+            targetDepth = this.depth + 1;
         }
         
         // Apply calculated coordinates
         this.weaponSprite.setPosition(targetX, targetY);
         this.weaponSprite.setAngle(targetAngle);
         this.weaponSprite.setFlipX(this.flipX);
-        this.weaponSprite.setDepth(this.depth + 1);
+        this.weaponSprite.setDepth(targetDepth);
     }
 
     private throwWeapon() {
@@ -209,10 +244,10 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             }
             
             const dirX = this.flipX ? -1 : 1;
-            (this.scene as any).spawnProjectile(this.x + (60 * dirX), this.y - 100, 'bullet', dirX, 30, false);
+            (this.scene as any).spawnProjectile(this.x + (60 * dirX), this.y - 160, 'bullet', dirX, 30, false);
             
             if (this.scene.textures.exists('muzzle-flash-m70')) {
-                const flash = this.scene.add.sprite(this.x + (90 * dirX), this.y - 100, 'muzzle-flash-m70');
+                const flash = this.scene.add.sprite(this.x + (90 * dirX), this.y - 160, 'muzzle-flash-m70');
                 flash.setDepth(this.depth + 2);
                 flash.setFlipX(!this.flipX);
                 flash.setScale(0.6);
@@ -308,15 +343,16 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 this.play(`${this.characterName}-jump`, true);
             }
             
+            const startOriginY = this.displayOriginY;
             this.scene.tweens.add({ 
                 targets: this, 
-                displayOriginY: this.height + 220, 
+                displayOriginY: startOriginY + 220, 
                 duration: 400, 
                 yoyo: true, 
                 ease: 'Quad.easeOut', 
                 onComplete: () => { 
                     this.isJumping = false; 
-                    this.displayOriginY = this.height; 
+                    this.displayOriginY = startOriginY; 
                     if (!this.isAttacking && this.scene.anims.exists(`${this.characterName}-idle`)) {
                         this.play(`${this.characterName}-idle`, true);
                     }
@@ -519,7 +555,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     }
 
     public takeDamage(amount: number) {
-        this.health -= amount; this.queuedAction = null;
+        this.health -= amount; 
+        this.queuedAction = null;
         
         (this.scene as any).spawnHitEffect(this.x, this.y - 40);
         (this.scene as any).lastPlayerHitTime = Date.now();
