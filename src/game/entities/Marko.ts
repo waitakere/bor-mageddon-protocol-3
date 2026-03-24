@@ -19,7 +19,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     // ADJUSTED OFFSETS: Tuned X and Y to perfectly center the grip in his idle hand
     private weaponOffsets: Record<string, {x: number, y: number, angle: number}> = {
         'idle': { x: 25, y: -155, angle: 15 },
-        'jump': { x: 25, y: -160, angle: -30 },
         'shoot':{ x: 60, y: -160, angle: 0 }
     };
     
@@ -69,7 +68,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
 
         const allFrames = texture.getFrameNames();
         
-        // ADDED 'shoot-with-rifle' to the animation parser
+        // Includes 'shoot-with-rifle'
         const animTypes = [
             'idle', 'walk', 'run', 'jump', 'punch-1', 'punch-2', 'kick-1', 'kick-2', 
             'melee', 'jump-punch', 'jump-kick', 'special-attack', 'finish-move', 
@@ -201,6 +200,23 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 targetX += (20 * dirX);
                 targetY -= 160;
                 targetAngle = 10 * dirX;
+            }
+        }
+
+        // ==========================================
+        // DYNAMIC JUMP TRACKING (Tucked Knees)
+        // ==========================================
+        else if (currentAnimKey === 'jump') {
+            if (currentFrameName.includes('002') || currentFrameName.includes('003') || currentFrameName.includes('004')) {
+                // Apex of jump: Knees tucked, hand raised higher on the sprite
+                targetX += (25 * dirX);
+                targetY -= 195;
+                targetAngle = -15 * dirX;
+            } else {
+                // Liftoff and Landing: Knees bent, hand lower
+                targetX += (30 * dirX);
+                targetY -= 155;
+                targetAngle = 15 * dirX;
             }
         }
 
