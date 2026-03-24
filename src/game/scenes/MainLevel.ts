@@ -73,7 +73,8 @@ export class MainLevel extends Phaser.Scene {
             space: Phaser.Input.Keyboard.KeyCodes.SPACE
         }) as any;
 
-        this.physics.world.setBounds(0, 750, 6000, 330); 
+        // FIXED: Lowered the upper bounds from 750 to 820 so Maja stays on the pavement
+        this.physics.world.setBounds(0, 820, 6000, 260); 
         const camW = this.cameras.main.width;
 
         this.skyLayer = this.add.image(0, 0, 'part1_sky').setOrigin(0, 0).setDisplaySize(4000, 1080).setScrollFactor(0.1).setDepth(-300);
@@ -340,7 +341,7 @@ export class MainLevel extends Phaser.Scene {
         const isLateGame = this.player.x > 3000;
         
         if (Math.random() < 0.50) {
-            // FIXED: Removed bat-3 from the possible loot drops
+            // FIXED: Removed bat-3 from the possible loot drops to prevent missing texture crash
             let weapons = ['axe', 'bat-2', 'crowbar-1'];
             if (isLateGame) weapons.push('M70-FINAL rev'); 
             
@@ -410,7 +411,8 @@ export class MainLevel extends Phaser.Scene {
             if (this.player.x > nextSector.triggerX) {
                 this.isLocked = true;
                 cam.stopFollow();
-                this.physics.world.setBounds(cam.worldView.left, 750, cam.width, 330);
+                // FIXED: Adjusted locked boundaries
+                this.physics.world.setBounds(cam.worldView.left, 820, cam.width, 260);
                 this.updateReactHUD();
             }
         }
@@ -471,7 +473,8 @@ export class MainLevel extends Phaser.Scene {
         this.currentSectorIndex++; 
         
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
-        this.physics.world.setBounds(0, 750, 6000, 330);
+        // FIXED: Adjusted unlocked boundaries
+        this.physics.world.setBounds(0, 820, 6000, 260);
         this.updateReactHUD();
         
         if (this.currentSectorIndex < this.sectors.length) {

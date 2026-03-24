@@ -16,11 +16,11 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     public weaponHitsTaken: number = 0;
     private weaponSprite: Phaser.GameObjects.Sprite | null = null;
     
-    // PERFECTED OFFSETS: Raised consistently to -180 to lock into her high hand position
+    // PERFECTED OFFSETS: Raised consistently to -220 to lock into her high hand position
     private weaponOffsets: Record<string, {x: number, y: number, angle: number}> = {
-        'idle': { x: 10, y: -180, angle: 15 },
-        'jump': { x: 10, y: -215, angle: -10 },
-        'shoot':{ x: 30, y: -180, angle: 0 }
+        'idle': { x: 10, y: -220, angle: 15 },
+        'jump': { x: 10, y: -220, angle: -10 },
+        'shoot':{ x: 30, y: -220, angle: 0 }
     };
 
     private currentVoice: any = null;
@@ -159,30 +159,30 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         else if (currentAnimKey === 'walk') {
             if (currentFrameName.includes('001') || currentFrameName.includes('002') || currentFrameName.includes('003')) {
                 targetX += (20 * dirX);
-                targetY -= 180;
+                targetY -= 220;
                 targetAngle = 25 * dirX;
             } else if (currentFrameName.includes('005') || currentFrameName.includes('006') || currentFrameName.includes('007')) {
                 targetX += (-5 * dirX);
-                targetY -= 180;
+                targetY -= 220;
                 targetAngle = -10 * dirX;
             } else {
                 targetX += (10 * dirX);
-                targetY -= 180;
+                targetY -= 220;
                 targetAngle = 5 * dirX;
             }
         }
         else if (currentAnimKey === 'run') {
             if (currentFrameName.includes('001') || currentFrameName.includes('002')) {
                 targetX += (-10 * dirX);
-                targetY -= 180;
+                targetY -= 220;
                 targetAngle = -25 * dirX;
             } else if (currentFrameName.includes('005') || currentFrameName.includes('006') || currentFrameName.includes('007')) {
                 targetX += (30 * dirX);
-                targetY -= 180;
+                targetY -= 230;
                 targetAngle = 45 * dirX;
             } else {
                 targetX += (10 * dirX);
-                targetY -= 180;
+                targetY -= 220;
                 targetAngle = 10 * dirX;
             }
         }
@@ -192,35 +192,35 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             if (currentFrameName.includes('000') || currentFrameName.includes('001')) {
                 // WINDUP: Pulled behind back horizontally
                 targetX += (-25 * dirX); 
-                targetY -= 180;          
+                targetY -= 230;          
                 targetAngle = -45 * dirX;
                 targetDepth = this.depth - 1; // Push behind sprite
             } 
             else if (currentFrameName.includes('002')) {
                 // DRAWING: Past hip, pointing slightly up
                 targetX += (5 * dirX);  
-                targetY -= 180;          
+                targetY -= 220;          
                 targetAngle = 20 * dirX;  
                 targetDepth = this.depth + 1; // Pop to front
             } 
             else if (currentFrameName.includes('003') || currentFrameName.includes('004') || currentFrameName.includes('005')) {
                 // EXTENSION: FLAT HORIZONTAL THRUST! Locked to arm height.
-                targetX += (85 * dirX);  
-                targetY -= 180;          
-                targetAngle = 90 * dirX; // Flat horizontal 
+                targetX += (95 * dirX);  
+                targetY -= 210;          
+                targetAngle = 45 * dirX; // 45 lays the naturally angled bat perfectly flat 
                 targetDepth = this.depth + 1; 
             }
             else if (currentFrameName.includes('006') || currentFrameName.includes('007')) {
                 // PULL BACK
                 targetX += (35 * dirX);  
-                targetY -= 180;           
-                targetAngle = 45 * dirX; 
+                targetY -= 220;           
+                targetAngle = 30 * dirX; 
                 targetDepth = this.depth + 1;
             }
             else {
                 // Return to idle
                 targetX += (15 * dirX);
-                targetY -= 180;
+                targetY -= 220;
                 targetAngle = 15 * dirX;
                 targetDepth = this.depth + 1;
             }
@@ -228,25 +228,25 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         else if (currentAnimKey === 'kick-1') {
             if (currentFrameName.includes('frame_000.png') || currentFrameName.includes('frame_001.png') || currentFrameName.includes('frame_002.png')) {
                 targetX += (-25 * dirX); 
-                targetY -= 200;          
+                targetY -= 240;          
                 targetAngle = 10 * dirX; 
                 targetDepth = this.depth - 1; 
             }
             else if (currentFrameName.includes('maja-kick-1/frame_003.png')) {
                 targetX += (85 * dirX); 
-                targetY -= 180; 
+                targetY -= 220; 
                 targetAngle = 0; 
                 targetDepth = this.depth + 1; 
             }
             else if (currentFrameName.includes('frame_004.png') || currentFrameName.includes('frame_005.png')) {
                 targetX += (-25 * dirX); 
-                targetY -= 200;          
+                targetY -= 240;          
                 targetAngle = 0; 
                 targetDepth = this.depth - 1; 
             }
             else {
                 targetX += (25 * dirX);  
-                targetY -= 180;          
+                targetY -= 220;          
                 targetAngle = -15 * dirX;  
                 targetDepth = this.depth + 1; 
             }
@@ -289,10 +289,10 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             }
             
             const dirX = this.flipX ? -1 : 1;
-            (this.scene as any).spawnProjectile(this.x + (80 * dirX), this.y - 180, 'bullet', dirX, 30, false);
+            (this.scene as any).spawnProjectile(this.x + (80 * dirX), this.y - 220, 'bullet', dirX, 30, false);
             
             if (this.scene.textures.exists('muzzle-flash-m70')) {
-                const flash = this.scene.add.sprite(this.x + (110 * dirX), this.y - 180, 'muzzle-flash-m70');
+                const flash = this.scene.add.sprite(this.x + (110 * dirX), this.y - 220, 'muzzle-flash-m70');
                 flash.setDepth(this.depth + 2);
                 flash.setFlipX(!this.flipX);
                 flash.setScale(0.6);
@@ -386,15 +386,17 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 this.play(`${this.characterName}-jump`, true);
             }
 
+            // FIXED JUMP TWEEN: Dynamically tracks starting origin so it never drops her early
+            const startOriginY = this.displayOriginY;
             this.scene.tweens.add({ 
                 targets: this, 
-                displayOriginY: this.height + 220, 
+                displayOriginY: startOriginY + 220, 
                 duration: 400, 
                 yoyo: true, 
                 ease: 'Quad.easeOut', 
                 onComplete: () => { 
                     this.isJumping = false; 
-                    this.displayOriginY = this.height; 
+                    this.displayOriginY = startOriginY; 
                     if (!this.isAttacking && this.scene.anims.exists(`${this.characterName}-idle`)) {
                         this.play(`${this.characterName}-idle`, true);
                     }
