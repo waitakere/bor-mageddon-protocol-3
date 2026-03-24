@@ -90,11 +90,8 @@ export class MainLevel extends Phaser.Scene {
         let charKey = this.registry.get('selectedCharacter') || data?.selectedCharacter || window.localStorage.getItem('selectedCharacter') || 'marko';
         this.spawnPlayer(charKey, 200, 950);
         
-        // ==========================================
-        // GUARANTEED EARLY WEAPON
-        // ==========================================
         const startWeapon = this.physics.add.sprite(500, 950, 'bat-2');
-        startWeapon.setScale(1.3); // Spawn at the correct new massive size!
+        startWeapon.setScale(1.3); 
         (startWeapon as any).isWeaponPickup = true;
         (startWeapon as any).weaponType = 'bat-2';
         this.items.add(startWeapon);
@@ -342,9 +339,9 @@ export class MainLevel extends Phaser.Scene {
     public dropItem(x: number, y: number) {
         const isLateGame = this.player.x > 3000;
         
-        // Weapon Drop Probability: Increased to 50%
         if (Math.random() < 0.50) {
-            let weapons = ['axe', 'bat-2', 'bat-3', 'crowbar-1'];
+            // FIXED: Removed bat-3 from the possible loot drops
+            let weapons = ['axe', 'bat-2', 'crowbar-1'];
             if (isLateGame) weapons.push('M70-FINAL rev'); 
             
             const randomWeapon = Phaser.Utils.Array.GetRandom(weapons);
@@ -352,7 +349,7 @@ export class MainLevel extends Phaser.Scene {
             drop.setOrigin(0.5, 0.5);
             
             if (randomWeapon === 'M70-FINAL rev') drop.setScale(0.45);
-            else drop.setScale(1.3); // MELEE SCALED UP TO 1.3
+            else drop.setScale(1.3); 
 
             (drop as any).isWeaponPickup = true;
             (drop as any).weaponType = randomWeapon;
@@ -377,7 +374,7 @@ export class MainLevel extends Phaser.Scene {
         else if (randomItem === 'item-burek') drop.setScale(2.5); 
         else if (randomItem === 'item-beer') drop.setScale(0.45); 
         else if (randomItem === 'item-sandwich') drop.setScale(0.8);
-        else if (randomItem === 'item-coffee') drop.setScale(2.5); // COFFEE FIX
+        else if (randomItem === 'item-coffee') drop.setScale(2.5); 
         else drop.setScale(1.5); 
 
         const body = drop.body as Phaser.Physics.Arcade.Body;
@@ -405,7 +402,7 @@ export class MainLevel extends Phaser.Scene {
         this.updateReactHUD();
     }
 
-    private handleWaveManager() { /* [Same as previous] */
+    private handleWaveManager() {
         const cam = this.cameras.main;
 
         if (!this.isLocked && this.currentSectorIndex < this.sectors.length) {
