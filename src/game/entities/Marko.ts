@@ -16,9 +16,9 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     public weaponHitsTaken: number = 0;
     private weaponSprite: Phaser.GameObjects.Sprite | null = null;
     
-    // ADJUSTED OFFSETS: Raised to ~ -160 to match the new handle-origin pivot fix
+    // ADJUSTED OFFSETS: Tuned X and Y to perfectly center the grip in his idle hand
     private weaponOffsets: Record<string, {x: number, y: number, angle: number}> = {
-        'idle': { x: 30, y: -160, angle: 15 },
+        'idle': { x: 25, y: -155, angle: 15 },
         'jump': { x: 25, y: -160, angle: -30 },
         'shoot':{ x: 60, y: -160, angle: 0 }
     };
@@ -69,11 +69,12 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
 
         const allFrames = texture.getFrameNames();
         
+        // ADDED 'shoot-with-rifle' to the animation parser
         const animTypes = [
             'idle', 'walk', 'run', 'jump', 'punch-1', 'punch-2', 'kick-1', 'kick-2', 
             'melee', 'jump-punch', 'jump-kick', 'special-attack', 'finish-move', 
             'throw', 'damage', 'knockdown-get-up', 'dying', 'pick-up', 
-            'shoot', 'shoot-recoil', 'shoot-up'
+            'shoot', 'shoot-recoil', 'shoot-up', 'shoot-with-rifle' 
         ];
 
         animTypes.forEach(animType => {
@@ -148,9 +149,9 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         let targetDepth = this.depth + 1;
 
         // ==========================================
-        // HIDE WEAPON DURING COMPLEX MOVES
+        // HIDE WEAPON DURING COMPLEX MOVES & DEDICATED RIFLE FRAME
         // ==========================================
-        if (['special-attack', 'finish-move', 'jump-punch', 'jump-kick'].includes(currentAnimKey)) {
+        if (['special-attack', 'finish-move', 'jump-punch', 'jump-kick', 'shoot-with-rifle'].includes(currentAnimKey)) {
             this.weaponSprite.visible = false;
             return; 
         }
@@ -162,19 +163,19 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             if (currentFrameName.includes('002') || currentFrameName.includes('003') || currentFrameName.includes('004')) {
                 // Front arm swings slightly forward
                 targetX += (40 * dirX);
-                targetY -= 160;
+                targetY -= 155;
                 targetAngle = 25 * dirX;
             } 
             else if (currentFrameName.includes('006') || currentFrameName.includes('007') || currentFrameName.includes('008')) {
                 // Front arm swings slightly back
-                targetX += (20 * dirX);
-                targetY -= 160;
+                targetX += (15 * dirX);
+                targetY -= 155;
                 targetAngle = 5 * dirX;
             } 
             else {
-                // Neutral passing frame (000, 001, 005, 009)
-                targetX += (30 * dirX);
-                targetY -= 160;
+                // Neutral passing frame
+                targetX += (25 * dirX);
+                targetY -= 155;
                 targetAngle = 15 * dirX;
             }
         } 
@@ -196,7 +197,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 targetAngle = -15 * dirX;
             } 
             else {
-                // Neutral passing frame (001, 002, 006, etc.)
+                // Neutral passing frame
                 targetX += (20 * dirX);
                 targetY -= 160;
                 targetAngle = 10 * dirX;
@@ -239,15 +240,18 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         this.setVelocity(0, 0);
 
         if (this.equippedWeapon === 'M70-FINAL rev') {
-            if (this.scene.anims.exists(`${this.characterName}-shoot`)) {
+            // Prioritize the newly baked-in rifle frame!
+            if (this.scene.anims.exists(`${this.characterName}-shoot-with-rifle`)) {
+                this.play(`${this.characterName}-shoot-with-rifle`, true);
+            } else if (this.scene.anims.exists(`${this.characterName}-shoot`)) {
                 this.play(`${this.characterName}-shoot`, true);
             }
             
             const dirX = this.flipX ? -1 : 1;
-            (this.scene as any).spawnProjectile(this.x + (60 * dirX), this.y - 160, 'bullet', dirX, 30, false);
+            (this.scene as any).spawnProjectile(this.x + (80 * dirX), this.y - 160, 'bullet', dirX, 30, false);
             
             if (this.scene.textures.exists('muzzle-flash-m70')) {
-                const flash = this.scene.add.sprite(this.x + (90 * dirX), this.y - 160, 'muzzle-flash-m70');
+                const flash = this.scene.add.sprite(this.x + (110 * dirX), this.y - 160, 'muzzle-flash-m70');
                 flash.setDepth(this.depth + 2);
                 flash.setFlipX(!this.flipX);
                 flash.setScale(0.6);
