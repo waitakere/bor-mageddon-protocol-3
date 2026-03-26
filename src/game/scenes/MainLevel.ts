@@ -120,12 +120,30 @@ export class MainLevel extends Phaser.Scene {
 
         this.physics.add.overlap(this.player, this.items, this.collectItem, undefined, this);
         
+        // =========================================================
+        // FIXED PROJECTILE -> ENEMY OVERLAP: Ground Tolerance Fix
+        // =========================================================
         this.physics.add.overlap(this.projectiles, this.enemies, (proj: any, enemy: any) => {
-            if (enemy.isDead || Math.abs(proj.y - enemy.y) > 60) return;
+            if (enemy.isDead) return;
+
+            // In a beat'em up, we only want hits to register if the visuals collide AND they are on the same floor plane.
+            // Since bullet y is shoulder height and enemy y is feet, the standard tolerance check was broken.
+            // We now use the stored 'sourceGroundY' of the shooter.
+            const tolerance = 30; // Strict matching for depth plane
+            const shooterGroundY = (proj as any).sourceGroundY || proj.y + 180; // Fallback to calculation if sourceGroundY isn't set (for thrown weapons)
+
+            if (Math.abs(shooterGroundY - enemy.y) > tolerance) {
+                // Not on the same vertical depth plane, projectile passes by.
+                return;
+            }
+
+            // Hit connects! Execute damage logic.
             proj.hit();
             this.spawnBlood(enemy.x, enemy.y - 50);
-            if (enemy.takeDamage) enemy.takeDamage(proj.damage);
-            if (proj.isThrownWeapon && enemy.takeKnockdown) enemy.takeKnockdown();
+            if (enemy.takeDamage) {
+                // Projectile damage (now 60 for the rifle bullet) is applied.
+                enemy.takeDamage(proj.damage);
+            }
         });
 
         this.physics.add.overlap(this.projectiles, this.breakables, (proj: any, prop: any) => {
@@ -138,15 +156,19 @@ export class MainLevel extends Phaser.Scene {
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
     }
 
-    public spawnProjectile(x: number, y: number, key: string, direction: number, damage: number, isThrown: boolean) {
+    // UPDATED SIGNATURE: Accepts 'ownerY' to store the depth plane
+    public spawnProjectile(ownerY: number, x: number, y: number, key: string, direction: number, damage: number, isThrown: boolean) {
         const proj = new Projectile(this, x, y, key, direction, damage, isThrown);
         
+        // Store the shooter's ground position for future depth-check logic
+        (proj as any).sourceGroundY = ownerY; 
+
         if (key === 'bullet') {
-            proj.setScale(0.3); // Shrink the massive bullet
+            proj.setScale(0.3); // Scale the massive bullet sprite down
             const body = proj.body as Phaser.Physics.Arcade.Body;
             if (body) {
-                body.setAllowGravity(false); // Shoot straight
-                body.setVelocityX(1500 * direction); // FIXED: Give the bullet massive horizontal speed!
+                body.setAllowGravity(false); // Bullet travels straight, no drop
+                body.setVelocityX(1500 * direction); // FIXED: Apply high horizontal speed across screen
                 body.setVelocityY(0);
             }
             
