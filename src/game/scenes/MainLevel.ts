@@ -73,7 +73,6 @@ export class MainLevel extends Phaser.Scene {
             space: Phaser.Input.Keyboard.KeyCodes.SPACE
         }) as any;
 
-        // FIXED: Lowered the upper bounds from 750 to 820 so Maja stays on the pavement
         this.physics.world.setBounds(0, 820, 6000, 260); 
         const camW = this.cameras.main.width;
 
@@ -91,10 +90,13 @@ export class MainLevel extends Phaser.Scene {
         let charKey = this.registry.get('selectedCharacter') || data?.selectedCharacter || window.localStorage.getItem('selectedCharacter') || 'marko';
         this.spawnPlayer(charKey, 200, 950);
         
-        const startWeapon = this.physics.add.sprite(500, 950, 'bat-2');
-        startWeapon.setScale(1.3); 
+        // ==========================================
+        // GUARANTEED EARLY WEAPON: M70 Rifle
+        // ==========================================
+        const startWeapon = this.physics.add.sprite(500, 950, 'M70-FINAL rev');
+        startWeapon.setScale(0.45); 
         (startWeapon as any).isWeaponPickup = true;
-        (startWeapon as any).weaponType = 'bat-2';
+        (startWeapon as any).weaponType = 'M70-FINAL rev';
         this.items.add(startWeapon);
 
         this.enemies.add(new Dizel(this, 1000, 950));
@@ -338,22 +340,14 @@ export class MainLevel extends Phaser.Scene {
     }
 
     public dropItem(x: number, y: number) {
-        const isLateGame = this.player.x > 3000;
-        
-        if (Math.random() < 0.50) {
-            // FIXED: Removed bat-3 from the possible loot drops to prevent missing texture crash
-            let weapons = ['axe', 'bat-2', 'crowbar-1'];
-            if (isLateGame) weapons.push('M70-FINAL rev'); 
-            
-            const randomWeapon = Phaser.Utils.Array.GetRandom(weapons);
-            const drop = this.physics.add.sprite(x, y - 40, randomWeapon);
+        // Weapon Drop Probability: 25% chance to drop the Rifle
+        if (Math.random() < 0.25) {
+            const drop = this.physics.add.sprite(x, y - 40, 'M70-FINAL rev');
             drop.setOrigin(0.5, 0.5);
-            
-            if (randomWeapon === 'M70-FINAL rev') drop.setScale(0.45);
-            else drop.setScale(1.3); 
+            drop.setScale(0.45); 
 
             (drop as any).isWeaponPickup = true;
-            (drop as any).weaponType = randomWeapon;
+            (drop as any).weaponType = 'M70-FINAL rev';
 
             this.items.add(drop);
             const body = drop.body as Phaser.Physics.Arcade.Body;
@@ -411,7 +405,6 @@ export class MainLevel extends Phaser.Scene {
             if (this.player.x > nextSector.triggerX) {
                 this.isLocked = true;
                 cam.stopFollow();
-                // FIXED: Adjusted locked boundaries
                 this.physics.world.setBounds(cam.worldView.left, 820, cam.width, 260);
                 this.updateReactHUD();
             }
@@ -473,7 +466,6 @@ export class MainLevel extends Phaser.Scene {
         this.currentSectorIndex++; 
         
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
-        // FIXED: Adjusted unlocked boundaries
         this.physics.world.setBounds(0, 820, 6000, 260);
         this.updateReactHUD();
         
