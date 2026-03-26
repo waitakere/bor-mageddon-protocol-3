@@ -90,7 +90,7 @@ export class MainLevel extends Phaser.Scene {
         let charKey = this.registry.get('selectedCharacter') || data?.selectedCharacter || window.localStorage.getItem('selectedCharacter') || 'marko';
         this.spawnPlayer(charKey, 200, 950);
         
-        // FIXED: Rifle spawn scale set to 1.0
+        // GUARANTEED EARLY WEAPON: M70 Rifle
         const startWeapon = this.physics.add.sprite(500, 950, 'M70-FINAL rev');
         startWeapon.setScale(1.0); 
         (startWeapon as any).isWeaponPickup = true;
@@ -138,7 +138,6 @@ export class MainLevel extends Phaser.Scene {
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
     }
 
-    // FIXED: Properly scale bullets and prevent them from falling to the floor
     public spawnProjectile(x: number, y: number, key: string, direction: number, damage: number, isThrown: boolean) {
         const proj = new Projectile(this, x, y, key, direction, damage, isThrown);
         
@@ -356,7 +355,6 @@ export class MainLevel extends Phaser.Scene {
         if (Math.random() < 0.25) {
             const drop = this.physics.add.sprite(x, y - 40, 'M70-FINAL rev');
             drop.setOrigin(0.5, 0.5);
-            // FIXED: Rifle drop scale set to 1.0
             drop.setScale(1.0); 
 
             (drop as any).isWeaponPickup = true;
@@ -464,4 +462,70 @@ export class MainLevel extends Phaser.Scene {
         switch (type) {
             case 'dizel': enemy = new Dizel(this, spawnX, spawnY); break;
             case 'dizelcic': enemy = new Dizelcic(this, spawnX, spawnY); break;
-            case 'miner': enemy = new Miner(this, spawnX, spawnY); break;
+            case 'miner': enemy = new Miner(this, spawnX, spawnY); break; 
+            case 'slobodan': enemy = new SlobodanCEO(this, spawnX, spawnY); break; 
+            default: enemy = new Enemy(this, spawnX, spawnY, type); break;
+        }
+        
+        this.enemies.add(enemy);
+        this.spawnedThisWave++;
+    }
+
+    private unlockCamera() {
+        this.isLocked = false;
+        this.spawnedThisWave = 0;
+        this.currentSectorIndex++; 
+        
+        this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+        this.physics.world.setBounds(0, 820, 6000, 260);
+        this.updateReactHUD();
+        
+        if (this.currentSectorIndex < this.sectors.length) {
+            const goText = this.add.text(this.player.x + 100, this.player.y - 150, 'GO! ➡', { 
+                font: '900 64px "Space Mono"', 
+                color: '#39ff14', 
+                stroke: '#000', 
+                strokeThickness: 8 
+            }).setOrigin(0.5);
+            
+            this.tweens.add({ 
+                targets: goText, 
+                x: goText.x + 60, 
+                scale: 1.2,
+                duration: 500, 
+                yoyo: true,
+                repeat: 3, 
+                onComplete: () => {
+                    this.tweens.add({ targets: goText, alpha: 0, duration: 500, onComplete: () => goText.destroy() });
+                }
+            });
+        }
+    }
+
+    public registerEnemyDeath() {
+        this.score += 100;
+        this.updateReactHUD();
+    }
+
+    public updateReactHUD() {
+        let eMaxHealth = 100;
+        if (this.lastEngagedEnemy) {
+            eMaxHealth = this.lastEngagedEnemy.skinPrefix === 'slobodan' ? 500 : 100;
+        }
+
+        window.dispatchEvent(new CustomEvent('update-phaser-hud', {
+            detail: { 
+                health: this.player?.health, 
+                maxHealth: this.player?.maxHealth,
+                smf: this.player?.smfMeter, 
+                score: this.score,
+                playerName: this.player?.characterName,
+                enemyName: this.lastEngagedEnemy && !this.lastEngagedEnemy.isDead ? this.lastEngagedEnemy.skinPrefix : null,
+                enemyHealth: this.lastEngagedEnemy ? this.lastEngagedEnemy.health : 0,
+                enemyMaxHealth: eMaxHealth,
+                playerHitStamp: this.lastPlayerHitTime,
+                enemyHitStamp: this.lastEnemyHitTime
+            }
+        }));
+    }
+}
