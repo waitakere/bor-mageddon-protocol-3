@@ -90,7 +90,6 @@ export class MainLevel extends Phaser.Scene {
         let charKey = this.registry.get('selectedCharacter') || data?.selectedCharacter || window.localStorage.getItem('selectedCharacter') || 'marko';
         this.spawnPlayer(charKey, 200, 950);
         
-        // GUARANTEED EARLY WEAPON: M70 Rifle
         const startWeapon = this.physics.add.sprite(500, 950, 'M70-FINAL rev');
         startWeapon.setScale(1.0); 
         (startWeapon as any).isWeaponPickup = true;
@@ -120,34 +119,38 @@ export class MainLevel extends Phaser.Scene {
 
         this.physics.add.overlap(this.player, this.items, this.collectItem, undefined, this);
         
-        // =========================================================
-        // FIXED PROJECTILE -> ENEMY OVERLAP: Ground Tolerance Fix
-        // =========================================================
         this.physics.add.overlap(this.projectiles, this.enemies, (proj: any, enemy: any) => {
             if (enemy.isDead) return;
 
-            // In a beat'em up, we only want hits to register if the visuals collide AND they are on the same floor plane.
-            // Since bullet y is shoulder height and enemy y is feet, the standard tolerance check was broken.
-            // We now use the stored 'sourceGroundY' of the shooter.
-            const tolerance = 30; // Strict matching for depth plane
-            const shooterGroundY = (proj as any).sourceGroundY || proj.y + 180; // Fallback to calculation if sourceGroundY isn't set (for thrown weapons)
+            const tolerance = 40; 
+            const shooterGroundY = (proj as any).sourceGroundY || proj.y + 180; 
 
             if (Math.abs(shooterGroundY - enemy.y) > tolerance) {
-                // Not on the same vertical depth plane, projectile passes by.
-                return;
+                return; 
             }
 
-            // Hit connects! Execute damage logic.
             proj.hit();
             this.spawnBlood(enemy.x, enemy.y - 50);
+            
             if (enemy.takeDamage) {
-                // Projectile damage (now 60 for the rifle bullet) is applied.
                 enemy.takeDamage(proj.damage);
             }
+
+            // EXPLICITLY FORCE ENEMY DAMAGE ANIMATION
+            if (!enemy.isDead && enemy.anims && enemy.anims.currentAnim) {
+                const prefix = enemy.anims.currentAnim.key.split('-'); 
+                const dmgAnim = `${prefix}-damage`;
+                if (enemy.scene.anims.exists(dmgAnim)) {
+                    enemy.play(dmgAnim, true);
+                    enemy.setVelocity(0, 0); // Halt their movement instantly
+                }
+            }
+
+            if (proj.isThrownWeapon && enemy.takeKnockdown) enemy.takeKnockdown();
         });
 
         this.physics.add.overlap(this.projectiles, this.breakables, (proj: any, prop: any) => {
-            if (prop.isDead || Math.abs(proj.y - prop.y) > 100) return;
+            if (prop.isDead || Math.abs((proj as any).sourceGroundY - prop.y) > 100) return;
             proj.hit();
             this.spawnHitEffect(prop.x, prop.y - 50);
             if (prop.takeDamage) prop.takeDamage(proj.damage);
@@ -156,24 +159,23 @@ export class MainLevel extends Phaser.Scene {
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
     }
 
-    // UPDATED SIGNATURE: Accepts 'ownerY' to store the depth plane
     public spawnProjectile(ownerY: number, x: number, y: number, key: string, direction: number, damage: number, isThrown: boolean) {
         const proj = new Projectile(this, x, y, key, direction, damage, isThrown);
         
-        // Store the shooter's ground position for future depth-check logic
         (proj as any).sourceGroundY = ownerY; 
+        proj.setDepth(9999); // Force it to render in front of everything so it's clearly visible
 
         if (key === 'bullet') {
-            proj.setScale(0.3); // Scale the massive bullet sprite down
+            proj.setScale(0.8); // Make it large enough to see easily
             const body = proj.body as Phaser.Physics.Arcade.Body;
             if (body) {
-                body.setAllowGravity(false); // Bullet travels straight, no drop
-                body.setVelocityX(1500 * direction); // FIXED: Apply high horizontal speed across screen
+                body.setAllowGravity(false); 
+                body.setVelocityX(2500 * direction); // Extremely fast horizontal velocity
                 body.setVelocityY(0);
             }
             
-            // Cleanup: Destroy the bullet after 2 seconds so it doesn't linger off-screen
-            this.time.delayedCall(2000, () => {
+            // Destroy bullet automatically if it leaves screen bounds
+            this.time.delayedCall(1000, () => {
                 if (proj && proj.active) proj.destroy();
             });
         }
@@ -346,33 +348,6 @@ export class MainLevel extends Phaser.Scene {
                 this.tweens.add({ targets: fx, offsetX: 0, offsetY: 0, duration: duration, ease: 'Power2', onComplete: () => cam.postFX.remove(fx) });
             }
         } catch (e) { cam.flash(duration, 255, 0, 0, 0.3); }
-    }
-
-    public spawnHitEffect(x: number, y: number) {
-        const exps = ['explosion_01', 'explosion_02', 'explosion_03', 'explosion_04'];
-        const key = Phaser.Utils.Array.GetRandom(exps);
-
-        if (!this.textures.exists(key)) return;
-
-        const explosion = this.add.sprite(x, y, key);
-        explosion.setDepth(9999); 
-        explosion.setOrigin(0.5, 0.5); 
-        
-        let baseScale = 1.0;
-        if (key === 'explosion_01') baseScale = 2.5; 
-        else if (key === 'explosion_03') baseScale = 0.6; 
-        else baseScale = 1.2; 
-
-        explosion.setScale(baseScale); 
-        
-        this.tweens.add({
-            targets: explosion,
-            scale: baseScale * 1.3, 
-            alpha: 0, 
-            duration: 250,
-            ease: 'Quad.easeOut',
-            onComplete: () => explosion.destroy()
-        });
     }
 
     public dropItem(x: number, y: number) {
