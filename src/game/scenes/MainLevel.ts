@@ -90,6 +90,7 @@ export class MainLevel extends Phaser.Scene {
         let charKey = this.registry.get('selectedCharacter') || data?.selectedCharacter || window.localStorage.getItem('selectedCharacter') || 'marko';
         this.spawnPlayer(charKey, 200, 950);
         
+        // GUARANTEED EARLY WEAPON: M70 Rifle
         const startWeapon = this.physics.add.sprite(500, 950, 'M70-FINAL rev');
         startWeapon.setScale(1.0); 
         (startWeapon as any).isWeaponPickup = true;
@@ -136,13 +137,12 @@ export class MainLevel extends Phaser.Scene {
                 enemy.takeDamage(proj.damage);
             }
 
-            // EXPLICITLY FORCE ENEMY DAMAGE ANIMATION
             if (!enemy.isDead && enemy.anims && enemy.anims.currentAnim) {
                 const prefix = enemy.anims.currentAnim.key.split('-'); 
                 const dmgAnim = `${prefix}-damage`;
                 if (enemy.scene.anims.exists(dmgAnim)) {
                     enemy.play(dmgAnim, true);
-                    enemy.setVelocity(0, 0); // Halt their movement instantly
+                    enemy.setVelocity(0, 0);
                 }
             }
 
@@ -159,28 +159,56 @@ export class MainLevel extends Phaser.Scene {
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
     }
 
-    public spawnProjectile(ownerY: number, x: number, y: number, key: string, direction: number, damage: number, isThrown: boolean) {
+    // FIXED SIGNATURE: Safe fallback so bullets always process correctly
+    public spawnProjectile(x: number, y: number, key: string, direction: number, damage: number, isThrown: boolean, ownerY?: number) {
         const proj = new Projectile(this, x, y, key, direction, damage, isThrown);
         
-        (proj as any).sourceGroundY = ownerY; 
-        proj.setDepth(9999); // Force it to render in front of everything so it's clearly visible
+        (proj as any).sourceGroundY = ownerY || y + 180; 
+        proj.setDepth(9999);
 
         if (key === 'bullet') {
-            proj.setScale(0.8); // Make it large enough to see easily
+            proj.setScale(0.4); // Perfectly sized bullet
             const body = proj.body as Phaser.Physics.Arcade.Body;
             if (body) {
                 body.setAllowGravity(false); 
-                body.setVelocityX(2500 * direction); // Extremely fast horizontal velocity
+                body.setVelocityX(2500 * direction); // Extreme speed
                 body.setVelocityY(0);
             }
             
-            // Destroy bullet automatically if it leaves screen bounds
             this.time.delayedCall(1000, () => {
                 if (proj && proj.active) proj.destroy();
             });
         }
         
         this.projectiles.add(proj);
+    }
+
+    // FIXED: Guarantee this function exists to prevent crashes when characters punch
+    public spawnHitEffect(x: number, y: number) {
+        const exps = ['explosion_01', 'explosion_02', 'explosion_03', 'explosion_04'];
+        const key = Phaser.Utils.Array.GetRandom(exps);
+
+        if (!this.textures.exists(key)) return;
+
+        const explosion = this.add.sprite(x, y, key);
+        explosion.setDepth(9999); 
+        explosion.setOrigin(0.5, 0.5); 
+        
+        let baseScale = 1.0;
+        if (key === 'explosion_01') baseScale = 2.5; 
+        else if (key === 'explosion_03') baseScale = 0.6; 
+        else baseScale = 1.2; 
+
+        explosion.setScale(baseScale); 
+        
+        this.tweens.add({
+            targets: explosion,
+            scale: baseScale * 1.3, 
+            alpha: 0, 
+            duration: 250,
+            ease: 'Quad.easeOut',
+            onComplete: () => explosion.destroy()
+        });
     }
 
     public spawnBlood(x: number, y: number) {
@@ -337,17 +365,6 @@ export class MainLevel extends Phaser.Scene {
         } catch (e) {
             return null;
         }
-    }
-
-    public triggerScreenGlitch(duration: number = 400) {
-        const cam = this.cameras.main;
-        cam.shake(duration, 0.02);
-        try {
-            if (cam.postFX) {
-                const fx = cam.postFX.addChromaticAberration(0.04, 0.04);
-                this.tweens.add({ targets: fx, offsetX: 0, offsetY: 0, duration: duration, ease: 'Power2', onComplete: () => cam.postFX.remove(fx) });
-            }
-        } catch (e) { cam.flash(duration, 255, 0, 0, 0.3); }
     }
 
     public dropItem(x: number, y: number) {

@@ -128,16 +128,13 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    // This is the new method that drops the empty weapon on the floor and fades it out
     private dropAndFadeWeapon() {
         if (!this.equippedWeapon) return;
 
-        // Spawn it high up (chest level)
         const drop = this.scene.physics.add.sprite(this.x, this.y - 180, this.equippedWeapon);
         if (this.equippedWeapon === 'M70-FINAL rev') drop.setScale(1.0); 
         else drop.setScale(1.3);
         
-        // Add physics to let it bounce on the floor
         const body = drop.body as Phaser.Physics.Arcade.Body;
         if (body) {
             body.setGravityY(1000);
@@ -146,19 +143,16 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             body.setBounce(0.3, 0.3);
         }
 
-        // Failsafe tween to make sure it hits the floor perfectly
         this.scene.tweens.add({ targets: drop, y: this.y, duration: 400, ease: 'Bounce.easeOut' });
 
-        // Fade it out entirely so it can't be picked back up
         this.scene.tweens.add({
             targets: drop,
             alpha: 0,
             duration: 1000,
-            delay: 1500, // Let it lay on the floor for a moment
+            delay: 1500, 
             onComplete: () => drop.destroy()
         });
 
-        // Clean up references
         this.equippedWeapon = null;
         if (this.weaponSprite) { 
             this.weaponSprite.destroy(); 
@@ -259,21 +253,21 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             
             const dirX = this.flipX ? -1 : 1;
             
-            // PLAY GUNSHOT SOUND
             (this.scene as any).playSFX('gun-shot-m70', 1.0);
 
-            // HIGHER OFFSET: Aligning to chest level
-            const spawnX = this.x + (170 * dirX); // Pushed further out
-            const spawnY = this.y - 235;          // Pushed higher up
+            // =========================================================
+            // FIXED OFFSETS: Pushed up to eye-level to match baked barrel
+            // =========================================================
+            const spawnX = this.x + (150 * dirX);
+            const spawnY = this.y - 265; 
             
-            // Spawn bullet (damage set to 60)
-            (this.scene as any).spawnProjectile(this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
+            // Pass 'x, y, key, dir, damage, thrown, sourceGroundY'
+            (this.scene as any).spawnProjectile(spawnX, spawnY, 'bullet', dirX, 60, false, this.y);
             
-            // HIGHER MUZZLE FLASH
-            const flash = this.scene.add.sprite(spawnX + (20 * dirX), spawnY, 'muzzle-flash-m70');
+            const flash = this.scene.add.sprite(spawnX, spawnY, 'muzzle-flash-m70');
             flash.setDepth(this.depth + 2);
             flash.setFlipX(this.flipX); 
-            flash.setScale(1.2); // Bigger, punchier flash
+            flash.setScale(1.5); 
             flash.setBlendMode(Phaser.BlendModes.ADD);
             this.scene.tweens.add({ targets: flash, alpha: 0, duration: 100, onComplete: () => flash.destroy() });
 
@@ -281,7 +275,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             
             this.weaponDurability--;
             if (this.weaponDurability <= 0) {
-                // Out of ammo: Drop the empty weapon on the floor immediately
                 this.scene.time.delayedCall(150, () => {
                     this.dropAndFadeWeapon();
                     this.scene.time.delayedCall(300, () => { this.isAttacking = false; });
@@ -291,7 +284,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             }
 
         } else {
-            // Legacy Melee Safety Net (Since Melee is disabled, this shouldn't fire, but just in case)
             this.weaponDurability--;
 
             if (this.weaponDurability <= 0) {
@@ -602,8 +594,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
 
         if (this.equippedWeapon) {
             this.weaponHitsTaken++;
-            if (this.weaponHitsTaken >= 2) {
-                // Modified to just drop the weapon, no manual throw needed for hits
+            // Marko drops the weapon after taking 4 hits instead of 2 now
+            if (this.weaponHitsTaken >= 4) {
                 this.dropAndFadeWeapon();
             }
         }
