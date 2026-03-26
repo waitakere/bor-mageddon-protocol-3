@@ -17,8 +17,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     private weaponSprite: Phaser.GameObjects.Sprite | null = null;
     
     private weaponOffsets: Record<string, {x: number, y: number, angle: number}> = {
-        'idle': { x: 25, y: -155, angle: 15 },
-        'shoot':{ x: 60, y: -160, angle: 0 }
+        'idle': { x: 25, y: -155, angle: 15 }
     };
     
     private currentVoice: any = null;
@@ -67,11 +66,12 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
 
         const allFrames = texture.getFrameNames();
         
+        // Added 'shoot-with-rifle' and 'walk-rifle' to generate the new animations
         const animTypes = [
             'idle', 'walk', 'run', 'jump', 'punch-1', 'punch-2', 'kick-1', 'kick-2', 
             'melee', 'jump-punch', 'jump-kick', 'special-attack', 'finish-move', 
             'throw', 'damage', 'knockdown-get-up', 'dying', 'pick-up', 
-            'shoot', 'shoot-recoil', 'shoot-up', 'shoot-with-rifle' 
+            'shoot', 'shoot-recoil', 'shoot-up', 'shoot-with-rifle', 'walk-rifle'
         ];
 
         animTypes.forEach(animType => {
@@ -84,7 +84,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             if (matchingFrames.length > 0) {
                 let fps = 15;
                 if (animType === 'idle') fps = 6;
-                else if (animType === 'walk') fps = 12;
+                else if (animType === 'walk' || animType === 'walk-rifle') fps = 12;
                 else if (animType === 'run') fps = 18;
                 else if (animType === 'jump') fps = 8;
                 else if (animType === 'finish-move') fps = 24; 
@@ -105,7 +105,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                     key: animKey,
                     frames: frameConfig,
                     frameRate: fps,
-                    repeat: (animType === 'idle' || animType === 'walk' || animType === 'run') ? -1 : 0
+                    repeat: (animType === 'idle' || animType === 'walk' || animType === 'walk-rifle' || animType === 'run') ? -1 : 0
                 });
             }
         });
@@ -116,16 +116,15 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
 
         this.equippedWeapon = weaponKey;
         this.weaponHitsTaken = 0;
-
-        this.weaponSprite = this.scene.add.sprite(this.x, this.y, weaponKey);
-        (this.weaponSprite as any).isWeaponSprite = true; 
         
         if (weaponKey === 'M70-FINAL rev') {
-            this.weaponDurability = 5; // Reverted back to 5 capacity
-            this.weaponSprite.setScale(1.0);
-            this.weaponSprite.setOrigin(0.3, 0.5);
+            this.weaponDurability = 5; 
+            // We NO LONGER create a separate weapon sprite for the rifle, as it is baked into the animation!
+            this.weaponSprite = null; 
         } else {
             this.weaponDurability = 5;
+            this.weaponSprite = this.scene.add.sprite(this.x, this.y, weaponKey);
+            (this.weaponSprite as any).isWeaponSprite = true; 
             this.weaponSprite.setScale(1.3);
             this.weaponSprite.setOrigin(0.5, 0.8);
         }
@@ -151,6 +150,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     }
 
     private positionWeaponSprite() {
+        // Since the M70 has no sprite attached, this gracefully skips execution if holding the M70
         if (!this.weaponSprite || !this.equippedWeapon) return;
         
         this.weaponSprite.visible = true;
@@ -165,7 +165,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         let targetAngle = 0;
         let targetDepth = this.depth + 1;
 
-        if (['special-attack', 'finish-move', 'jump-punch', 'jump-kick', 'shoot-with-rifle', 'knockdown-get-up'].includes(currentAnimKey)) {
+        if (['special-attack', 'finish-move', 'jump-punch', 'jump-kick', 'knockdown-get-up'].includes(currentAnimKey)) {
             this.weaponSprite.visible = false;
             return; 
         }
@@ -274,10 +274,9 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         this.setVelocity(0, 0);
 
         if (this.equippedWeapon === 'M70-FINAL rev') {
+            // Play the baked shooting frame
             if (this.scene.anims.exists(`${this.characterName}-shoot-with-rifle`)) {
                 this.play(`${this.characterName}-shoot-with-rifle`, true);
-            } else if (this.scene.anims.exists(`${this.characterName}-shoot`)) {
-                this.play(`${this.characterName}-shoot`, true);
             }
             
             const dirX = this.flipX ? -1 : 1;
@@ -296,12 +295,20 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             
             this.weaponDurability--;
             if (this.weaponDurability <= 0) {
-                this.scene.time.delayedCall(200, () => this.throwWeapon());
+                // Out of ammo: Play throw animation then toss the gun
+                this.scene.time.delayedCall(150, () => {
+                    if (this.scene.anims.exists(`${this.characterName}-throw`)) {
+                        this.play(`${this.characterName}-throw`, true);
+                    }
+                    this.scene.time.delayedCall(300, () => this.throwWeapon());
+                    this.scene.time.delayedCall(500, () => { this.isAttacking = false; });
+                });
+            } else {
+                this.scene.time.delayedCall(300, () => { this.isAttacking = false; });
             }
 
-            this.scene.time.delayedCall(300, () => { this.isAttacking = false; });
-
         } else {
+            // Legacy Melee Logic
             this.weaponDurability--;
 
             if (this.weaponDurability <= 0) {
@@ -320,7 +327,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             }
 
             const animToPlay = this.scene.anims.exists(`${this.characterName}-melee`) ? `${this.characterName}-melee` : `${this.characterName}-punch-2`;
-            
             this.play(animToPlay, true);
 
             const hitZone = this.scene.add.zone(this.x + (this.flipX ? -80 : 80), this.y - 60, 160, 100);
@@ -435,6 +441,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 }
 
                 if (!this.isAttacking) {
+                    // Rifles shoot on punch, but regular kicks act completely normal!
                     if (this.equippedWeapon && (requestedAction === 'punch-1' || requestedAction === 'punch-2')) {
                         this.executeWeaponAttack();
                     } else {
@@ -464,11 +471,23 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             
             if (!this.isJumping) {
                 if (vx !== 0 || vy !== 0) {
-                    const anim = this.isRunning ? `${this.characterName}-run` : `${this.characterName}-walk`;
-                    if (this.scene.anims.exists(anim)) this.play(anim, true);
-                    else if (this.scene.anims.exists(`${this.characterName}-walk`)) this.play(`${this.characterName}-walk`, true);
+                    if (this.isRunning) {
+                        this.play(`${this.characterName}-run`, true);
+                    } else {
+                        // Apply the baked-in walk animation if holding the rifle!
+                        if (this.equippedWeapon === 'M70-FINAL rev' && this.scene.anims.exists(`${this.characterName}-walk-rifle`)) {
+                            this.play(`${this.characterName}-walk-rifle`, true);
+                        } else {
+                            this.play(`${this.characterName}-walk`, true);
+                        }
+                    }
                 } else { 
-                    if (this.scene.anims.exists(`${this.characterName}-idle`)) this.play(`${this.characterName}-idle`, true); 
+                    // Apply the baked-in idle frame if holding the rifle!
+                    if (this.equippedWeapon === 'M70-FINAL rev' && this.scene.anims.exists(`${this.characterName}-shoot-with-rifle`)) {
+                        this.play(`${this.characterName}-shoot-with-rifle`, true);
+                    } else {
+                        this.play(`${this.characterName}-idle`, true); 
+                    }
                 }
             }
         } else {
