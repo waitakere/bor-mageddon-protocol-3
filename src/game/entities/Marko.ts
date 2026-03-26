@@ -10,7 +10,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     public isDead: boolean = false;
     public isJumping: boolean = false;
 
-    // Weapon System
     public equippedWeapon: string | null = null;
     public weaponDurability: number = 0;
     public weaponHitsTaken: number = 0;
@@ -66,7 +65,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
 
         const allFrames = texture.getFrameNames();
         
-        // Added 'shoot-with-rifle' and 'walk-rifle' to generate the new animations
         const animTypes = [
             'idle', 'walk', 'run', 'jump', 'punch-1', 'punch-2', 'kick-1', 'kick-2', 
             'melee', 'jump-punch', 'jump-kick', 'special-attack', 'finish-move', 
@@ -119,7 +117,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         
         if (weaponKey === 'M70-FINAL rev') {
             this.weaponDurability = 5; 
-            // We NO LONGER create a separate weapon sprite for the rifle, as it is baked into the animation!
             this.weaponSprite = null; 
         } else {
             this.weaponDurability = 5;
@@ -150,7 +147,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     }
 
     private positionWeaponSprite() {
-        // Since the M70 has no sprite attached, this gracefully skips execution if holding the M70
         if (!this.weaponSprite || !this.equippedWeapon) return;
         
         this.weaponSprite.visible = true;
@@ -274,28 +270,32 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         this.setVelocity(0, 0);
 
         if (this.equippedWeapon === 'M70-FINAL rev') {
-            // Play the baked shooting frame
             if (this.scene.anims.exists(`${this.characterName}-shoot-with-rifle`)) {
                 this.play(`${this.characterName}-shoot-with-rifle`, true);
+            } else if (this.scene.anims.exists(`${this.characterName}-shoot`)) {
+                this.play(`${this.characterName}-shoot`, true);
             }
             
             const dirX = this.flipX ? -1 : 1;
-            (this.scene as any).spawnProjectile(this.x + (80 * dirX), this.y - 160, 'bullet', dirX, 30, false);
             
-            if (this.scene.textures.exists('muzzle-flash-m70')) {
-                const flash = this.scene.add.sprite(this.x + (90 * dirX), this.y - 160, 'muzzle-flash-m70');
-                flash.setDepth(this.depth + 2);
-                flash.setFlipX(!this.flipX);
-                flash.setScale(0.4); 
-                flash.setBlendMode(Phaser.BlendModes.ADD);
-                this.scene.tweens.add({ targets: flash, alpha: 0, duration: 80, onComplete: () => flash.destroy() });
-            }
+            // FIXED: Play the gunshot SFX!
+            (this.scene as any).playSFX('gun-shot-m70', 1.0);
+
+            // Spawn bullet
+            (this.scene as any).spawnProjectile(this.x + (80 * dirX), this.y - 155, 'bullet', dirX, 30, false);
+            
+            // FIXED: Muzzle Flash directly instantiated, scaled up, and flipped correctly to face the bullet direction
+            const flash = this.scene.add.sprite(this.x + (100 * dirX), this.y - 155, 'muzzle-flash-m70');
+            flash.setDepth(this.depth + 2);
+            flash.setFlipX(this.flipX); 
+            flash.setScale(1.0); 
+            flash.setBlendMode(Phaser.BlendModes.ADD);
+            this.scene.tweens.add({ targets: flash, alpha: 0, duration: 100, onComplete: () => flash.destroy() });
 
             this.scene.cameras.main.shake(100, 0.01);
             
             this.weaponDurability--;
             if (this.weaponDurability <= 0) {
-                // Out of ammo: Play throw animation then toss the gun
                 this.scene.time.delayedCall(150, () => {
                     if (this.scene.anims.exists(`${this.characterName}-throw`)) {
                         this.play(`${this.characterName}-throw`, true);
@@ -308,7 +308,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             }
 
         } else {
-            // Legacy Melee Logic
             this.weaponDurability--;
 
             if (this.weaponDurability <= 0) {
@@ -441,7 +440,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 }
 
                 if (!this.isAttacking) {
-                    // Rifles shoot on punch, but regular kicks act completely normal!
                     if (this.equippedWeapon && (requestedAction === 'punch-1' || requestedAction === 'punch-2')) {
                         this.executeWeaponAttack();
                     } else {
@@ -474,7 +472,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                     if (this.isRunning) {
                         this.play(`${this.characterName}-run`, true);
                     } else {
-                        // Apply the baked-in walk animation if holding the rifle!
                         if (this.equippedWeapon === 'M70-FINAL rev' && this.scene.anims.exists(`${this.characterName}-walk-rifle`)) {
                             this.play(`${this.characterName}-walk-rifle`, true);
                         } else {
@@ -482,7 +479,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                         }
                     }
                 } else { 
-                    // Apply the baked-in idle frame if holding the rifle!
                     if (this.equippedWeapon === 'M70-FINAL rev' && this.scene.anims.exists(`${this.characterName}-shoot-with-rifle`)) {
                         this.play(`${this.characterName}-shoot-with-rifle`, true);
                     } else {

@@ -146,6 +146,8 @@ export class MainLevel extends Phaser.Scene {
             const body = proj.body as Phaser.Physics.Arcade.Body;
             if (body) {
                 body.setAllowGravity(false); // Shoot straight
+                body.setVelocityX(1500 * direction); // FIXED: Give the bullet massive horizontal speed!
+                body.setVelocityY(0);
             }
             
             // Cleanup: Destroy the bullet after 2 seconds so it doesn't linger off-screen
