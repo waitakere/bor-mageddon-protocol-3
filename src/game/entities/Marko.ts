@@ -17,7 +17,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     private weaponSprite: Phaser.GameObjects.Sprite | null = null;
     
     private weaponOffsets: Record<string, {x: number, y: number, angle: number}> = {
-        'idle': { x: 25, y: -155, angle: 15 }
+        'idle': { x: 25, y: -155, angle: 15 },
+        'shoot':{ x: 60, y: -160, angle: 0 }
     };
     
     private currentVoice: any = null;
@@ -162,7 +163,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         let targetAngle = 0;
         let targetDepth = this.depth + 1;
 
-        if (['special-attack', 'finish-move', 'jump-punch', 'jump-kick', 'knockdown-get-up'].includes(currentAnimKey)) {
+        if (['special-attack', 'finish-move', 'jump-punch', 'jump-kick', 'shoot-with-rifle', 'knockdown-get-up'].includes(currentAnimKey)) {
             this.weaponSprite.visible = false;
             return; 
         }
@@ -210,7 +211,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         } 
         
         else if (currentAnimKey === 'run') {
-            if (currentFrameName.includes('003) || currentFrameName.includes('004') || currentFrameName.includes('005')) {
+            if (currentFrameName.includes('003') || currentFrameName.includes('004') || currentFrameName.includes('005')) {
                 targetX += (45 * dirX);
                 targetY -= 165;
                 targetAngle = 35 * dirX;
@@ -257,7 +258,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         if (!this.equippedWeapon) return;
 
         const dirX = this.flipX ? -1 : 1;
-        // The floor plane 'this.y' is passed as the first argument.
         (this.scene as any).spawnProjectile(this.y, this.x + (20 * dirX), this.y - 120, this.equippedWeapon, dirX, 50, true); 
 
         this.equippedWeapon = null;
@@ -282,23 +282,14 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             
             (this.scene as any).playSFX('gun-shot-m70', 1.0);
 
-            // =========================================================
-            // FIXED OFFSETS: Higher muzzle height and Further right
-            // =========================================================
-            // Spawn height changed from this.y-155 to this.y-180 to match baked barrel tip.
-            // Further right changed from x+80 to x+125
             const spawnX = this.x + (125 * dirX);
             const spawnY = this.y - 180;
             
-            // Spawn bullet (Passing 'this.y' for ground depth tolerance, Damage set to 60)
             (this.scene as any).spawnProjectile(this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
             
-            // Muzzle Flash
             const flash = this.scene.add.sprite(spawnX, spawnY, 'muzzle-flash-m70');
             flash.setDepth(this.depth + 2);
-            // Flip must match Marko's facing to look correct.
             flash.setFlipX(this.flipX); 
-            // Scaled up for punchiness
             flash.setScale(1.0); 
             flash.setBlendMode(Phaser.BlendModes.ADD);
             this.scene.tweens.add({ targets: flash, alpha: 0, duration: 100, onComplete: () => flash.destroy() });
@@ -319,7 +310,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             }
 
         } else {
-            // Legacy Melee Logic
             this.weaponDurability--;
 
             if (this.weaponDurability <= 0) {
