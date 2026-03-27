@@ -18,6 +18,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
     private weaponOffsets: Record<string, {x: number, y: number, angle: number}> = {
         'idle': { x: 10, y: -220, angle: 15 },
+        'jump': { x: 10, y: -220, angle: -10 },
         'shoot':{ x: 30, y: -220, angle: 0 }
     };
 
@@ -125,7 +126,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.weaponHitsTaken = 0;
 
         if (weaponKey === 'M70-FINAL rev') {
-             this.weaponDurability = 5;
+             this.weaponDurability = 15;
              this.weaponSprite = null;
         } else {
              this.weaponDurability = 5;
@@ -139,7 +140,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     private dropAndFadeWeapon() {
         if (!this.equippedWeapon) return;
 
-        const drop = this.scene.add.sprite(this.x, this.y - 160, this.equippedWeapon);
+        const drop = this.scene.add.sprite(this.x, this.y - 250, this.equippedWeapon);
         if (this.equippedWeapon === 'M70-FINAL rev') drop.setScale(1.0);
         else drop.setScale(1.3);
 
@@ -147,17 +148,17 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
         this.scene.tweens.add({
             targets: drop,
-            y: this.y,
-            x: this.x + (this.flipX ? -60 : 60),
-            angle: 0,
-            duration: 600,
+            y: this.y - 20,
+            x: this.x + (this.flipX ? -80 : 80),
+            angle: this.flipX ? -90 : 90,
+            duration: 500,
             ease: 'Bounce.easeOut'
         });
 
         this.scene.tweens.add({
             targets: drop,
             alpha: 0,
-            duration: 1000,
+            duration: 500,
             delay: 1500,
             onComplete: () => drop.destroy()
         });
@@ -175,7 +176,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.weaponSprite.visible = true;
 
         const currentAnimKey = this.anims.currentAnim?.key.replace(`${this.characterName}-`, '') || 'idle';
-        const currentFrameName = this.frame.name; // Use exact frame name check to hide during pickup
+        const currentFrameName = this.frame.name; 
         const dirX = this.flipX ? -1 : 1;
         const jumpVisualOffset = this.height - this.displayOriginY;
 
@@ -415,6 +416,17 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         if (this.isDead) return;
         this.setAngle(0);
 
+        // ==========================================
+        // DYNAMIC ATLAS SCALING FIX
+        // ==========================================
+        // Counters the bloated 283px sourceSize of the walk-rifle frames
+        const currentAnimKeyForScale = this.anims.currentAnim?.key || '';
+        if (currentAnimKeyForScale.includes('walk-rifle')) {
+            this.setScale(1.59);
+        } else {
+            this.setScale(1.7);
+        }
+
         this.positionWeaponSprite();
 
         if (input.space && !this.isJumping && !this.isAttacking) {
@@ -485,7 +497,8 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         }
 
         if (!this.isAttacking) {
-            let vx = 0; let vy = 0;
+            let vx = 0;
+            let vy = 0;
 
             if (this.isJumping) {
                 vx = this.jumpVelocityX;
