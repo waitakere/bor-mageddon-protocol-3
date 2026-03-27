@@ -58,12 +58,10 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         this.createAnimations();
     }
 
-    // CRASH PROOF WRAPPER: Safely calls scene methods even if hot-reloading breaks the context
     private safeCall(methodName: string, ...args: any[]) {
         if (this.scene && typeof (this.scene as any)[methodName] === 'function') {
             return (this.scene as any)[methodName](...args);
         }
-        console.warn(`SafeCall Warning: ${methodName} is currently missing or unavailable on Scene.`);
         return null;
     }
 
@@ -104,6 +102,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
 
                 if (animType === 'special-attack' && frameConfig.length > 0) {
                     const lastFrame = frameConfig[frameConfig.length - 1];
+                    // Append 8 holding frames to ensure we catch the pose
                     for (let i = 0; i < 8; i++) {
                         frameConfig.push(lastFrame);
                     }
@@ -140,25 +139,27 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     private dropAndFadeWeapon() {
         if (!this.equippedWeapon) return;
 
-        const drop = this.scene.add.sprite(this.x, this.y - 250, this.equippedWeapon);
+        const drop = this.scene.add.sprite(this.x, this.y - 160, this.equippedWeapon);
         if (this.equippedWeapon === 'M70-FINAL rev') drop.setScale(1.0);
         else drop.setScale(1.3);
 
         drop.setFlipX(this.flipX);
 
+        // FIXED: Angle set to 0 so it lands perfectly horizontal, better bounce duration
         this.scene.tweens.add({
             targets: drop,
-            y: this.y - 20,
-            x: this.x + (this.flipX ? -80 : 80),
-            angle: this.flipX ? -90 : 90,
-            duration: 500,
+            y: this.y,
+            x: this.x + (this.flipX ? -60 : 60),
+            angle: 0, 
+            duration: 600,
             ease: 'Bounce.easeOut'
         });
 
+        // FIXED: Smoother fade out
         this.scene.tweens.add({
             targets: drop,
             alpha: 0,
-            duration: 500,
+            duration: 1000,
             delay: 1500,
             onComplete: () => drop.destroy()
         });
@@ -269,7 +270,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             const flashX = this.x + (210 * dirX);
             const spawnY = this.y - 325;
 
-            // Pass the bullet parameters safely
             this.safeCall('spawnProjectile', this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
 
             const flash = this.scene.add.sprite(flashX, spawnY, 'muzzle-flash-m70');
@@ -542,32 +542,64 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     }
 
     private executeMegaphoneScream() {
-        this.isAttacking = true; this.setVelocity(0, 0);
-        const anim = this.scene.anims.exists(`${this.characterName}-special-attack`) ? `${this.characterName}-special-attack` : `${this.characterName}-punch-2`;
-        if (this.scene.anims.exists(anim)) this.play(anim, true);
+        this.isAttacking = true; 
+        this.setVelocity(0, 0);
+        const animKey = this.scene.anims.exists(`${this.characterName}-special-attack`) ? `${this.characterName}-special-attack` : `${this.characterName}-punch-2`;
+        
+        this.play(animKey, true);
 
-        this.safeCall('playSFX', 'marko_special_1');
-        this.safeCall('triggerScreenGlitch', 400);
+        let triggered = false;
 
-        const waveZone = this.scene.add.circle(this.x, this.y - 40, 180);
-        this.scene.physics.add.existing(waveZone);
+        // FIXED: Wait until the final "hold" frames of the animation before shaking
+        const onUpdate = (anim: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => {
+            if (anim.key !== animKey) return;
+            
+            // We pushed 8 duplicate frames at the end in createAnimations. Trigger on the first one.
+            if (frame.index >= anim.frames.length - 8 && !triggered) {
+                triggered = true;
+                
+                this.anims.pause(); // Hold the megaphone pose!
 
-        const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
-        this.scene.physics.add.overlap(waveZone, targets, (wz, target: any) => {
-            const yTol = target.isBreakable ? 160 : 60;
-            if (Math.abs(this.y - target.y) <= yTol) {
-                const pushDir = target.x > this.x ? 1 : -1;
-                if (target.takeDamage) {
-                    target.takeDamage(20 * this.damageMultiplier);
-                    if (target.body && target.type !== 'obj_kiosk' && target.type !== 'obj_kontejner') {
-                        target.setVelocityX(250 * pushDir);
+                this.safeCall('playSFX', 'marko_special_1');
+                this.safeCall('triggerScreenGlitch', 2000); // Massive 2-second screen shake
+
+                const waveZone = this.scene.add.circle(this.x, this.y - 40, 180);
+                this.scene.physics.add.existing(waveZone);
+                
+                const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
+                this.scene.physics.add.overlap(waveZone, targets, (wz, target: any) => {
+                    const yTol = target.isBreakable ? 160 : 60;
+                    if (Math.abs(this.y - target.y) <= yTol) {
+                        const pushDir = target.x > this.x ? 1 : -1;
+                        if (target.takeDamage) {
+                            target.takeDamage(20 * this.damageMultiplier);
+                            if (target.body && target.type !== 'obj_kiosk' && target.type !== 'obj_kontejner') {
+                                target.setVelocityX(250 * pushDir);
+                            }
+                        }
+                        this.safeCall('spawnHitEffect', target.x, target.y - 50);
                     }
-                }
-                this.safeCall('spawnHitEffect', target.x, target.y - 50);
+                });
+
+                this.scene.time.delayedCall(250, () => { if (waveZone.active) waveZone.destroy(); });
+
+                // Resume gameplay after a 2-second hold
+                this.scene.time.delayedCall(2000, () => {
+                    this.anims.resume();
+                    this.isAttacking = false;
+                    this.off('animationupdate', onUpdate);
+                });
+            }
+        };
+
+        this.on('animationupdate', onUpdate);
+
+        this.once('animationcomplete', () => {
+            if (!triggered) {
+                this.isAttacking = false;
+                this.off('animationupdate', onUpdate);
             }
         });
-        this.scene.time.delayedCall(250, () => { if (waveZone.active) waveZone.destroy(); });
-        this.once('animationcomplete', () => { this.isAttacking = false; });
     }
 
     private executeChainWhip() {
