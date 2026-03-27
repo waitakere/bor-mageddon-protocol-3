@@ -122,7 +122,8 @@ export class MainLevel extends Phaser.Scene {
         this.physics.add.overlap(this.projectiles, this.enemies, (proj: any, enemy: any) => {
             if (enemy.isDead) return;
 
-            const tolerance = 50; 
+            // EXPANDED TOLERANCE: Increased from 50 to 90 for much more flexible hit detection
+            const tolerance = 90; 
             const shooterGroundY = (proj as any).sourceGroundY || proj.y + 180; 
 
             if (Math.abs(shooterGroundY - enemy.y) > tolerance) {
@@ -169,7 +170,8 @@ export class MainLevel extends Phaser.Scene {
         proj.setDepth(9999);
 
         if (key === 'bullet') {
-            proj.setScale(0.6); // SMALLER BULLET
+            // SMALLER BULLET: Reduced from 0.6 to 0.45
+            proj.setScale(0.45); 
             const body = proj.body as Phaser.Physics.Arcade.Body;
             if (body) {
                 body.setAllowGravity(false); 
