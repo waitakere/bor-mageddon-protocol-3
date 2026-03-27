@@ -128,27 +128,32 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
+    // CRASH FIX: Discarded weapons are now plain visual sprites, no physics!
     private dropAndFadeWeapon() {
         if (!this.equippedWeapon) return;
 
-        const drop = this.scene.physics.add.sprite(this.x, this.y - 180, this.equippedWeapon);
+        // Spawn a pure visual sprite high up (chest level)
+        const drop = this.scene.add.sprite(this.x, this.y - 250, this.equippedWeapon);
         if (this.equippedWeapon === 'M70-FINAL rev') drop.setScale(1.0); 
         else drop.setScale(1.3);
         
-        const body = drop.body as Phaser.Physics.Arcade.Body;
-        if (body) {
-            body.setGravityY(1000);
-            body.setVelocity((this.flipX ? -80 : 80), -150);
-            body.setCollideWorldBounds(true);
-            body.setBounce(0.3, 0.3);
-        }
+        drop.setFlipX(this.flipX);
 
-        this.scene.tweens.add({ targets: drop, y: this.y, duration: 400, ease: 'Bounce.easeOut' });
+        // Visual tween to simulate it falling to the floor and bouncing
+        this.scene.tweens.add({ 
+            targets: drop, 
+            y: this.y - 20, 
+            x: this.x + (this.flipX ? -80 : 80),
+            angle: this.flipX ? -90 : 90,
+            duration: 500, 
+            ease: 'Bounce.easeOut' 
+        });
 
+        // Fade out entirely so it vanishes
         this.scene.tweens.add({
             targets: drop,
             alpha: 0,
-            duration: 1000,
+            duration: 500,
             delay: 1500, 
             onComplete: () => drop.destroy()
         });
@@ -256,18 +261,17 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             (this.scene as any).playSFX('gun-shot-m70', 1.0);
 
             // =========================================================
-            // FIXED OFFSETS: Pushed up to eye-level to match baked barrel
+            // FIXED MUZZLE ALIGNMENT: Pushed up to eye-level and out to the barrel
             // =========================================================
-            const spawnX = this.x + (150 * dirX);
-            const spawnY = this.y - 265; 
+            const spawnX = this.x + (190 * dirX); 
+            const spawnY = this.y - 325;          
             
-            // Pass 'x, y, key, dir, damage, thrown, sourceGroundY'
-            (this.scene as any).spawnProjectile(spawnX, spawnY, 'bullet', dirX, 60, false, this.y);
+            (this.scene as any).spawnProjectile(this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
             
             const flash = this.scene.add.sprite(spawnX, spawnY, 'muzzle-flash-m70');
             flash.setDepth(this.depth + 2);
             flash.setFlipX(this.flipX); 
-            flash.setScale(1.5); 
+            flash.setScale(1.2); 
             flash.setBlendMode(Phaser.BlendModes.ADD);
             this.scene.tweens.add({ targets: flash, alpha: 0, duration: 100, onComplete: () => flash.destroy() });
 
@@ -275,6 +279,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             
             this.weaponDurability--;
             if (this.weaponDurability <= 0) {
+                // Out of ammo: Fade drop weapon instead of throwing it
                 this.scene.time.delayedCall(150, () => {
                     this.dropAndFadeWeapon();
                     this.scene.time.delayedCall(300, () => { this.isAttacking = false; });
@@ -287,7 +292,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             this.weaponDurability--;
 
             if (this.weaponDurability <= 0) {
-                this.scene.time.delayedCall(500, () => this.dropAndFadeWeapon());
+                this.scene.time.delayedCall(100, () => this.dropAndFadeWeapon());
                 this.play(`${this.characterName}-punch-2`, true);
                 this.once('animationcomplete', () => { this.isAttacking = false; });
                 return; 
@@ -594,7 +599,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
 
         if (this.equippedWeapon) {
             this.weaponHitsTaken++;
-            // Marko drops the weapon after taking 4 hits instead of 2 now
             if (this.weaponHitsTaken >= 4) {
                 this.dropAndFadeWeapon();
             }

@@ -123,26 +123,30 @@ export class MainLevel extends Phaser.Scene {
         this.physics.add.overlap(this.projectiles, this.enemies, (proj: any, enemy: any) => {
             if (enemy.isDead) return;
 
-            const tolerance = 40; 
+            const tolerance = 50; 
             const shooterGroundY = (proj as any).sourceGroundY || proj.y + 180; 
 
             if (Math.abs(shooterGroundY - enemy.y) > tolerance) {
                 return; 
             }
 
-            proj.hit();
+            // Cleanup the projectile
+            if (proj.hit) proj.hit();
+            else proj.destroy();
+
             this.spawnBlood(enemy.x, enemy.y - 50);
             
             if (enemy.takeDamage) {
-                enemy.takeDamage(proj.damage);
+                enemy.takeDamage(proj.damage || 60);
             }
 
+            // FORCE DAMAGE ANIMATION & HALT MOVEMENT
             if (!enemy.isDead && enemy.anims && enemy.anims.currentAnim) {
                 const prefix = enemy.anims.currentAnim.key.split('-'); 
                 const dmgAnim = `${prefix}-damage`;
                 if (enemy.scene.anims.exists(dmgAnim)) {
                     enemy.play(dmgAnim, true);
-                    enemy.setVelocity(0, 0);
+                    if (enemy.setVelocity) enemy.setVelocity(0, 0);
                 }
             }
 
@@ -151,7 +155,8 @@ export class MainLevel extends Phaser.Scene {
 
         this.physics.add.overlap(this.projectiles, this.breakables, (proj: any, prop: any) => {
             if (prop.isDead || Math.abs((proj as any).sourceGroundY - prop.y) > 100) return;
-            proj.hit();
+            if (proj.hit) proj.hit();
+            else proj.destroy();
             this.spawnHitEffect(prop.x, prop.y - 50);
             if (prop.takeDamage) prop.takeDamage(proj.damage);
         });
@@ -159,20 +164,18 @@ export class MainLevel extends Phaser.Scene {
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
     }
 
-    // FIXED SIGNATURE: Safe fallback so bullets always process correctly
-    public spawnProjectile(x: number, y: number, key: string, direction: number, damage: number, isThrown: boolean, ownerY?: number) {
+    public spawnProjectile(ownerY: number, x: number, y: number, key: string, direction: number, damage: number, isThrown: boolean) {
         const proj = new Projectile(this, x, y, key, direction, damage, isThrown);
         
-        (proj as any).sourceGroundY = ownerY || y + 180; 
+        (proj as any).sourceGroundY = ownerY; 
+        (proj as any).bulletDir = direction; // Store direction for the update loop to force speed
         proj.setDepth(9999);
 
         if (key === 'bullet') {
-            proj.setScale(0.4); // Perfectly sized bullet
+            proj.setScale(0.8); // Large visible bullet
             const body = proj.body as Phaser.Physics.Arcade.Body;
             if (body) {
                 body.setAllowGravity(false); 
-                body.setVelocityX(2500 * direction); // Extreme speed
-                body.setVelocityY(0);
             }
             
             this.time.delayedCall(1000, () => {
@@ -183,7 +186,6 @@ export class MainLevel extends Phaser.Scene {
         this.projectiles.add(proj);
     }
 
-    // FIXED: Guarantee this function exists to prevent crashes when characters punch
     public spawnHitEffect(x: number, y: number) {
         const exps = ['explosion_01', 'explosion_02', 'explosion_03', 'explosion_04'];
         const key = Phaser.Utils.Array.GetRandom(exps);
@@ -304,6 +306,17 @@ export class MainLevel extends Phaser.Scene {
         if (!this.player || this.player.isDead) return;
         this.handleWaveManager();
         this.floorLayer.tilePositionX = this.cameras.main.scrollX;
+
+        // FORCE BULLET VELOCITY: Overrides any static behaviors from the Projectile class
+        this.projectiles.getChildren().forEach((p: any) => {
+            if (p.active && p.texture && p.texture.key === 'bullet') {
+                if (p.body) {
+                    p.body.setAllowGravity(false);
+                    p.setVelocityX(2500 * (p.bulletDir || 1));
+                    p.setVelocityY(0);
+                }
+            }
+        });
 
         this.children.each((c: any) => { if (c.body && c.type === 'Sprite') { c.setAngle(0); c.rotation = 0; } });
 
