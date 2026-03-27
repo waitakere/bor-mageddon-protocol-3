@@ -96,7 +96,6 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 else if (animType === 'walk' || animType === 'walk-rifle') fps = 12;
                 else if (animType === 'run') fps = 18;
                 else if (animType === 'jump') fps = 8;
-                else if (animType === 'finish-move') fps = 24;
 
                 const frameConfig: Phaser.Types.Animations.AnimationFrameConfig[] = matchingFrames.map(f => {
                     return { key: this.characterName, frame: f };
@@ -113,7 +112,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                     key: animKey,
                     frames: frameConfig,
                     frameRate: fps,
-                    repeat: (animType === 'idle' || animType === 'walk' || animType === 'walk-rifle' || animType === 'run') ? -1 : 0
+                    repeat: (animType === 'idle' || animType === 'walk' || animType === 'run') ? -1 : 0
                 });
             }
         });
@@ -126,7 +125,8 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.weaponHitsTaken = 0;
 
         if (weaponKey === 'M70-FINAL rev') {
-             this.weaponDurability = 15;
+             // FIXED: Resetting Maja's ammo to 5 instead of 15
+             this.weaponDurability = 5;
              this.weaponSprite = null;
         } else {
              this.weaponDurability = 5;
@@ -313,15 +313,17 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         if (this.equippedWeapon === 'M70-FINAL rev') {
             if (this.scene.anims.exists(`${this.characterName}-shoot-with-rifle`)) {
                 this.play(`${this.characterName}-shoot-with-rifle`, true);
+            } else if (this.scene.anims.exists(`${this.characterName}-shoot`)) {
+                this.play(`${this.characterName}-shoot`, true);
             }
 
             const dirX = this.flipX ? -1 : 1;
 
             this.safeCall('playSFX', 'gun-shot-m70', 1.0);
 
-            // Maja Muzzle Offsets (adjusted for her height)
-            const spawnX = this.x + (180 * dirX);
-            const flashX = this.x + (200 * dirX);
+            // FIXED: Pushed forward on the X axis to align with barrel tip
+            const spawnX = this.x + (200 * dirX);
+            const flashX = this.x + (230 * dirX);
             const spawnY = this.y - 270;
 
             this.safeCall('spawnProjectile', this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
@@ -397,16 +399,12 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.isAttacking = true;
         this.setVelocity(0, 0);
 
-        // Halt any current animation
         this.anims.stop();
-        
-        // Force the specific pickup crouch frame
         this.setFrame('maja-pick-up/frame_001.png');
 
         this.setTintFill(0x39ff14);
         this.scene.time.delayedCall(100, () => this.clearTint());
 
-        // Resume after 300ms
         this.scene.time.delayedCall(300, () => {
             this.isAttacking = false;
         });
@@ -419,10 +417,14 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         // ==========================================
         // DYNAMIC ATLAS SCALING FIX
         // ==========================================
-        // Counters the bloated 283px sourceSize of the walk-rifle frames
         const currentAnimKeyForScale = this.anims.currentAnim?.key || '';
+        const currentFrameName = this.frame.name;
+        
         if (currentAnimKeyForScale.includes('walk-rifle')) {
             this.setScale(1.59);
+        } else if (currentFrameName.includes('pick-up')) {
+            // FIXED: Bumped up scale during pickup so she doesn't shrink when crouching!
+            this.setScale(1.9); 
         } else {
             this.setScale(1.7);
         }
@@ -497,8 +499,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         }
 
         if (!this.isAttacking) {
-            let vx = 0;
-            let vy = 0;
+            let vx = 0; let vy = 0;
 
             if (this.isJumping) {
                 vx = this.jumpVelocityX;
