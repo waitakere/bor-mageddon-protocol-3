@@ -90,7 +90,6 @@ export class MainLevel extends Phaser.Scene {
         let charKey = this.registry.get('selectedCharacter') || data?.selectedCharacter || window.localStorage.getItem('selectedCharacter') || 'marko';
         this.spawnPlayer(charKey, 200, 950);
         
-        // GUARANTEED EARLY WEAPON: M70 Rifle
         const startWeapon = this.physics.add.sprite(500, 950, 'M70-FINAL rev');
         startWeapon.setScale(1.0); 
         (startWeapon as any).isWeaponPickup = true;
@@ -130,7 +129,6 @@ export class MainLevel extends Phaser.Scene {
                 return; 
             }
 
-            // Cleanup the projectile
             if (proj.hit) proj.hit();
             else proj.destroy();
 
@@ -140,7 +138,6 @@ export class MainLevel extends Phaser.Scene {
                 enemy.takeDamage(proj.damage || 60);
             }
 
-            // FORCE DAMAGE ANIMATION & HALT MOVEMENT
             if (!enemy.isDead && enemy.anims && enemy.anims.currentAnim) {
                 const prefix = enemy.anims.currentAnim.key.split('-'); 
                 const dmgAnim = `${prefix}-damage`;
@@ -168,11 +165,11 @@ export class MainLevel extends Phaser.Scene {
         const proj = new Projectile(this, x, y, key, direction, damage, isThrown);
         
         (proj as any).sourceGroundY = ownerY; 
-        (proj as any).bulletDir = direction; // Store direction for the update loop to force speed
+        (proj as any).bulletDir = direction; 
         proj.setDepth(9999);
 
         if (key === 'bullet') {
-            proj.setScale(0.8); // Large visible bullet
+            proj.setScale(0.6); // SMALLER BULLET
             const body = proj.body as Phaser.Physics.Arcade.Body;
             if (body) {
                 body.setAllowGravity(false); 
@@ -307,7 +304,6 @@ export class MainLevel extends Phaser.Scene {
         this.handleWaveManager();
         this.floorLayer.tilePositionX = this.cameras.main.scrollX;
 
-        // FORCE BULLET VELOCITY: Overrides any static behaviors from the Projectile class
         this.projectiles.getChildren().forEach((p: any) => {
             if (p.active && p.texture && p.texture.key === 'bullet') {
                 if (p.body) {

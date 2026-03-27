@@ -10,7 +10,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     public isDead: boolean = false;
     public isJumping: boolean = false;
 
-    // Weapon System
     public equippedWeapon: string | null = null;
     public weaponDurability: number = 0;
     public weaponHitsTaken: number = 0;
@@ -23,8 +22,9 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     
     private currentVoice: any = null;
 
-    private walkSpeed: number = 230; 
-    private runSpeed: number = 480; 
+    // FASTER MOVEMENT
+    private walkSpeed: number = 280; 
+    private runSpeed: number = 550; 
     private jumpVelocityX: number = 0; 
 
     private lastKey: string = '';
@@ -128,18 +128,16 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    // CRASH FIX: Discarded weapons are now plain visual sprites, no physics!
     private dropAndFadeWeapon() {
         if (!this.equippedWeapon) return;
 
-        // Spawn a pure visual sprite high up (chest level)
+        // purely visual sprite so the physics engine never panics
         const drop = this.scene.add.sprite(this.x, this.y - 250, this.equippedWeapon);
         if (this.equippedWeapon === 'M70-FINAL rev') drop.setScale(1.0); 
         else drop.setScale(1.3);
         
         drop.setFlipX(this.flipX);
 
-        // Visual tween to simulate it falling to the floor and bouncing
         this.scene.tweens.add({ 
             targets: drop, 
             y: this.y - 20, 
@@ -149,7 +147,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             ease: 'Bounce.easeOut' 
         });
 
-        // Fade out entirely so it vanishes
         this.scene.tweens.add({
             targets: drop,
             alpha: 0,
@@ -260,16 +257,16 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             
             (this.scene as any).playSFX('gun-shot-m70', 1.0);
 
-            // =========================================================
-            // FIXED MUZZLE ALIGNMENT: Pushed up to eye-level and out to the barrel
-            // =========================================================
+            // ADJUSTED: Higher and Further Out
             const spawnX = this.x + (190 * dirX); 
+            const flashX = this.x + (210 * dirX);
             const spawnY = this.y - 325;          
             
             (this.scene as any).spawnProjectile(this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
             
-            const flash = this.scene.add.sprite(spawnX, spawnY, 'muzzle-flash-m70');
-            flash.setDepth(this.depth + 2);
+            const flash = this.scene.add.sprite(flashX, spawnY, 'muzzle-flash-m70');
+            // FORCE RENDER IN FRONT
+            flash.setDepth(9999);
             flash.setFlipX(this.flipX); 
             flash.setScale(1.2); 
             flash.setBlendMode(Phaser.BlendModes.ADD);
@@ -279,7 +276,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             
             this.weaponDurability--;
             if (this.weaponDurability <= 0) {
-                // Out of ammo: Fade drop weapon instead of throwing it
                 this.scene.time.delayedCall(150, () => {
                     this.dropAndFadeWeapon();
                     this.scene.time.delayedCall(300, () => { this.isAttacking = false; });
