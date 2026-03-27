@@ -96,6 +96,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 else if (animType === 'walk' || animType === 'walk-rifle') fps = 12;
                 else if (animType === 'run') fps = 18;
                 else if (animType === 'jump') fps = 8;
+                else if (animType === 'finish-move') fps = 24;
 
                 const frameConfig: Phaser.Types.Animations.AnimationFrameConfig[] = matchingFrames.map(f => {
                     return { key: this.characterName, frame: f };
@@ -112,7 +113,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                     key: animKey,
                     frames: frameConfig,
                     frameRate: fps,
-                    repeat: (animType === 'idle' || animType === 'walk' || animType === 'run') ? -1 : 0
+                    repeat: (animType === 'idle' || animType === 'walk' || animType === 'walk-rifle' || animType === 'run') ? -1 : 0
                 });
             }
         });
@@ -125,7 +126,6 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.weaponHitsTaken = 0;
 
         if (weaponKey === 'M70-FINAL rev') {
-             // FIXED: Resetting Maja's ammo to 5 instead of 15
              this.weaponDurability = 5;
              this.weaponSprite = null;
         } else {
@@ -140,25 +140,29 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     private dropAndFadeWeapon() {
         if (!this.equippedWeapon) return;
 
-        const drop = this.scene.add.sprite(this.x, this.y - 250, this.equippedWeapon);
+        // Spawn at chest level so it has room to fall
+        const drop = this.scene.add.sprite(this.x, this.y - 220, this.equippedWeapon);
         if (this.equippedWeapon === 'M70-FINAL rev') drop.setScale(1.0);
         else drop.setScale(1.3);
 
         drop.setFlipX(this.flipX);
+        
+        // Start the rotation barrel-up or down depending on facing direction
+        drop.setAngle(this.flipX ? -90 : 90);
 
         this.scene.tweens.add({
             targets: drop,
-            y: this.y - 20,
-            x: this.x + (this.flipX ? -80 : 80),
-            angle: this.flipX ? -90 : 90,
-            duration: 500,
+            y: this.y - 15, // land cleanly on the ground plane
+            x: this.x + (this.flipX ? -90 : 90),
+            angle: 0, // rotate to land flat
+            duration: 800,
             ease: 'Bounce.easeOut'
         });
 
         this.scene.tweens.add({
             targets: drop,
             alpha: 0,
-            duration: 500,
+            duration: 600,
             delay: 1500,
             onComplete: () => drop.destroy()
         });
@@ -321,10 +325,10 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
             this.safeCall('playSFX', 'gun-shot-m70', 1.0);
 
-            // FIXED: Pushed forward on the X axis to align with barrel tip
-            const spawnX = this.x + (200 * dirX);
-            const flashX = this.x + (230 * dirX);
-            const spawnY = this.y - 270;
+            // ADJUSTED: Lowered spawn height and pushed flash further forward
+            const spawnX = this.x + (180 * dirX);
+            const flashX = this.x + (215 * dirX);
+            const spawnY = this.y - 255;
 
             this.safeCall('spawnProjectile', this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
 
@@ -414,16 +418,12 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         if (this.isDead) return;
         this.setAngle(0);
 
-        // ==========================================
-        // DYNAMIC ATLAS SCALING FIX
-        // ==========================================
         const currentAnimKeyForScale = this.anims.currentAnim?.key || '';
         const currentFrameName = this.frame.name;
         
         if (currentAnimKeyForScale.includes('walk-rifle')) {
             this.setScale(1.59);
         } else if (currentFrameName.includes('pick-up')) {
-            // FIXED: Bumped up scale during pickup so she doesn't shrink when crouching!
             this.setScale(1.9); 
         } else {
             this.setScale(1.7);
