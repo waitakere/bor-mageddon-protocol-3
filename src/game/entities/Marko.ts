@@ -102,7 +102,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
 
                 if (animType === 'special-attack' && frameConfig.length > 0) {
                     const lastFrame = frameConfig[frameConfig.length - 1];
-                    // Append 8 holding frames to ensure we catch the pose
                     for (let i = 0; i < 8; i++) {
                         frameConfig.push(lastFrame);
                     }
@@ -145,7 +144,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
 
         drop.setFlipX(this.flipX);
 
-        // FIXED: Angle set to 0 so it lands perfectly horizontal, better bounce duration
         this.scene.tweens.add({
             targets: drop,
             y: this.y,
@@ -155,7 +153,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             ease: 'Bounce.easeOut'
         });
 
-        // FIXED: Smoother fade out
         this.scene.tweens.add({
             targets: drop,
             alpha: 0,
@@ -177,7 +174,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         this.weaponSprite.visible = true;
 
         const currentAnimKey = this.anims.currentAnim?.key.replace(`${this.characterName}-`, '') || 'idle';
-        const currentFrameName = this.anims.currentFrame?.textureFrame as string || '';
+        const currentFrameName = this.frame.name;
         const dirX = this.flipX ? -1 : 1;
         const jumpVisualOffset = this.height - this.displayOriginY;
 
@@ -186,7 +183,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         let targetAngle = 0;
         let targetDepth = this.depth + 1;
 
-        if (['special-attack', 'finish-move', 'jump-punch', 'jump-kick', 'knockdown-get-up'].includes(currentAnimKey)) {
+        if (['special-attack', 'finish-move', 'jump-punch', 'jump-kick', 'knockdown-get-up'].includes(currentAnimKey) || currentFrameName.includes('pick-up')) {
             this.weaponSprite.visible = false;
             return;
         }
@@ -343,9 +340,8 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         this.isAttacking = true;
         this.setVelocity(0, 0);
 
-        if (this.scene.anims.exists(`${this.characterName}-idle`)) {
-            this.play(`${this.characterName}-idle`, true);
-        }
+        this.anims.stop();
+        this.setFrame('marko-pick-up/frame_002.png');
 
         this.setTintFill(0x39ff14);
         this.scene.time.delayedCall(100, () => this.clearTint());
@@ -550,18 +546,16 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
 
         let triggered = false;
 
-        // FIXED: Wait until the final "hold" frames of the animation before shaking
         const onUpdate = (anim: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => {
             if (anim.key !== animKey) return;
             
-            // We pushed 8 duplicate frames at the end in createAnimations. Trigger on the first one.
             if (frame.index >= anim.frames.length - 8 && !triggered) {
                 triggered = true;
                 
-                this.anims.pause(); // Hold the megaphone pose!
+                this.anims.pause(); 
 
                 this.safeCall('playSFX', 'marko_special_1');
-                this.safeCall('triggerScreenGlitch', 2000); // Massive 2-second screen shake
+                this.safeCall('triggerScreenGlitch', 2000); 
 
                 const waveZone = this.scene.add.circle(this.x, this.y - 40, 180);
                 this.scene.physics.add.existing(waveZone);
@@ -583,7 +577,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
 
                 this.scene.time.delayedCall(250, () => { if (waveZone.active) waveZone.destroy(); });
 
-                // Resume gameplay after a 2-second hold
                 this.scene.time.delayedCall(2000, () => {
                     this.anims.resume();
                     this.isAttacking = false;

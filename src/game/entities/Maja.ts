@@ -18,7 +18,6 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
     private weaponOffsets: Record<string, {x: number, y: number, angle: number}> = {
         'idle': { x: 10, y: -220, angle: 15 },
-        'jump': { x: 10, y: -220, angle: -10 },
         'shoot':{ x: 30, y: -220, angle: 0 }
     };
 
@@ -60,6 +59,13 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.createAnimations();
     }
 
+    private safeCall(methodName: string, ...args: any[]) {
+        if (this.scene && typeof (this.scene as any)[methodName] === 'function') {
+            return (this.scene as any)[methodName](...args);
+        }
+        return null;
+    }
+
     private createAnimations() {
         const anims = this.scene.anims;
         if (anims.exists(`${this.characterName}-idle`)) return;
@@ -73,7 +79,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             'idle', 'walk', 'run', 'jump', 'punch-1', 'punch-2', 'kick-1', 'kick-2',
             'melee', 'jump-punch', 'jump-kick', 'special-attack', 'finish-move',
             'throw', 'damage', 'knockdown-get-up', 'dying', 'pick-up',
-            'shoot', 'shoot-recoil', 'shoot-up'
+            'shoot', 'shoot-recoil', 'shoot-up', 'shoot-with-rifle', 'walk-rifle'
         ];
 
         animTypes.forEach(animType => {
@@ -86,9 +92,10 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             if (matchingFrames.length > 0) {
                 let fps = 15;
                 if (animType === 'idle') fps = 6;
-                else if (animType === 'walk') fps = 12;
+                else if (animType === 'walk' || animType === 'walk-rifle') fps = 12;
                 else if (animType === 'run') fps = 18;
                 else if (animType === 'jump') fps = 8;
+                else if (animType === 'finish-move') fps = 24;
 
                 const frameConfig: Phaser.Types.Animations.AnimationFrameConfig[] = matchingFrames.map(f => {
                     return { key: this.characterName, frame: f };
@@ -105,7 +112,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                     key: animKey,
                     frames: frameConfig,
                     frameRate: fps,
-                    repeat: (animType === 'idle' || animType === 'walk' || animType === 'run') ? -1 : 0
+                    repeat: (animType === 'idle' || animType === 'walk' || animType === 'walk-rifle' || animType === 'run') ? -1 : 0
                 });
             }
         });
@@ -118,7 +125,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.weaponHitsTaken = 0;
 
         if (weaponKey === 'M70-FINAL rev') {
-             this.weaponDurability = 15;
+             this.weaponDurability = 5;
              this.weaponSprite = null;
         } else {
              this.weaponDurability = 5;
@@ -132,7 +139,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     private dropAndFadeWeapon() {
         if (!this.equippedWeapon) return;
 
-        const drop = this.scene.add.sprite(this.x, this.y - 250, this.equippedWeapon);
+        const drop = this.scene.add.sprite(this.x, this.y - 160, this.equippedWeapon);
         if (this.equippedWeapon === 'M70-FINAL rev') drop.setScale(1.0);
         else drop.setScale(1.3);
 
@@ -140,17 +147,17 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
         this.scene.tweens.add({
             targets: drop,
-            y: this.y - 20,
-            x: this.x + (this.flipX ? -80 : 80),
-            angle: this.flipX ? -90 : 90,
-            duration: 500,
+            y: this.y,
+            x: this.x + (this.flipX ? -60 : 60),
+            angle: 0,
+            duration: 600,
             ease: 'Bounce.easeOut'
         });
 
         this.scene.tweens.add({
             targets: drop,
             alpha: 0,
-            duration: 500,
+            duration: 1000,
             delay: 1500,
             onComplete: () => drop.destroy()
         });
@@ -168,7 +175,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.weaponSprite.visible = true;
 
         const currentAnimKey = this.anims.currentAnim?.key.replace(`${this.characterName}-`, '') || 'idle';
-        const currentFrameName = this.anims.currentFrame?.textureFrame as string || '';
+        const currentFrameName = this.frame.name; // Use exact frame name check to hide during pickup
         const dirX = this.flipX ? -1 : 1;
         const jumpVisualOffset = this.height - this.displayOriginY;
 
@@ -177,7 +184,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         let targetAngle = 0;
         let targetDepth = this.depth + 1;
 
-        if (['kick-2', 'special-attack', 'finish-move', 'jump-punch', 'jump-kick'].includes(currentAnimKey)) {
+        if (['kick-2', 'special-attack', 'finish-move', 'jump-punch', 'jump-kick'].includes(currentAnimKey) || currentFrameName.includes('pick-up')) {
             this.weaponSprite.visible = false;
             return;
         }
@@ -289,7 +296,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         if (!this.equippedWeapon) return;
 
         const dirX = this.flipX ? -1 : 1;
-        (this.scene as any).spawnProjectile(this.y, this.x + (20 * dirX), this.y - 120, this.equippedWeapon, dirX, 50, true);
+        this.safeCall('spawnProjectile', this.y, this.x + (20 * dirX), this.y - 120, this.equippedWeapon, dirX, 50, true);
 
         this.equippedWeapon = null;
         if (this.weaponSprite) {
@@ -303,19 +310,20 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.setVelocity(0, 0);
 
         if (this.equippedWeapon === 'M70-FINAL rev') {
-            if (this.scene.anims.exists(`${this.characterName}-shoot`)) {
-                this.play(`${this.characterName}-shoot`, true);
+            if (this.scene.anims.exists(`${this.characterName}-shoot-with-rifle`)) {
+                this.play(`${this.characterName}-shoot-with-rifle`, true);
             }
 
             const dirX = this.flipX ? -1 : 1;
 
-            (this.scene as any).playSFX('gun-shot-m70', 1.0);
+            this.safeCall('playSFX', 'gun-shot-m70', 1.0);
 
-            const spawnX = this.x + (80 * dirX);
-            const flashX = this.x + (110 * dirX);
-            const spawnY = this.y - 220;
+            // Maja Muzzle Offsets (adjusted for her height)
+            const spawnX = this.x + (180 * dirX);
+            const flashX = this.x + (200 * dirX);
+            const spawnY = this.y - 270;
 
-            (this.scene as any).spawnProjectile(this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
+            this.safeCall('spawnProjectile', this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
 
             const flash = this.scene.add.sprite(flashX, spawnY, 'muzzle-flash-m70');
             flash.setDepth(9999);
@@ -359,12 +367,12 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 const yTol = target.isBreakable ? 140 : 60;
                 if (Math.abs(this.y - target.y) <= yTol) {
                     if (!hasHit) {
-                        (this.scene as any).playSFX(['punch_4', 'punch_5']);
+                        this.safeCall('playSFX', ['punch_4', 'punch_5']);
                         hasHit = true;
                     }
 
                     const hitX = (this.x + target.x) / 2;
-                    (this.scene as any).spawnBlood(hitX, target.y - 50);
+                    this.safeCall('spawnBlood', hitX, target.y - 50);
                     if (target.takeDamage) target.takeDamage(25 * this.damageMultiplier);
                     if (hitZone.body) hitZone.body.enable = false;
                 }
@@ -379,7 +387,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
     private playVoice(marker: string | string[]) {
         if (this.currentVoice && this.currentVoice.isPlaying) this.currentVoice.stop();
-        this.currentVoice = (this.scene as any).playSFX(marker);
+        this.currentVoice = this.safeCall('playSFX', marker);
     }
 
     public playPickupAnim() {
@@ -388,13 +396,16 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.isAttacking = true;
         this.setVelocity(0, 0);
 
-        if (this.scene.anims.exists(`${this.characterName}-idle`)) {
-            this.play(`${this.characterName}-idle`, true);
-        }
+        // Halt any current animation
+        this.anims.stop();
+        
+        // Force the specific pickup crouch frame
+        this.setFrame('maja-pick-up/frame_001.png');
 
         this.setTintFill(0x39ff14);
         this.scene.time.delayedCall(100, () => this.clearTint());
 
+        // Resume after 300ms
         this.scene.time.delayedCall(300, () => {
             this.isAttacking = false;
         });
@@ -489,11 +500,21 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
             if (!this.isJumping) {
                 if (vx !== 0 || vy !== 0) {
-                    const anim = this.isRunning ? `${this.characterName}-run` : `${this.characterName}-walk`;
-                    if (this.scene.anims.exists(anim)) this.play(anim, true);
-                    else if (this.scene.anims.exists(`${this.characterName}-walk`)) this.play(`${this.characterName}-walk`, true);
+                    if (this.isRunning) {
+                        this.play(`${this.characterName}-run`, true);
+                    } else {
+                        if (this.equippedWeapon === 'M70-FINAL rev' && this.scene.anims.exists(`${this.characterName}-walk-rifle`)) {
+                            this.play(`${this.characterName}-walk-rifle`, true);
+                        } else {
+                            this.play(`${this.characterName}-walk`, true);
+                        }
+                    }
                 } else {
-                    if (this.scene.anims.exists(`${this.characterName}-idle`)) this.play(`${this.characterName}-idle`, true);
+                    if (this.equippedWeapon === 'M70-FINAL rev' && this.scene.anims.exists(`${this.characterName}-shoot-with-rifle`)) {
+                        this.play(`${this.characterName}-shoot-with-rifle`, true);
+                    } else {
+                        this.play(`${this.characterName}-idle`, true);
+                    }
                 }
             }
         } else {
@@ -521,12 +542,12 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             const yTol = target.isBreakable ? 140 : 60;
             if (Math.abs(this.y - target.y) <= yTol) {
                 if (!hasHit) {
-                    (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
+                    this.safeCall('playSFX', action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     hasHit = true;
                 }
                 const damage = 15 * this.damageMultiplier;
                 const hitX = (this.x + target.x) / 2;
-                (this.scene as any).spawnHitEffect(hitX, target.y - 80);
+                this.safeCall('spawnHitEffect', hitX, target.y - 80);
                 if (target.takeDamage) target.takeDamage(damage);
                 if (hitZone.body) hitZone.body.enable = false;
             }
@@ -557,12 +578,12 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             const yTol = target.isBreakable ? 140 : 60;
             if (Math.abs(this.y - target.y) <= yTol) {
                 if (!hasHit) {
-                    (this.scene as any).playSFX(action.includes('punch') ? this.punchImpacts : this.kickImpacts);
+                    this.safeCall('playSFX', action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     hasHit = true;
                 }
                 const damage = (action.includes('2') ? 15 : 10) * this.damageMultiplier;
                 const hitX = (this.x + target.x) / 2;
-                (this.scene as any).spawnHitEffect(hitX, target.y - 50);
+                this.safeCall('spawnHitEffect', hitX, target.y - 50);
                 if (target.takeDamage) target.takeDamage(damage);
                 if (hitZone.body) hitZone.body.enable = false;
             }
@@ -596,8 +617,8 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             if (grabbedTarget.setVelocity) grabbedTarget.setVelocity(0, 0);
 
             this.scene.time.delayedCall(200, () => {
-                (this.scene as any).triggerScreenGlitch(400);
-                (this.scene as any).spawnHitEffect(grabbedTarget.x, grabbedTarget.y - 50);
+                this.safeCall('triggerScreenGlitch', 400);
+                this.safeCall('spawnHitEffect', grabbedTarget.x, grabbedTarget.y - 50);
                 if(grabbedTarget.takeDamage) grabbedTarget.takeDamage(40 * this.damageMultiplier);
 
                 const shockwave = this.scene.add.circle(this.x, this.y - 40, 120);
@@ -624,7 +645,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         const anim = this.scene.anims.exists(`${this.characterName}-finish-move`) ? `${this.characterName}-finish-move` : `${this.characterName}-run`;
         if (this.scene.anims.exists(anim)) this.play(anim, true);
 
-        (this.scene as any).triggerScreenGlitch(600);
+        this.safeCall('triggerScreenGlitch', 600);
 
         const direction = this.flipX ? -1 : 1;
         this.setVelocityX(500 * direction);
@@ -640,7 +661,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             this.scene.physics.overlap(drillZone, targets, (dz, target: any) => {
                 const yTol = target.isBreakable ? 140 : 60;
                 if (Math.abs(this.y - target.y) <= yTol) {
-                    (this.scene as any).spawnHitEffect(target.x, target.y - 50);
+                    this.safeCall('spawnHitEffect', target.x, target.y - 50);
                     if (target.takeDamage) target.takeDamage(5);
                 }
             });
@@ -658,8 +679,8 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
     public takeDamage(amount: number) {
         this.health -= amount; this.queuedAction = null;
 
-        (this.scene as any).spawnHitEffect(this.x, this.y - 40);
-        (this.scene as any).lastPlayerHitTime = Date.now();
+        this.safeCall('spawnHitEffect', this.x, this.y - 40);
+        if (this.scene) (this.scene as any).lastPlayerHitTime = Date.now();
 
         if (this.equippedWeapon) {
             this.weaponHitsTaken++;
@@ -669,34 +690,34 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         }
 
         if (this.health <= 0) {
-            (this.scene as any).playSFX(this.agonies);
+            this.safeCall('playSFX', this.agonies);
             this.die();
         }
         else {
-            (this.scene as any).playSFX(this.grunts);
+            this.safeCall('playSFX', this.grunts);
             const dmgAnim = `${this.characterName}-damage`;
             if (this.scene.anims.exists(dmgAnim)) { this.isAttacking = true; this.play(dmgAnim, true); this.once('animationcomplete', () => { this.isAttacking = false; }); }
             else { this.setTint(0xff0000); this.scene.time.delayedCall(200, () => this.clearTint()); }
         }
-        (this.scene as any).updateReactHUD();
+        this.safeCall('updateReactHUD');
     }
 
     public takeKnockdown(amount: number = 15) {
         this.health -= amount;
         this.queuedAction = null;
 
-        (this.scene as any).spawnHitEffect(this.x, this.y - 40);
-        (this.scene as any).lastPlayerHitTime = Date.now();
+        this.safeCall('spawnHitEffect', this.x, this.y - 40);
+        if (this.scene) (this.scene as any).lastPlayerHitTime = Date.now();
 
         if (this.equippedWeapon) {
              this.dropAndFadeWeapon();
         }
 
         if (this.health <= 0) {
-            (this.scene as any).playSFX(this.agonies);
+            this.safeCall('playSFX', this.agonies);
             this.die();
         } else {
-            (this.scene as any).playSFX(this.grunts);
+            this.safeCall('playSFX', this.grunts);
             const anim = `${this.characterName}-knockdown-get-up`;
             if (this.scene.anims.exists(anim)) {
                 this.isAttacking = true;
@@ -707,7 +728,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 this.scene.time.delayedCall(200, () => this.clearTint());
             }
         }
-        (this.scene as any).updateReactHUD();
+        this.safeCall('updateReactHUD');
     }
 
     private die() {
