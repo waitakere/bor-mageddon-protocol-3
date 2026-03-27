@@ -1,13 +1,12 @@
-// Darko.ts
 import Phaser from 'phaser';
-import { CHARACTER_STATS } from '../utils/characterstats';
+import { CHARACTER_STATS } from '../config/CharacterStats';
 
 export class Darko extends Phaser.Physics.Arcade.Sprite {
     public health: number = CHARACTER_STATS.darko_1993.maxHealth;
     public maxHealth: number = CHARACTER_STATS.darko_1993.maxHealth;
     public smfMeter: number = 0;
     public characterName: string = 'darko';
-    public damageMultiplier: number = CHARACTER_STATS.darko_1993.hitDamage / 12; // Assuming 12 is base
+    public damageMultiplier: number = CHARACTER_STATS.darko_1993.hitDamage / 12; 
     public isAttacking: boolean = false;
     public isDead: boolean = false;
     public isJumping: boolean = false;
@@ -482,7 +481,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
     private executeAction(action: string) {
         if (action === 'special') {
-            // Add Darko's special
              this.isAttacking = true; this.setVelocity(0, 0);
             const anim = this.scene.anims.exists(`${this.characterName}-special-attack`) ? `${this.characterName}-special-attack` : `${this.characterName}-punch-1`;
             if (this.scene.anims.exists(anim)) this.play(anim, true);
@@ -490,7 +488,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             return;
         }
         if (action === 'finisher') {
-             // Add Darko's finisher
               this.isAttacking = true; this.setVelocity(0, 0);
             const anim = this.scene.anims.exists(`${this.characterName}-finish-move`) ? `${this.characterName}-finish-move` : `${this.characterName}-punch-1`;
             if (this.scene.anims.exists(anim)) this.play(anim, true);

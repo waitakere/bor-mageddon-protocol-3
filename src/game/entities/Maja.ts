@@ -1,6 +1,5 @@
-// Maja.ts
 import Phaser from 'phaser';
-import { CHARACTER_STATS } from '../utils/characterstats';
+import { CHARACTER_STATS } from '../config/CharacterStats';
 
 export class Maja extends Phaser.Physics.Arcade.Sprite {
     public health: number = CHARACTER_STATS.maja_1993.maxHealth;
@@ -304,9 +303,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.setVelocity(0, 0);
 
         if (this.equippedWeapon === 'M70-FINAL rev') {
-            if (this.scene.anims.exists(`${this.characterName}-shoot-with-rifle`)) {
-                this.play(`${this.characterName}-shoot-with-rifle`, true);
-            } else if (this.scene.anims.exists(`${this.characterName}-shoot`)) {
+            if (this.scene.anims.exists(`${this.characterName}-shoot`)) {
                 this.play(`${this.characterName}-shoot`, true);
             }
 
@@ -314,9 +311,9 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
             (this.scene as any).playSFX('gun-shot-m70', 1.0);
 
-            const spawnX = this.x + (190 * dirX);
-            const flashX = this.x + (210 * dirX);
-            const spawnY = this.y - 325;
+            const spawnX = this.x + (80 * dirX);
+            const flashX = this.x + (110 * dirX);
+            const spawnY = this.y - 220;
 
             (this.scene as any).spawnProjectile(this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
 
@@ -464,7 +461,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 }
 
                 if (!this.isAttacking) {
-                     if (this.equippedWeapon && (requestedAction === 'punch-1' || requestedAction === 'punch-2')) {
+                    if (this.equippedWeapon && (requestedAction === 'punch-1' || requestedAction === 'punch-2')) {
                         this.executeWeaponAttack();
                     } else {
                         this.executeAction(requestedAction);
@@ -492,21 +489,11 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
             if (!this.isJumping) {
                 if (vx !== 0 || vy !== 0) {
-                     if (this.isRunning) {
-                        this.play(`${this.characterName}-run`, true);
-                    } else {
-                        if (this.equippedWeapon === 'M70-FINAL rev' && this.scene.anims.exists(`${this.characterName}-walk-rifle`)) {
-                            this.play(`${this.characterName}-walk-rifle`, true);
-                        } else {
-                            this.play(`${this.characterName}-walk`, true);
-                        }
-                    }
+                    const anim = this.isRunning ? `${this.characterName}-run` : `${this.characterName}-walk`;
+                    if (this.scene.anims.exists(anim)) this.play(anim, true);
+                    else if (this.scene.anims.exists(`${this.characterName}-walk`)) this.play(`${this.characterName}-walk`, true);
                 } else {
-                    if (this.equippedWeapon === 'M70-FINAL rev' && this.scene.anims.exists(`${this.characterName}-shoot-with-rifle`)) {
-                        this.play(`${this.characterName}-shoot-with-rifle`, true);
-                    } else {
-                        this.play(`${this.characterName}-idle`, true);
-                    }
+                    if (this.scene.anims.exists(`${this.characterName}-idle`)) this.play(`${this.characterName}-idle`, true);
                 }
             }
         } else {

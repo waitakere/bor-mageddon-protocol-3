@@ -1,6 +1,5 @@
-// Marko.ts
 import Phaser from 'phaser';
-import { CHARACTER_STATS } from '../utils/characterstats';
+import { CHARACTER_STATS } from '../config/CharacterStats';
 
 export class Marko extends Phaser.Physics.Arcade.Sprite {
     public health: number = CHARACTER_STATS.marko_1993.maxHealth;
@@ -283,7 +282,6 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             }
 
         } else {
-             // Melee is not active but here is the logic just in case
             this.weaponDurability--;
 
             if (this.weaponDurability <= 0) {
@@ -595,7 +593,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         if (this.equippedWeapon) {
             this.weaponHitsTaken++;
             if (this.weaponHitsTaken >= 4) {
-                 this.dropAndFadeWeapon();
+                this.dropAndFadeWeapon();
             }
         }
 
