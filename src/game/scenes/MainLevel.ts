@@ -119,46 +119,8 @@ export class MainLevel extends Phaser.Scene {
 
         this.physics.add.overlap(this.player, this.items, this.collectItem, undefined, this);
         
-        this.physics.add.overlap(this.projectiles, this.enemies, (proj: any, enemy: any) => {
-            if (enemy.isDead) return;
-
-            // EXPANDED TOLERANCE: Increased from 50 to 90 for much more flexible hit detection
-            const tolerance = 90; 
-            const shooterGroundY = (proj as any).sourceGroundY || proj.y + 180; 
-
-            if (Math.abs(shooterGroundY - enemy.y) > tolerance) {
-                return; 
-            }
-
-            if (proj.hit) proj.hit();
-            else proj.destroy();
-
-            this.spawnBlood(enemy.x, enemy.y - 50);
-            
-            if (enemy.takeDamage) {
-                enemy.takeDamage(proj.damage || 60);
-            }
-
-            if (!enemy.isDead && enemy.anims && enemy.anims.currentAnim) {
-                const prefix = enemy.anims.currentAnim.key.split('-'); 
-                const dmgAnim = `${prefix}-damage`;
-                if (enemy.scene.anims.exists(dmgAnim)) {
-                    enemy.play(dmgAnim, true);
-                    if (enemy.setVelocity) enemy.setVelocity(0, 0);
-                }
-            }
-
-            if (proj.isThrownWeapon && enemy.takeKnockdown) enemy.takeKnockdown();
-        });
-
-        this.physics.add.overlap(this.projectiles, this.breakables, (proj: any, prop: any) => {
-            if (prop.isDead || Math.abs((proj as any).sourceGroundY - prop.y) > 100) return;
-            if (proj.hit) proj.hit();
-            else proj.destroy();
-            this.spawnHitEffect(prop.x, prop.y - 50);
-            if (prop.takeDamage) prop.takeDamage(proj.damage);
-        });
-
+        // Note: Projectile overlaps have been fully moved to the Update loop for manual check
+        
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
     }
 
@@ -170,8 +132,7 @@ export class MainLevel extends Phaser.Scene {
         proj.setDepth(9999);
 
         if (key === 'bullet') {
-            // SMALLER BULLET: Reduced from 0.6 to 0.45
-            proj.setScale(0.45); 
+            proj.setScale(0.45); // SLIGHTLY SMALLER BULLET
             const body = proj.body as Phaser.Physics.Arcade.Body;
             if (body) {
                 body.setAllowGravity(false); 
@@ -299,6 +260,17 @@ export class MainLevel extends Phaser.Scene {
         });
     }
 
+    public triggerScreenGlitch(duration: number = 400) {
+        const cam = this.cameras.main;
+        cam.shake(duration, 0.02);
+        try {
+            if (cam.postFX) {
+                const fx = cam.postFX.addChromaticAberration(0.04, 0.04);
+                this.tweens.add({ targets: fx, offsetX: 0, offsetY: 0, duration: duration, ease: 'Power2', onComplete: () => cam.postFX.remove(fx) });
+            }
+        } catch (e) { cam.flash(duration, 255, 0, 0, 0.3); }
+    }
+
     private handleRestart = () => { this.scene.restart(); };
 
     update() {
@@ -306,14 +278,62 @@ export class MainLevel extends Phaser.Scene {
         this.handleWaveManager();
         this.floorLayer.tilePositionX = this.cameras.main.scrollX;
 
+        // MANUAL BULLET COLLISION & VELOCITY SYSTEM
         this.projectiles.getChildren().forEach((p: any) => {
-            if (p.active && p.texture && p.texture.key === 'bullet') {
+            if (!p.active) return;
+            
+            if (p.texture && p.texture.key === 'bullet') {
                 if (p.body) {
                     p.body.setAllowGravity(false);
                     p.setVelocityX(2500 * (p.bulletDir || 1));
                     p.setVelocityY(0);
                 }
             }
+
+            // Check manual overlap with enemies (bypasses physics hitboxes entirely)
+            this.enemies.getChildren().forEach((e: any) => {
+                if (e.isDead || !e.active) return;
+                
+                const yTolerance = 90; // Extremely generous vertical floor lane allowance
+                const xTolerance = 60; // Generous horizontal strike zone
+
+                const shooterGroundY = p.sourceGroundY || p.y + 180;
+                
+                if (Math.abs(shooterGroundY - e.y) <= yTolerance) {
+                    if (Math.abs(p.x - e.x) <= xTolerance) {
+                        
+                        if (p.hit) p.hit(); else p.destroy();
+                        
+                        this.spawnBlood(e.x, e.y - 50);
+                        if (e.takeDamage) e.takeDamage(p.damage || 60);
+
+                        // FORCE ENEMY DAMAGE ANIMATION
+                        if (!e.isDead && e.anims && e.anims.currentAnim) {
+                            const prefix = e.anims.currentAnim.key.split('-'); 
+                            const dmgAnim = `${prefix}-damage`;
+                            if (this.anims.exists(dmgAnim)) {
+                                e.play(dmgAnim, true);
+                                if (e.setVelocity) e.setVelocity(0, 0); // Stops them instantly!
+                            }
+                        }
+
+                        if (p.isThrownWeapon && e.takeKnockdown) e.takeKnockdown();
+                    }
+                }
+            });
+            
+            // Check manual overlap with breakables
+            this.breakables.getChildren().forEach((prop: any) => {
+                if (prop.isDead || !prop.active) return;
+                const shooterGroundY = p.sourceGroundY || p.y + 180;
+                if (Math.abs(shooterGroundY - prop.y) <= 100) {
+                    if (Math.abs(p.x - prop.x) <= 60) {
+                        if (p.hit) p.hit(); else p.destroy();
+                        this.spawnHitEffect(prop.x, prop.y - 50);
+                        if (prop.takeDamage) prop.takeDamage(p.damage || 60);
+                    }
+                }
+            });
         });
 
         this.children.each((c: any) => { if (c.body && c.type === 'Sprite') { c.setAngle(0); c.rotation = 0; } });
