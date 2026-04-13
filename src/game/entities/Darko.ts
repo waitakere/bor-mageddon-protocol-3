@@ -145,7 +145,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
         drop.setFlipX(this.flipX);
 
-        // X-Axis Linear drift
         this.scene.tweens.add({
             targets: drop,
             x: this.x + (this.flipX ? -80 : 80),
@@ -153,7 +152,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             ease: 'Linear'
         });
 
-        // Y-Axis Realistic Bounce
         this.scene.tweens.add({
             targets: drop,
             y: this.y,
@@ -162,7 +160,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             ease: 'Bounce.easeOut'
         });
 
-        // Arcade Blink & Fade
         this.scene.tweens.add({
             targets: drop,
             alpha: 0,
@@ -380,12 +377,17 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         if (this.isDead) return;
         this.setAngle(0);
 
-        // ALWAYS strict lock to 1.7 to prevent ballooning
         this.setScale(1.7);
         
-        // FLAWLESS JUMP LOGIC: Let Phaser calculate the base frame trim, then add our offset
         this.updateDisplayOrigin(); 
         this.displayOriginY += this.jumpOffset;
+
+        // DYNAMIC PHYSICS ANCHOR FIX
+        // Re-aligns the hitbox to his feet every frame, canceling out the 512x512 texture scaling glitch
+        if (this.body && this.frame) {
+            const body = this.body as Phaser.Physics.Arcade.Body;
+            body.setOffset((this.width / 2) - 25, this.height - 30);
+        }
 
         this.positionWeaponSprite();
 
@@ -402,7 +404,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
             this.scene.tweens.add({
                 targets: this,
-                jumpOffset: 220, // Animates the custom offset, not displayOriginY directly!
+                jumpOffset: 220,
                 duration: 400,
                 yoyo: true,
                 ease: 'Quad.easeOut',
@@ -582,7 +584,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         const anim = this.scene.anims.exists(`${this.characterName}-special-attack`) ? `${this.characterName}-special-attack` : `${this.characterName}-punch-1`;
         if (this.scene.anims.exists(anim)) this.play(anim, true);
 
-        // Wait to trigger impact slightly after the animation starts
         this.scene.time.delayedCall(200, () => {
             this.safeCall('playSFX', this.specialAudio);
             this.safeCall('triggerScreenGlitch', 400);
@@ -599,7 +600,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                     if (target.takeDamage) {
                         target.takeDamage(40 * this.damageMultiplier); 
                         if (target.body && target.type !== 'obj_kiosk' && target.type !== 'obj_kontejner') {
-                            target.setVelocityX(500 * pushDir); // Extreme knockback
+                            target.setVelocityX(400 * pushDir); 
                         }
                     }
                     this.safeCall('spawnHitEffect', target.x, target.y - 50);
@@ -618,13 +619,11 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         const anim = this.scene.anims.exists(`${this.characterName}-finish-move`) ? `${this.characterName}-finish-move` : `${this.characterName}-punch-1`;
         if (this.scene.anims.exists(anim)) this.play(anim, true);
 
-        // Wait for the exact moment of the guitar swing to trigger the impact
         this.scene.time.delayedCall(300, () => {
             this.safeCall('playSFX', ['explosion_01', 'explosion_02'], 1.0);
             this.safeCall('triggerScreenGlitch', 800);
             this.scene.cameras.main.shake(500, 0.03); 
 
-            // Massive hitzone in front of Darko
             const hitZone = this.scene.add.zone(this.x + (this.flipX ? -150 : 150), this.y - 40, 260, 120);
             this.scene.physics.add.existing(hitZone);
 
@@ -633,10 +632,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 const yTol = target.isBreakable ? 140 : 60;
                 if (Math.abs(this.y - target.y) <= yTol) {
                     if (target.takeDamage) target.takeDamage(80 * this.damageMultiplier); 
-                    
-                    // Spawn a massive visual effect directly on the target
                     this.safeCall('spawnHitEffect', target.x, target.y - 50);
-                    
                     if (hitZone.body) (hitZone.body as Phaser.Physics.Arcade.Body).enable = false;
                 }
             });
