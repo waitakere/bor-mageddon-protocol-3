@@ -97,7 +97,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 else if (animType === 'run') fps = 18;
                 else if (animType === 'jump') fps = 8;
 
-                const frameConfig: Phaser.Types.Animations.AnimationFrameConfig[] = matchingFrames.map(f => {
+                const frameConfig = matchingFrames.map(f => {
                     return { key: this.characterName, frame: f };
                 });
 
@@ -125,7 +125,6 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         this.weaponHitsTaken = 0;
 
         if (weaponKey === 'M70-FINAL rev') {
-             // FIXED: Resetting Maja's ammo to 5 instead of 15
              this.weaponDurability = 5;
              this.weaponSprite = null;
         } else {
@@ -321,9 +320,8 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
 
             this.safeCall('playSFX', 'gun-shot-m70', 1.0);
 
-            // FIXED: Pushed forward on the X axis to align with barrel tip
-            const spawnX = this.x + (200 * dirX);
-            const flashX = this.x + (230 * dirX);
+            const spawnX = this.x + (180 * dirX);
+            const flashX = this.x + (200 * dirX);
             const spawnY = this.y - 270;
 
             this.safeCall('spawnProjectile', this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
@@ -377,7 +375,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                     const hitX = (this.x + target.x) / 2;
                     this.safeCall('spawnBlood', hitX, target.y - 50);
                     if (target.takeDamage) target.takeDamage(25 * this.damageMultiplier);
-                    if (hitZone.body) hitZone.body.enable = false;
+                    if (hitZone.body) (hitZone.body as Phaser.Physics.Arcade.Body).enable = false;
                 }
             });
 
@@ -414,16 +412,12 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         if (this.isDead) return;
         this.setAngle(0);
 
-        // ==========================================
-        // DYNAMIC ATLAS SCALING FIX
-        // ==========================================
         const currentAnimKeyForScale = this.anims.currentAnim?.key || '';
         const currentFrameName = this.frame.name;
         
         if (currentAnimKeyForScale.includes('walk-rifle')) {
             this.setScale(1.59);
         } else if (currentFrameName.includes('pick-up')) {
-            // FIXED: Bumped up scale during pickup so she doesn't shrink when crouching!
             this.setScale(1.9); 
         } else {
             this.setScale(1.7);
@@ -563,7 +557,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 const hitX = (this.x + target.x) / 2;
                 this.safeCall('spawnHitEffect', hitX, target.y - 80);
                 if (target.takeDamage) target.takeDamage(damage);
-                if (hitZone.body) hitZone.body.enable = false;
+                if (hitZone.body) (hitZone.body as Phaser.Physics.Arcade.Body).enable = false;
             }
         });
 
@@ -599,7 +593,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 const hitX = (this.x + target.x) / 2;
                 this.safeCall('spawnHitEffect', hitX, target.y - 50);
                 if (target.takeDamage) target.takeDamage(damage);
-                if (hitZone.body) hitZone.body.enable = false;
+                if (hitZone.body) (hitZone.body as Phaser.Physics.Arcade.Body).enable = false;
             }
         });
 

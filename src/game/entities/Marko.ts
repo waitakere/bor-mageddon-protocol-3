@@ -96,7 +96,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 else if (animType === 'jump') fps = 8;
                 else if (animType === 'finish-move') fps = 24;
 
-                const frameConfig: Phaser.Types.Animations.AnimationFrameConfig[] = matchingFrames.map(f => {
+                const frameConfig = matchingFrames.map(f => {
                     return { key: this.characterName, frame: f };
                 });
 
@@ -318,7 +318,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                     const hitX = (this.x + target.x) / 2;
                     this.safeCall('spawnBlood', hitX, target.y - 50);
                     if (target.takeDamage) target.takeDamage(25 * this.damageMultiplier);
-                    if (hitZone.body) hitZone.body.enable = false;
+                    if (hitZone.body) (hitZone.body as Phaser.Physics.Arcade.Body).enable = false;
                 }
             });
 
@@ -354,6 +354,17 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     public update(input: any) {
         if (this.isDead) return;
         this.setAngle(0);
+
+        const currentAnimKeyForScale = this.anims.currentAnim?.key || '';
+        const currentFrameName = this.frame.name;
+        
+        if (currentAnimKeyForScale.includes('walk-rifle')) {
+            this.setScale(1.59);
+        } else if (currentFrameName.includes('pick-up')) {
+            this.setScale(1.9); 
+        } else {
+            this.setScale(1.7);
+        }
 
         this.positionWeaponSprite();
 
@@ -490,7 +501,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 const hitX = (this.x + target.x) / 2;
                 this.safeCall('spawnHitEffect', hitX, target.y - 80);
                 if (target.takeDamage) target.takeDamage(damage);
-                if (hitZone.body) hitZone.body.enable = false;
+                if (hitZone.body) (hitZone.body as Phaser.Physics.Arcade.Body).enable = false;
             }
         });
 
@@ -526,7 +537,7 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 const hitX = (this.x + target.x) / 2;
                 this.safeCall('spawnHitEffect', hitX, target.y - 50);
                 if (target.takeDamage) target.takeDamage(damage);
-                if (hitZone.body) hitZone.body.enable = false;
+                if (hitZone.body) (hitZone.body as Phaser.Physics.Arcade.Body).enable = false;
             }
         });
 
