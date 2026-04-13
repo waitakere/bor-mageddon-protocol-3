@@ -30,7 +30,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private runSpeed: number = CHARACTER_STATS.darko_1993.runSpeed;
 
     private jumpVelocityX: number = 0;
-    private jumpOffset: number = 0; 
+    private jumpVisualHeight: number = 0; // NEW: Safe jump tracking
 
     private lastKey: string = '';
     private lastKeyTime: number = 0;
@@ -108,11 +108,16 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                     return { key: this.characterName, frame: f };
                 });
 
+                if (animType === 'shoot-with-rifle' && frameConfig.length === 1) {
+                    // Duplicate single frame so animation system holds it properly
+                    frameConfig.push(frameConfig, frameConfig, frameConfig);
+                }
+
                 anims.create({
                     key: animKey,
                     frames: frameConfig,
                     frameRate: fps,
-                    repeat: (animType === 'idle' || animType === 'walk' || animType === 'run') ? -1 : 0
+                    repeat: (animType === 'idle' || animType === 'walk' || animType === 'run' || animType === 'walk-rifle') ? -1 : 0
                 });
             }
         });
@@ -126,7 +131,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
         if (weaponKey === 'M70-FINAL rev') {
             this.weaponDurability = 5;
-            this.weaponSprite = null;
+            this.weaponSprite = null; 
         } else {
             this.weaponDurability = 5;
             this.weaponSprite = this.scene.add.sprite(this.x, this.y, weaponKey);
@@ -377,17 +382,26 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         if (this.isDead) return;
         this.setAngle(0);
 
+        // ALWAYS strictly lock scale to prevent ballooning
         this.setScale(1.7);
-        
-        this.updateDisplayOrigin(); 
-        this.displayOriginY += this.jumpOffset;
 
-        // DYNAMIC PHYSICS ANCHOR FIX
-        // Re-aligns the hitbox to his feet every frame, canceling out the 512x512 texture scaling glitch
-        if (this.body && this.frame) {
-            const body = this.body as Phaser.Physics.Arcade.Body;
-            body.setOffset((this.width / 2) - 25, this.height - 30);
-        }
+        // =======================================================
+        // DYNAMIC ORIGIN FIX (PREVENTS FLOATING, SKYWALKING, & SLICING)
+        // =======================================================
+        const currentAnimKeyForOrigin = this.anims.currentAnim?.key.replace(`${this.characterName}-`, '') || 'idle';
+        
+        let baseOriginY = 1.0;
+        if (currentAnimKeyForOrigin === 'melee') baseOriginY = 0.75;
+        else if (currentAnimKeyForOrigin === 'finish-move') baseOriginY = 0.93;
+        else if (currentAnimKeyForOrigin === 'dying') baseOriginY = 0.96;
+        else if (currentAnimKeyForOrigin === 'jump') baseOriginY = 0.92;
+        else if (currentAnimKeyForOrigin === 'throw') baseOriginY = 0.98;
+
+        const realHeight = this.frame?.realHeight || 260; 
+        const jumpOriginShift = this.jumpVisualHeight / realHeight;
+        
+        // This flawlessly maps his feet to the ground regardless of bad Texture Packer whitespace!
+        this.setOrigin(0.5, baseOriginY + jumpOriginShift);
 
         this.positionWeaponSprite();
 
@@ -402,15 +416,16 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 this.play(`${this.characterName}-jump`, true);
             }
 
+            // Safe jump tween that manipulates the visual origin offset instead of the hardware display coordinates
             this.scene.tweens.add({
                 targets: this,
-                jumpOffset: 220,
+                jumpVisualHeight: 220, 
                 duration: 400,
                 yoyo: true,
                 ease: 'Quad.easeOut',
                 onComplete: () => {
                     this.isJumping = false;
-                    this.jumpOffset = 0; 
+                    this.jumpVisualHeight = 0; 
                     if (!this.isAttacking && this.scene.anims.exists(`${this.characterName}-idle`)) {
                         this.play(`${this.characterName}-idle`, true);
                     }
