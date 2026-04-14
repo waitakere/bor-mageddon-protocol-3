@@ -58,6 +58,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         
         if (this.body) {
             this.body.setSize(50, 30);
+            this.body.setOffset(103, 226); // Safe, hardcoded offset for 256x256 frame
             (this.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
         }
         
@@ -341,16 +342,10 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.setVelocity(0, 0);
         this.anims.stop();
         this.setFrame('darko-pick-up/frame_002.png');
-        
-        // FIX 1: Explicit scale management to fix giant AI frame output
-        this.setScale(1.0); 
-        
-        // FIX 2: Use setTint for additive blend instead of setTintFill which causes the white ghost flash
-        this.setTint(0x39ff14); 
+        this.setTint(0x39ff14);
         
         this.scene.time.delayedCall(100, () => this.clearTint());
         this.scene.time.delayedCall(300, () => {
-            this.setScale(1.7); // Restore scale
             this.isAttacking = false;
         });
     }
@@ -359,31 +354,24 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         if (this.isDead) return;
 
         this.setAngle(0);
-        
-        // FIX 3: Robust Alignment. Do NOT use += accumulation for offset.
+
+        const currentFrameName = this.frame ? this.frame.name : '';
+        if (currentFrameName.includes('pick-up')) {
+            this.setScale(1.0); 
+        } else {
+            this.setScale(1.7); 
+        }
+
+        // Let Phaser natively calculate the correct origin for trimmed frames!
         this.setOrigin(0.5, 1);
 
-        if (this.frame) {
-            let baseY = this.frame.realHeight;
-            let baseX = this.frame.realWidth / 2;
-            
-            if (this.frame.trimmed) {
-                // Safely calculate true bottom-center against trimmed AI JSON boundaries
-                baseY = this.frame.trimY + this.frame.height;
-                baseX = this.frame.trimX + (this.frame.width / 2);
-            }
-            
-            // Absolutely assign the offset to prevent endless vertical drift
-            this.displayOriginY = baseY + this.jumpVisualOffset;
-            this.displayOriginX = baseX;
+        // Safely add our visual jump offset
+        this.displayOriginY += this.jumpVisualOffset;
 
-            if (this.body) {
-                const body = this.body as Phaser.Physics.Arcade.Body;
-                body.setOffset(
-                    (this.frame.realWidth / 2) - 25,
-                    this.frame.realHeight - 30
-                );
-            }
+        // Hardcode offset to avoid NaN crashes if realWidth/realHeight properties are missing
+        if (this.body) {
+            const body = this.body as Phaser.Physics.Arcade.Body;
+            body.setOffset(103, 226); // (256/2 - 25), (256 - 30)
         }
 
         this.positionWeaponSprite();
@@ -445,8 +433,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                     this.executeJumpAttack(requestedAction);
                 }
             } else if (!this.isJumping) {
-                // FIX 4: Prevent Input Bypass by removing the hard reset of isAttacking.
-                // We simply queue the action safely to be fired when the current attack concludes.
                 if (!this.isAttacking) {
                     if (this.equippedWeapon && (requestedAction === 'punch-1' || requestedAction === 'punch-2')) {
                         this.executeWeaponAttack();
@@ -600,11 +586,10 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.once('animationcomplete', () => {
             if (hitZone.active) hitZone.destroy();
             
-            // Allow the queued action to safely execute its own SMF checks
             if (this.queuedAction) { 
                 const next = this.queuedAction; 
                 this.queuedAction = null; 
-                this.isAttacking = false; // Reset first so the next call registers properly
+                this.isAttacking = false; 
                 this.executeAction(next); 
             } else { 
                 this.isAttacking = false; 
@@ -700,7 +685,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             
             if (this.scene.anims.exists(dmgAnim)) { 
                 this.isAttacking = true; 
-                this.clearTint(); // FIX 1: Safely clear any neon pick-up tints before applying damage red
+                this.clearTint();
                 this.setTint(0xff0000);
                 this.play(dmgAnim, true); 
                 this.scene.time.delayedCall(150, () => this.clearTint());
