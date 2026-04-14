@@ -57,7 +57,9 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         
         if (this.body) {
             this.body.setSize(50, 30);
-            this.body.setOffset(this.width / 2 - 25, this.height - 30);
+            // FIX: Hardcode offset based on original 256x256 frame size. 
+            // Relying on this.width/height with a trimmed atlas causes massive jitter.
+            this.body.setOffset(128 - 25, 256 - 30); 
             (this.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
         }
         
@@ -352,11 +354,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         if (this.isDead) return;
 
         this.setAngle(0);
-        
-        // ALWAYS strictly lock scale to prevent ballooning
         this.setScale(1.7);
-        
-        // Lock origin to bottom center to match physics body natively
         this.setOrigin(0.5, 1);
 
         this.positionWeaponSprite();
@@ -372,7 +370,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 this.play(`${this.characterName}-jump`, true);
             }
 
-            // Safe jump tween: manipulates the visual origin offset instead of the hardware coordinates
             const startOriginY = this.displayOriginY;
 
             this.scene.tweens.add({
@@ -383,7 +380,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 ease: 'Quad.easeOut',
                 onComplete: () => {
                     this.isJumping = false;
-                    this.displayOriginY = startOriginY; // Snap back to safe baseline
+                    this.displayOriginY = startOriginY; 
                     
                     if (!this.isAttacking && this.scene.anims.exists(`${this.characterName}-idle`)) {
                         this.play(`${this.characterName}-idle`, true);

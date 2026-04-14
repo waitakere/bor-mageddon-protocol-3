@@ -1,45 +1,47 @@
 import React, { useEffect, useState } from 'react';
-import Phaser from 'phaser';
 
 export const PauseMenu: React.FC = () => {
   const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // FIX 1: Prevent holding the key down from spamming the pause toggle
-      if (e.repeat) return;
+      // FIX 1: Prevent holding the key down from spamming the engine
+      if (e.repeat) return; 
 
+      // Listen for 'P' or 'p'
       if (e.key.toLowerCase() === 'p') {
         const game = (window as any).phaserGame;
         
         if (!game) {
-          console.error("[PAUSE SYSTEM] Error: window.phaserGame is undefined.");
+          console.error("[PAUSE SYSTEM] Error: window.phaserGame is undefined. Make sure GameContainer sets it!");
           return;
         }
 
-        // FIX 2: Check the strict scene status directly from the engine
-        const status = game.scene.getStatus('MainLevel');
+        // FIX 2: Check strict SceneManager state instead of relying on React
+        const sceneManager = game.scene;
         
-        if (status === Phaser.Scenes.RUNNING) {
-          game.scene.pause('MainLevel');
-          setIsPaused(true);
-        } else if (status === Phaser.Scenes.PAUSED) {
-          game.scene.resume('MainLevel');
-          setIsPaused(false);
+        if (sceneManager.isActive('MainLevel')) {
+            sceneManager.pause('MainLevel');
+            setIsPaused(true);
+        } else if (sceneManager.isPaused('MainLevel')) {
+            sceneManager.resume('MainLevel');
+            setIsPaused(false);
         }
       }
     };
 
+    // Attach to window capture phase so it fires BEFORE Phaser can swallow it
     window.addEventListener('keydown', handleKeyDown, true);
+    
     return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, []);
 
   const handleResume = () => {
       const game = (window as any).phaserGame;
-      if (game && game.scene.getStatus('MainLevel') === Phaser.Scenes.PAUSED) {
+      if (game && game.scene.isPaused('MainLevel')) {
           game.scene.resume('MainLevel');
+          setIsPaused(false);
       }
-      setIsPaused(false);
   };
 
   if (!isPaused) return null;
