@@ -58,7 +58,9 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         
         if (this.body) {
             this.body.setSize(50, 30);
-            this.body.setOffset(103, 226); // Safe, hardcoded offset for 256x256 frame
+            // FIX 1: Lock the physics offset ONCE in the constructor. 
+            // Running this in update() causes collision jitter on scaled sprites.
+            this.body.setOffset(103, 226); 
             (this.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
         }
         
@@ -342,7 +344,9 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.setVelocity(0, 0);
         this.anims.stop();
         this.setFrame('darko-pick-up/frame_002.png');
-        this.setTint(0x39ff14);
+        
+        // Using setTint prevents the entire alpha channel turning into a white ghost block
+        this.setTint(0x39ff14); 
         
         this.scene.time.delayedCall(100, () => this.clearTint());
         this.scene.time.delayedCall(300, () => {
@@ -355,23 +359,25 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
         this.setAngle(0);
 
+        // FIX 2: Only scale if the scale actually changed to prevent constant physics bounds resets
         const currentFrameName = this.frame ? this.frame.name : '';
         if (currentFrameName.includes('pick-up')) {
-            this.setScale(1.0); 
+            if (this.scale !== 1.0) this.setScale(1.0); 
         } else {
-            this.setScale(1.7); 
+            if (this.scale !== 1.7) this.setScale(1.7); 
         }
 
-        // Let Phaser natively calculate the correct origin for trimmed frames!
-        this.setOrigin(0.5, 1);
-
-        // Safely add our visual jump offset
-        this.displayOriginY += this.jumpVisualOffset;
-
-        // Hardcode offset to avoid NaN crashes if realWidth/realHeight properties are missing
-        if (this.body) {
-            const body = this.body as Phaser.Physics.Arcade.Body;
-            body.setOffset(103, 226); // (256/2 - 25), (256 - 30)
+        // FIX 3: Clean Jump Math. Let Phaser natively process the complex trim data.
+        if (this.jumpVisualOffset > 0 && this.frame) {
+            this.setOrigin(0.5, 1);
+            let nativeY = this.frame.realHeight;
+            if (this.frame.trimmed) {
+                nativeY -= this.frame.trimY;
+            }
+            // Absolute assignment! NEVER use += here, or he flies into space.
+            this.displayOriginY = nativeY + this.jumpVisualOffset;
+        } else {
+            this.setOrigin(0.5, 1);
         }
 
         this.positionWeaponSprite();
@@ -685,7 +691,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             
             if (this.scene.anims.exists(dmgAnim)) { 
                 this.isAttacking = true; 
-                this.clearTint();
+                this.clearTint(); 
                 this.setTint(0xff0000);
                 this.play(dmgAnim, true); 
                 this.scene.time.delayedCall(150, () => this.clearTint());
