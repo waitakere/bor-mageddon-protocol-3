@@ -57,9 +57,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         
         if (this.body) {
             this.body.setSize(50, 30);
-            // FIX: Hardcode offset based on original 256x256 frame size. 
-            // Relying on this.width/height with a trimmed atlas causes massive jitter.
-            this.body.setOffset(128 - 25, 256 - 30); 
             (this.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
         }
         
@@ -354,8 +351,22 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         if (this.isDead) return;
 
         this.setAngle(0);
-        this.setScale(1.7);
         this.setOrigin(0.5, 1);
+
+        // FIX 1: Prevent Pickup Ballooning 
+        const currentFrameName = this.frame ? this.frame.name : '';
+        if (currentFrameName.includes('pick-up')) {
+            this.setScale(0.9); // Compress the massive AI-generated resolution frame
+        } else {
+            this.setScale(1.7); // Standard scale
+        }
+
+        // FIX 2: Dynamic Physics Hitbox Offset
+        // Binds the physics body to the feet regardless of how drastically the trimmed sourceSize dimensions change
+        if (this.body && this.frame) {
+            const body = this.body as Phaser.Physics.Arcade.Body;
+            body.setOffset(this.frame.realWidth / 2 - 25, this.frame.realHeight - 30);
+        }
 
         this.positionWeaponSprite();
 
@@ -516,8 +527,28 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     }
 
     private executeAction(action: string) {
-        if (action === 'special') { this.executeDarkoSpecial(); return; }
-        if (action === 'finisher') { this.executeDarkoFinisher(); return; }
+        // FIX 3: Enforce SMF Meter costs to prevent accidental input overlaps flashing the Finisher animation!
+        if (action === 'special') { 
+            if (this.smfMeter >= 50) {
+                this.smfMeter -= 50;
+                this.safeCall('updateReactHUD');
+                this.executeDarkoSpecial(); 
+            } else {
+                this.executeAction('punch-2'); // Fallback heavy punch
+            }
+            return; 
+        }
+        
+        if (action === 'finisher') { 
+            if (this.smfMeter >= 100) {
+                this.smfMeter = 0;
+                this.safeCall('updateReactHUD');
+                this.executeDarkoFinisher(); 
+            } else {
+                this.executeAction('kick-2'); // Fallback heavy kick
+            }
+            return; 
+        }
         
         this.isAttacking = true; this.setVelocity(0, 0);
         const animToPlay = `${this.characterName}-${action}`;
