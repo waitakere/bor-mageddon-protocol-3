@@ -12,7 +12,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     public isAttacking: boolean = false;
     public isDead: boolean = false;
     public isJumping: boolean = false;
-    public jumpVisualOffset: number = 0; // Explicit tracker for the visual leap
+    public jumpVisualOffset: number = 0;
     
     public equippedWeapon: string | null = null;
     public weaponDurability: number = 0;
@@ -58,9 +58,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         
         if (this.body) {
             this.body.setSize(50, 30);
-            // FIX: Hardcode offset based on original 256x256 frame size. 
-            // This prevents physics jitter when AI-trimmed frames change dimensions.
-            this.body.setOffset(103, 226); 
             (this.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
         }
         
@@ -344,9 +341,16 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.setVelocity(0, 0);
         this.anims.stop();
         this.setFrame('darko-pick-up/frame_002.png');
-        this.setTintFill(0x39ff14);
+        
+        // FIX 1: Explicit scale management to fix giant AI frame output
+        this.setScale(1.0); 
+        
+        // FIX 2: Use setTint for additive blend instead of setTintFill which causes the white ghost flash
+        this.setTint(0x39ff14); 
+        
         this.scene.time.delayedCall(100, () => this.clearTint());
         this.scene.time.delayedCall(300, () => {
+            this.setScale(1.7); // Restore scale
             this.isAttacking = false;
         });
     }
@@ -355,23 +359,31 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         if (this.isDead) return;
 
         this.setAngle(0);
-
-        // FIX 1: Prevent Massive Pickup Ballooning from AI generation
-        const currentFrameName = this.frame ? this.frame.name : '';
-        if (currentFrameName.includes('pick-up')) {
-            this.setScale(1.0); // Compress the huge AI frame to match standard 1.7 proportions
-        } else {
-            this.setScale(1.7); // Standard scale
-        }
-
-        // FIX 2: Universal Alignment (Locks Visuals and Physics together perfectly)
-        this.setOrigin(0.5, 1);
         
-        // Add our clean visual jump offset
-        // Phaser natively recalculates displayOriginY every frame to account for trimmed atlas bounds.
-        // Adding the offset here shifts the sprite up visually without breaking the physics body.
-        if (this.jumpVisualOffset > 0) {
-            this.displayOriginY += this.jumpVisualOffset;
+        // FIX 3: Robust Alignment. Do NOT use += accumulation for offset.
+        this.setOrigin(0.5, 1);
+
+        if (this.frame) {
+            let baseY = this.frame.realHeight;
+            let baseX = this.frame.realWidth / 2;
+            
+            if (this.frame.trimmed) {
+                // Safely calculate true bottom-center against trimmed AI JSON boundaries
+                baseY = this.frame.trimY + this.frame.height;
+                baseX = this.frame.trimX + (this.frame.width / 2);
+            }
+            
+            // Absolutely assign the offset to prevent endless vertical drift
+            this.displayOriginY = baseY + this.jumpVisualOffset;
+            this.displayOriginX = baseX;
+
+            if (this.body) {
+                const body = this.body as Phaser.Physics.Arcade.Body;
+                body.setOffset(
+                    (this.frame.realWidth / 2) - 25,
+                    this.frame.realHeight - 30
+                );
+            }
         }
 
         this.positionWeaponSprite();
@@ -433,12 +445,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                     this.executeJumpAttack(requestedAction);
                 }
             } else if (!this.isJumping) {
-                if (this.isAttacking && (requestedAction === 'special' || requestedAction === 'finisher')) {
-                    this.isAttacking = false;
-                    const oldZone = this.scene.children.getByName('basicAttackZone');
-                    if (oldZone) oldZone.destroy();
-                }
-                
+                // FIX 4: Prevent Input Bypass by removing the hard reset of isAttacking.
+                // We simply queue the action safely to be fired when the current attack concludes.
                 if (!this.isAttacking) {
                     if (this.equippedWeapon && (requestedAction === 'punch-1' || requestedAction === 'punch-2')) {
                         this.executeWeaponAttack();
@@ -531,14 +539,13 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     }
 
     private executeAction(action: string) {
-        // FIX 3: Strictly enforce SMF Meter costs to prevent input overlaps flashing the Finisher animation!
         if (action === 'special') { 
             if (this.smfMeter >= 50) {
                 this.smfMeter -= 50;
                 this.safeCall('updateReactHUD');
                 this.executeDarkoSpecial(); 
             } else {
-                this.executeAction('punch-2'); // Fallback to heavy punch if lacking SMF
+                this.executeAction('punch-2'); 
             }
             return; 
         }
@@ -549,7 +556,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 this.safeCall('updateReactHUD');
                 this.executeDarkoFinisher(); 
             } else {
-                this.executeAction('kick-2'); // Fallback to heavy kick if lacking SMF
+                this.executeAction('kick-2'); 
             }
             return; 
         }
@@ -592,8 +599,16 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         
         this.once('animationcomplete', () => {
             if (hitZone.active) hitZone.destroy();
-            if (this.queuedAction) { const next = this.queuedAction; this.queuedAction = null; this.executeAction(next); }
-            else { this.isAttacking = false; }
+            
+            // Allow the queued action to safely execute its own SMF checks
+            if (this.queuedAction) { 
+                const next = this.queuedAction; 
+                this.queuedAction = null; 
+                this.isAttacking = false; // Reset first so the next call registers properly
+                this.executeAction(next); 
+            } else { 
+                this.isAttacking = false; 
+            }
         });
     }
 
@@ -683,7 +698,14 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             this.safeCall('playSFX', this.grunts);
             const dmgAnim = `${this.characterName}-damage`;
             
-            if (this.scene.anims.exists(dmgAnim)) { this.isAttacking = true; this.play(dmgAnim, true); this.once('animationcomplete', () => { this.isAttacking = false; }); }
+            if (this.scene.anims.exists(dmgAnim)) { 
+                this.isAttacking = true; 
+                this.clearTint(); // FIX 1: Safely clear any neon pick-up tints before applying damage red
+                this.setTint(0xff0000);
+                this.play(dmgAnim, true); 
+                this.scene.time.delayedCall(150, () => this.clearTint());
+                this.once('animationcomplete', () => { this.isAttacking = false; }); 
+            }
             else { this.setTint(0xff0000); this.scene.time.delayedCall(200, () => this.clearTint()); }
         }
         this.safeCall('updateReactHUD');
