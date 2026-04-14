@@ -12,6 +12,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     public isAttacking: boolean = false;
     public isDead: boolean = false;
     public isJumping: boolean = false;
+    public jumpVisualOffset: number = 0; // Added explicit tracker for the visual leap
     
     public equippedWeapon: string | null = null;
     public weaponDurability: number = 0;
@@ -53,7 +54,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         scene.physics.add.existing(this);
         
         this.setOrigin(0.5, 1);
-        this.setScale(1.7);
         
         if (this.body) {
             this.body.setSize(50, 30);
@@ -192,10 +192,10 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         const currentAnimKey = this.anims.currentAnim?.key.replace(`${this.characterName}-`, '') || 'idle';
         const currentFrameName = this.frame.name;
         const dirX = this.flipX ? -1 : 1;
-        const jumpVisualOffset = this.height - this.displayOriginY;
         
         let targetX = this.x;
-        let targetY = this.y + jumpVisualOffset;
+        // Apply the visual jump offset cleanly
+        let targetY = this.y - this.jumpVisualOffset; 
         let targetAngle = 0;
         
         if (['special-attack', 'finish-move', 'jump-punch', 'jump-kick', 'knockdown-get-up'].includes(currentAnimKey) || currentFrameName.includes('pick-up') || this.equippedWeapon === 'M70-FINAL rev') {
@@ -351,21 +351,40 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         if (this.isDead) return;
 
         this.setAngle(0);
-        this.setOrigin(0.5, 1);
 
-        // FIX 1: Prevent Pickup Ballooning 
+        // FIX 1: Prevent Massive Pickup Ballooning from AI generation
         const currentFrameName = this.frame ? this.frame.name : '';
         if (currentFrameName.includes('pick-up')) {
-            this.setScale(0.9); // Compress the massive AI-generated resolution frame
+            this.setScale(0.9);
         } else {
-            this.setScale(1.7); // Standard scale
+            this.setScale(1.7);
         }
 
-        // FIX 2: Dynamic Physics Hitbox Offset
-        // Binds the physics body to the feet regardless of how drastically the trimmed sourceSize dimensions change
-        if (this.body && this.frame) {
-            const body = this.body as Phaser.Physics.Arcade.Body;
-            body.setOffset(this.frame.realWidth / 2 - 25, this.frame.realHeight - 30);
+        // FIX 2: Universal Alignment (Locks Visuals and Physics together perfectly)
+        if (this.frame) {
+            let baseY = this.frame.realHeight;
+            let baseX = this.frame.realWidth / 2;
+            
+            if (this.frame.trimmed) {
+                // If trimmed, anchor the exact bottom-center of the drawn pixels to this.y
+                baseY = this.frame.trimY + this.frame.height;
+                baseX = this.frame.trimX + (this.frame.width / 2);
+            }
+            
+            this.displayOriginY = baseY + this.jumpVisualOffset;
+            this.displayOriginX = baseX;
+
+            if (this.body) {
+                const body = this.body as Phaser.Physics.Arcade.Body;
+                const unscaledBodyW = 50;
+                const unscaledBodyH = 30;
+                
+                // Align the physics body offset with the original unscaled image dimensions
+                body.setOffset(
+                    (this.frame.realWidth / 2) - (unscaledBodyW / 2),
+                    this.frame.realHeight - unscaledBodyH
+                );
+            }
         }
 
         this.positionWeaponSprite();
@@ -381,17 +400,15 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 this.play(`${this.characterName}-jump`, true);
             }
 
-            const startOriginY = this.displayOriginY;
-
             this.scene.tweens.add({
                 targets: this,
-                displayOriginY: startOriginY + 220,
+                jumpVisualOffset: 220,
                 duration: 400,
                 yoyo: true,
                 ease: 'Quad.easeOut',
                 onComplete: () => {
                     this.isJumping = false;
-                    this.displayOriginY = startOriginY; 
+                    this.jumpVisualOffset = 0; 
                     
                     if (!this.isAttacking && this.scene.anims.exists(`${this.characterName}-idle`)) {
                         this.play(`${this.characterName}-idle`, true);
@@ -527,14 +544,14 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     }
 
     private executeAction(action: string) {
-        // FIX 3: Enforce SMF Meter costs to prevent accidental input overlaps flashing the Finisher animation!
+        // FIX 3: Enforce SMF Meter costs to prevent accidental input overlaps flashing the animations!
         if (action === 'special') { 
             if (this.smfMeter >= 50) {
                 this.smfMeter -= 50;
                 this.safeCall('updateReactHUD');
                 this.executeDarkoSpecial(); 
             } else {
-                this.executeAction('punch-2'); // Fallback heavy punch
+                this.executeAction('punch-2'); 
             }
             return; 
         }
@@ -545,7 +562,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 this.safeCall('updateReactHUD');
                 this.executeDarkoFinisher(); 
             } else {
-                this.executeAction('kick-2'); // Fallback heavy kick
+                this.executeAction('kick-2'); 
             }
             return; 
         }
