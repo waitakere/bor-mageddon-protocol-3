@@ -9,7 +9,11 @@ export const PauseMenu: React.FC = () => {
 
       if (e.key.toLowerCase() === 'p') {
         const game = (window as any).phaserGame;
-        if (!game) return;
+        
+        if (!game) {
+          console.error("[PAUSE SYSTEM] Error: window.phaserGame is undefined. Make sure GameContainer sets it!");
+          return;
+        }
 
         const sceneManager = game.scene;
         
@@ -24,6 +28,7 @@ export const PauseMenu: React.FC = () => {
     };
 
     window.addEventListener('keydown', handleKeyDown, true);
+    
     return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, []);
 
@@ -53,9 +58,8 @@ export const PauseMenu: React.FC = () => {
         </div>
         
         <button 
-            autoFocus 
             onClick={handleResume} 
-            className="bg-[#ff3333] text-black border-none py-[20px] px-[40px] cursor-pointer shadow-[8px_8px_0px_#660000] text-[24px] font-mono font-bold hover:bg-white hover:shadow-[8px_8px_0px_#ff3333] transition-all focus:outline-none focus:ring-4 focus:ring-white"
+            className="bg-[#ff3333] text-black border-none py-[20px] px-[40px] cursor-pointer shadow-[8px_8px_0px_#660000] text-[24px] font-mono font-bold hover:bg-white hover:shadow-[8px_8px_0px_#ff3333] transition-all"
         >
           RESUME PROTOCOL
         </button>
