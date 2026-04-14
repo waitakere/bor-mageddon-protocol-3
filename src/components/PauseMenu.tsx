@@ -1,24 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import Phaser from 'phaser'; 
 
 export const PauseMenu: React.FC = () => {
   const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // FIX: Block browser key-repeat from spamming the engine
       if (e.repeat) return; 
 
       if (e.key.toLowerCase() === 'p') {
-        e.stopPropagation();
-        e.preventDefault();
-        
         const game = (window as any).phaserGame;
         if (!game) return;
 
         const sceneManager = game.scene;
         
-        // Strict SceneManager check instead of relying on !prevPaused
         if (sceneManager.isActive('MainLevel')) {
             sceneManager.pause('MainLevel');
             setIsPaused(true);
@@ -59,8 +53,9 @@ export const PauseMenu: React.FC = () => {
         </div>
         
         <button 
+            autoFocus 
             onClick={handleResume} 
-            className="bg-[#ff3333] text-black border-none py-[20px] px-[40px] cursor-pointer shadow-[8px_8px_0px_#660000] text-[24px] font-mono font-bold hover:bg-white hover:shadow-[8px_8px_0px_#ff3333] transition-all"
+            className="bg-[#ff3333] text-black border-none py-[20px] px-[40px] cursor-pointer shadow-[8px_8px_0px_#660000] text-[24px] font-mono font-bold hover:bg-white hover:shadow-[8px_8px_0px_#ff3333] transition-all focus:outline-none focus:ring-4 focus:ring-white"
         >
           RESUME PROTOCOL
         </button>
