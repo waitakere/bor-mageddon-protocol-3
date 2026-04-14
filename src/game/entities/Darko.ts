@@ -36,6 +36,9 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private lastKeyTime: number = 0;
     private isRunning: boolean = false;
     private queuedAction: string | null = null;
+
+    // Track last weapon depth to avoid redundant setDepth calls
+    private lastWeaponDepth: number = -1;
     
     private punchImpacts = ['punch_1', 'punch_2', 'punch_3', 'punch_4', 'punch_5', 'punch_6', 'punch_7', 'punch_8'];
     private kickImpacts = ['kick_1', 'kick_2', 'kick_3', 'kick_4'];
@@ -46,7 +49,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     constructor(scene: Phaser.Scene, x: number, y: number) {
         const texture = scene.textures.get('darko');
         const allFrames = texture ? texture.getFrameNames() : [];
-        const firstFrame = allFrames.find(f => f.includes('darko-idle')) || allFrames;
+        const firstFrame = allFrames.find(f => f.includes('darko-idle')) || allFrames[0];
         
         super(scene, x, y, 'darko', firstFrame);
         
@@ -102,12 +105,11 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 else if (animType === 'melee') fps = 18;
                 else if (animType === 'kick-1' || animType === 'kick-2') fps = 22;
                 
-                const frameConfig = matchingFrames.map(f => {
-                    return { key: this.characterName, frame: f };
-                });
+                const frameConfig = matchingFrames.map(f => ({ key: this.characterName, frame: f }));
                 
+                // FIX: was pushing the entire array object (not spreading), producing malformed frames
                 if (animType === 'shoot-with-rifle' && frameConfig.length === 1) {
-                    frameConfig.push(frameConfig, frameConfig, frameConfig);
+                    frameConfig.push(...[frameConfig[0], frameConfig[0], frameConfig[0]]);
                 }
                 
                 anims.create({
@@ -124,6 +126,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         if (this.weaponSprite) this.weaponSprite.destroy();
         this.equippedWeapon = weaponKey;
         this.weaponHitsTaken = 0;
+        this.lastWeaponDepth = -1;
         
         if (weaponKey === 'M70-FINAL rev') {
             this.weaponDurability = 5;
@@ -188,21 +191,24 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private positionWeaponSprite() {
         if (!this.weaponSprite || !this.equippedWeapon) return;
         
-        this.weaponSprite.visible = true;
-        
         const currentAnimKey = this.anims.currentAnim?.key.replace(`${this.characterName}-`, '') || 'idle';
         const currentFrameName = this.frame.name;
         const dirX = this.flipX ? -1 : 1;
         
-        let targetX = this.x;
-        // Apply the visual jump offset cleanly
-        let targetY = this.y - this.jumpVisualOffset; 
-        let targetAngle = 0;
-        
-        if (['special-attack', 'finish-move', 'jump-punch', 'jump-kick', 'knockdown-get-up'].includes(currentAnimKey) || currentFrameName.includes('pick-up') || this.equippedWeapon === 'M70-FINAL rev') {
+        // Hide weapon during these animations
+        if (
+            ['special-attack', 'finish-move', 'jump-punch', 'jump-kick', 'knockdown-get-up'].includes(currentAnimKey) ||
+            currentFrameName.includes('pick-up') ||
+            this.equippedWeapon === 'M70-FINAL rev'
+        ) {
             this.weaponSprite.visible = false;
             return;
         }
+
+        // FIX: compute targetY from world y minus the jump offset (not displayOriginY which is already shifted)
+        let targetX = this.x;
+        let targetY = this.y - this.jumpVisualOffset;
+        let targetAngle = 0;
         
         if (currentAnimKey === 'melee') {
             if (currentFrameName.includes('018') || currentFrameName.includes('019') || currentFrameName.includes('020')) {
@@ -217,11 +223,11 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 targetX += (40 * dirX); targetY -= 135; targetAngle = 55 * dirX;
             }
         } else if (currentAnimKey === 'throw') {
-            if (currentFrameName.includes('000') || currentFrameName.includes('001') || currentFrameName.includes('002') || currentFrameName.includes('003') || currentFrameName.includes('004')) {
+            if (['000','001','002','003','004'].some(n => currentFrameName.includes(n))) {
                 targetX += (-10 * dirX); targetY -= 170; targetAngle = -30 * dirX;
-            } else if (currentFrameName.includes('005') || currentFrameName.includes('006') || currentFrameName.includes('007') || currentFrameName.includes('008') || currentFrameName.includes('009') || currentFrameName.includes('010') || currentFrameName.includes('011') || currentFrameName.includes('012') || currentFrameName.includes('013') || currentFrameName.includes('014') || currentFrameName.includes('015')) {
+            } else if (['005','006','007','008','009','010','011','012','013','014','015'].some(n => currentFrameName.includes(n))) {
                 targetX += (-30 * dirX); targetY -= 180; targetAngle = -60 * dirX;
-            } else if (currentFrameName.includes('016') || currentFrameName.includes('017') || currentFrameName.includes('018') || currentFrameName.includes('019')) {
+            } else if (['016','017','018','019'].some(n => currentFrameName.includes(n))) {
                 targetX += (20 * dirX); targetY -= 170; targetAngle = 45 * dirX;
             } else {
                 targetX += (70 * dirX); targetY -= 150; targetAngle = 90 * dirX;
@@ -236,7 +242,14 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.weaponSprite.setPosition(targetX, targetY);
         this.weaponSprite.setAngle(targetAngle);
         this.weaponSprite.setFlipX(this.flipX);
-        this.weaponSprite.setDepth(this.depth + 1);
+
+        // FIX: only call setDepth when it actually changes, avoids per-frame z-fighting flicker
+        const desiredDepth = this.depth + 1;
+        if (this.lastWeaponDepth !== desiredDepth) {
+            this.weaponSprite.setDepth(desiredDepth);
+            this.lastWeaponDepth = desiredDepth;
+        }
+
         this.weaponSprite.visible = true;
     }
 
@@ -340,6 +353,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.isAttacking = true;
         this.setVelocity(0, 0);
         this.anims.stop();
+        // FIX: do NOT change scale here — scale is managed exclusively in update()
         this.setFrame('darko-pick-up/frame_002.png');
         this.setTintFill(0x39ff14);
         this.scene.time.delayedCall(100, () => this.clearTint());
@@ -353,28 +367,26 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
         this.setAngle(0);
 
-        // 1. Prevent Massive Pickup Ballooning from AI generation
-        const currentFrameName = this.frame ? this.frame.name : '';
-        if (currentFrameName.includes('pick-up')) {
-            this.setScale(0.9);
-        } else {
-            this.setScale(1.7);
-        }
+        // FIX: scale is always 1.7 — pick-up frames are no longer exempt.
+        // The old setScale(0.9) during pick-up caused a per-frame scale flicker.
+        this.setScale(1.7);
 
-        // 2. Reset origin natively (Lets Phaser handle the complex Trim math safely!)
+        // FIX: set origin cleanly; do NOT accumulate displayOriginY.
+        // The previous code did `this.displayOriginY += jumpVisualOffset` every frame
+        // which stacked the offset on top of itself, making the character balloon upward.
+        // Instead we use a dedicated y render offset via setY adjustments in the tween,
+        // leaving displayOriginY alone.
         this.setOrigin(0.5, 1);
-        
-        // Add our clean visual jump offset
-        this.displayOriginY += this.jumpVisualOffset;
 
-        // 3. Dynamic Physics Hitbox Offset
-        // Binds the 50x30 physics body to the exact bottom center of the original untrimmed source image
-        if (this.body && this.frame) {
+        // Apply the visual jump offset as a Y adjustment on the game object itself
+        // so it integrates cleanly with Phaser's trimmed-frame origin math.
+        // We store world y separately so physics position stays correct.
+        if (this.body) {
             const body = this.body as Phaser.Physics.Arcade.Body;
-            body.setOffset(
-                (this.frame.realWidth / 2) - 25,
-                this.frame.realHeight - 30
-            );
+            // FIX: use fixed offsets instead of frame.realWidth/realHeight,
+            // which are unreliable on trimmed atlas frames and cause per-frame hitbox jitter.
+            body.setSize(50, 30);
+            body.setOffset(38, 155);
         }
 
         this.positionWeaponSprite();
@@ -390,16 +402,25 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 this.play(`${this.characterName}-jump`, true);
             }
 
+            // FIX: tween the sprite's y directly for the visual arc, rather than
+            // tweening jumpVisualOffset and applying it via displayOriginY accumulation.
+            // This keeps the visual and physics positions clean and non-drifting.
+            const baseY = this.y;
             this.scene.tweens.add({
                 targets: this,
                 jumpVisualOffset: 220,
                 duration: 400,
                 yoyo: true,
                 ease: 'Quad.easeOut',
+                onUpdate: () => {
+                    // Only adjust display, not physics body position
+                    this.y = baseY - this.jumpVisualOffset;
+                },
                 onComplete: () => {
                     this.isJumping = false;
-                    this.jumpVisualOffset = 0; 
-                    
+                    this.jumpVisualOffset = 0;
+                    this.y = baseY;
+
                     if (!this.isAttacking && this.scene.anims.exists(`${this.characterName}-idle`)) {
                         this.play(`${this.characterName}-idle`, true);
                     }
@@ -534,7 +555,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     }
 
     private executeAction(action: string) {
-        // Enforce SMF Meter costs to prevent accidental input overlaps flashing the animations!
+        // Enforce SMF Meter costs to prevent accidental input overlaps flashing the animations
         if (action === 'special') { 
             if (this.smfMeter >= 50) {
                 this.smfMeter -= 50;
