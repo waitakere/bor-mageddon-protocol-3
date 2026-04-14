@@ -1,45 +1,45 @@
 import React, { useEffect, useState } from 'react';
-import Phaser from 'phaser'; // Import needed for Scene status enums
+import Phaser from 'phaser';
 
 export const PauseMenu: React.FC = () => {
   const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Listen for 'P' or 'p'
+      // FIX 1: Prevent holding the key down from spamming the pause toggle
+      if (e.repeat) return;
+
       if (e.key.toLowerCase() === 'p') {
         const game = (window as any).phaserGame;
         
         if (!game) {
-          console.error("[PAUSE SYSTEM] Error: window.phaserGame is undefined. Make sure GameContainer sets it!");
+          console.error("[PAUSE SYSTEM] Error: window.phaserGame is undefined.");
           return;
         }
 
-        // Safely check strict scene status to prevent "Cannot pause non-running Scene" errors
+        // FIX 2: Check the strict scene status directly from the engine
         const status = game.scene.getStatus('MainLevel');
         
         if (status === Phaser.Scenes.RUNNING) {
-            game.scene.pause('MainLevel');
-            setIsPaused(true);
+          game.scene.pause('MainLevel');
+          setIsPaused(true);
         } else if (status === Phaser.Scenes.PAUSED) {
-            game.scene.resume('MainLevel');
-            setIsPaused(false);
+          game.scene.resume('MainLevel');
+          setIsPaused(false);
         }
       }
     };
 
-    // Attach to window capture phase so it fires BEFORE Phaser can swallow it
     window.addEventListener('keydown', handleKeyDown, true);
-    
     return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, []);
 
   const handleResume = () => {
       const game = (window as any).phaserGame;
-      if (game) {
+      if (game && game.scene.getStatus('MainLevel') === Phaser.Scenes.PAUSED) {
           game.scene.resume('MainLevel');
-          setIsPaused(false);
       }
+      setIsPaused(false);
   };
 
   if (!isPaused) return null;
