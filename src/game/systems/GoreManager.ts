@@ -13,16 +13,16 @@ export class GoreManager {
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
 
-        // 1. SAFELY generate the pixel texture, preventing WebGL immutable errors on HMR
+        // FIX: Safely destroy existing textures to prevent WebGL immutable errors during React Fast Refresh
         if (this.scene.textures.exists('pixel_particle')) {
-            this.scene.textures.remove('pixel_particle'); // Clear stale WebGL bindings
+            this.scene.textures.remove('pixel_particle');
         }
-        
+
         const graphics = this.scene.make.graphics({ x: 0, y: 0, add: false });
         graphics.fillStyle(0xffffff, 1);
         graphics.fillRect(0, 0, 4, 4);
         graphics.generateTexture('pixel_particle', 4, 4);
-        graphics.destroy(); // CRITICAL: Prevent memory leak and massive box rendering
+        graphics.destroy(); // CRITICAL: Prevent memory leak of the graphics object
 
         // 2. Organic Blood Splatter (Red/Dark Red)
         this.bloodParticles = this.scene.add.particles(0, 0, 'pixel_particle', {
@@ -31,10 +31,10 @@ export class GoreManager {
             scale: { start: 1, end: 0 },
             lifespan: 400,
             gravityY: 600,
-            emitting: false, // Replaces 'quantity: 0' for modern Phaser versions
+            emitting: false, 
             blendMode: 'NORMAL'
         });
-        this.bloodParticles.setDepth(9999); // Always draw blood on top of everything
+        this.bloodParticles.setDepth(9999); 
 
         // 3. Industrial Debris/Sparks (Yellow/Orange/Grey)
         this.debrisParticles = this.scene.add.particles(0, 0, 'pixel_particle', {
@@ -44,11 +44,11 @@ export class GoreManager {
             lifespan: 300,
             gravityY: 400,
             emitting: false,
-            blendMode: 'ADD' // Makes sparks glow!
+            blendMode: 'ADD' 
         });
         this.debrisParticles.setDepth(9999);
 
-        // 4. Persistent Dust Emitter (Fixes the memory leak!)
+        // 4. Persistent Dust Emitter 
         this.dustParticles = this.scene.add.particles(0, 0, 'pixel_particle', {
             color: [0x444444, 0x666666],
             alpha: { start: 0.5, end: 0 },
@@ -57,10 +57,9 @@ export class GoreManager {
             lifespan: 800,
             emitting: false
         });
-        this.dustParticles.setDepth(1); // Dust should stay near the ground, under characters
+        this.dustParticles.setDepth(1); 
 
         // 5. Global Event Listeners
-        // This listens to the exact same event we set up in Player.ts and BreakableObject.ts
         this.scene.events.on('spawn-gore', this.handleGoreEvent, this);
         this.scene.events.on('spawn-dust', this.spawnDustCloud, this);
 
@@ -68,24 +67,15 @@ export class GoreManager {
         this.scene.events.on('shutdown', this.cleanup, this);
     }
 
-    /**
-     * Routes the global 'spawn-gore' event to the correct particle emitter.
-     */
     private handleGoreEvent(data: { x: number, y: number, type: string }) {
         if (data.type === 'CLASSIC' || data.type === 'HIT') {
-            // Blood burst
             this.bloodParticles.emitParticleAt(data.x, data.y, Phaser.Math.Between(8, 15));
-            // Brief screen shake for "weighty" hits
             this.scene.cameras.main.shake(100, 0.005);
         } else {
-            // Sparks/Debris burst (BUREAUCRATIC or INDUSTRIAL)
             this.debrisParticles.emitParticleAt(data.x, data.y, Phaser.Math.Between(10, 20));
         }
     }
 
-    /**
-     * Specialized "Industrial Dust" for the road belt movement.
-     */
     public spawnDustCloud(data: { x: number, y: number }) {
         this.dustParticles.emitParticleAt(data.x, data.y, 5);
     }
