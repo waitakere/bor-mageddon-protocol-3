@@ -13,13 +13,16 @@ export class GoreManager {
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
 
-        // 1. FAILSAFE: Programmatically generate the pixel texture if it doesn't exist
-        if (!this.scene.textures.exists('pixel_particle')) {
-            const graphics = this.scene.make.graphics({ x: 0, y: 0, add: false });
-            graphics.fillStyle(0xffffff, 1);
-            graphics.fillRect(0, 0, 4, 4);
-            graphics.generateTexture('pixel_particle', 4, 4);
+        // 1. SAFELY generate the pixel texture, preventing WebGL immutable errors on HMR
+        if (this.scene.textures.exists('pixel_particle')) {
+            this.scene.textures.remove('pixel_particle'); // Clear stale WebGL bindings
         }
+        
+        const graphics = this.scene.make.graphics({ x: 0, y: 0, add: false });
+        graphics.fillStyle(0xffffff, 1);
+        graphics.fillRect(0, 0, 4, 4);
+        graphics.generateTexture('pixel_particle', 4, 4);
+        graphics.destroy(); // CRITICAL: Prevent memory leak and massive box rendering
 
         // 2. Organic Blood Splatter (Red/Dark Red)
         this.bloodParticles = this.scene.add.particles(0, 0, 'pixel_particle', {

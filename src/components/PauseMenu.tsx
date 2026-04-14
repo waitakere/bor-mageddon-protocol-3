@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Phaser from 'phaser'; // Import needed for Scene status enums
 
 export const PauseMenu: React.FC = () => {
   const [isPaused, setIsPaused] = useState(false);
@@ -14,16 +15,16 @@ export const PauseMenu: React.FC = () => {
           return;
         }
 
-        // Toggle state safely
-        setIsPaused((prevPaused) => {
-          const nextPausedState = !prevPaused;
-          if (nextPausedState) {
+        // Safely check strict scene status to prevent "Cannot pause non-running Scene" errors
+        const status = game.scene.getStatus('MainLevel');
+        
+        if (status === Phaser.Scenes.RUNNING) {
             game.scene.pause('MainLevel');
-          } else {
+            setIsPaused(true);
+        } else if (status === Phaser.Scenes.PAUSED) {
             game.scene.resume('MainLevel');
-          }
-          return nextPausedState;
-        });
+            setIsPaused(false);
+        }
       }
     };
 
@@ -46,7 +47,7 @@ export const PauseMenu: React.FC = () => {
   return (
     <div 
         id="pause-overlay" 
-        className="fixed inset-0 z-[4000] bg-black/85 backdrop-blur-sm flex justify-center items-center"
+        className="fixed inset-0 z- bg-black/85 backdrop-blur-sm flex justify-center items-center"
     >
       <div className="text-center border-[4px] border-double border-[#ff3333] p-[60px] bg-[#1a0a05] shadow-[0_0_50px_rgba(255,51,51,0.2)]">
         
