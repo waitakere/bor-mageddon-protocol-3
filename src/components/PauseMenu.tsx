@@ -1,25 +1,24 @@
 import React, { useEffect, useState } from 'react';
+import Phaser from 'phaser'; 
 
 export const PauseMenu: React.FC = () => {
   const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // FIX 1: Prevent holding the key down from spamming the engine
+      // FIX: Block browser key-repeat from spamming the engine
       if (e.repeat) return; 
 
-      // Listen for 'P' or 'p'
       if (e.key.toLowerCase() === 'p') {
-        const game = (window as any).phaserGame;
+        e.stopPropagation();
+        e.preventDefault();
         
-        if (!game) {
-          console.error("[PAUSE SYSTEM] Error: window.phaserGame is undefined. Make sure GameContainer sets it!");
-          return;
-        }
+        const game = (window as any).phaserGame;
+        if (!game) return;
 
-        // FIX 2: Check strict SceneManager state instead of relying on React
         const sceneManager = game.scene;
         
+        // Strict SceneManager check instead of relying on !prevPaused
         if (sceneManager.isActive('MainLevel')) {
             sceneManager.pause('MainLevel');
             setIsPaused(true);
@@ -30,9 +29,7 @@ export const PauseMenu: React.FC = () => {
       }
     };
 
-    // Attach to window capture phase so it fires BEFORE Phaser can swallow it
     window.addEventListener('keydown', handleKeyDown, true);
-    
     return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, []);
 
