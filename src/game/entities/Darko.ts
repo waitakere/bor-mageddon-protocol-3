@@ -37,6 +37,9 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private isRunning: boolean = false;
     private queuedAction: string | null = null;
     
+    // Tints
+    private tintClearTimer: Phaser.Time.TimerEvent | null = null;
+    
     private punchImpacts = ['punch_1', 'punch_2', 'punch_3', 'punch_4', 'punch_5', 'punch_6', 'punch_7', 'punch_8'];
     private kickImpacts = ['kick_1', 'kick_2', 'kick_3', 'kick_4'];
     private grunts = ['grunt_m_1', 'grunt_m_2', 'grunt_m_3', 'grunt_m_4'];
@@ -58,9 +61,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         
         if (this.body) {
             this.body.setSize(50, 30);
-            // FIX 1: Lock the physics offset ONCE in the constructor. 
-            // Running this in update() causes collision jitter on scaled sprites.
-            this.body.setOffset(103, 226); 
+            this.body.setOffset(103, 226); // Hardcoded safe offset
             (this.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
         }
         
@@ -345,10 +346,14 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.anims.stop();
         this.setFrame('darko-pick-up/frame_002.png');
         
-        // Using setTint prevents the entire alpha channel turning into a white ghost block
+        // FIX 1: Safely clear any existing damage tints to avoid WebGL overlap
+        this.clearTint();
+        if (this.tintClearTimer) this.tintClearTimer.remove();
+        
+        // FIX 2: Use setTint instead of setTintFill to avoid the solid white artifact
         this.setTint(0x39ff14); 
         
-        this.scene.time.delayedCall(100, () => this.clearTint());
+        this.tintClearTimer = this.scene.time.delayedCall(100, () => this.clearTint());
         this.scene.time.delayedCall(300, () => {
             this.isAttacking = false;
         });
@@ -359,25 +364,35 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
         this.setAngle(0);
 
-        // FIX 2: Only scale if the scale actually changed to prevent constant physics bounds resets
+        // FIX 3: Prevent Pick-up Scale fighting. Only call setScale if it differs.
         const currentFrameName = this.frame ? this.frame.name : '';
-        if (currentFrameName.includes('pick-up')) {
-            if (this.scale !== 1.0) this.setScale(1.0); 
-        } else {
-            if (this.scale !== 1.7) this.setScale(1.7); 
+        const targetScale = currentFrameName.includes('pick-up') ? 1.0 : 1.7;
+        
+        if (this.scale !== targetScale) {
+            this.setScale(targetScale);
         }
 
-        // FIX 3: Clean Jump Math. Let Phaser natively process the complex trim data.
-        if (this.jumpVisualOffset > 0 && this.frame) {
-            this.setOrigin(0.5, 1);
-            let nativeY = this.frame.realHeight;
+        // FIX 4: Correct Origin and Visual Jump Offset
+        this.setOrigin(0.5, 1);
+        
+        if (this.frame) {
+            let baseY = this.frame.realHeight;
+            let baseX = this.frame.realWidth / 2;
+            
             if (this.frame.trimmed) {
-                nativeY -= this.frame.trimY;
+                // Determine exact pixel anchor
+                baseY = this.frame.trimY + this.frame.height;
+                baseX = this.frame.trimX + (this.frame.width / 2);
             }
-            // Absolute assignment! NEVER use += here, or he flies into space.
-            this.displayOriginY = nativeY + this.jumpVisualOffset;
-        } else {
-            this.setOrigin(0.5, 1);
+            
+            // Absolute assignment prevents infinite '+=' accumulation
+            this.displayOriginY = baseY + this.jumpVisualOffset;
+            this.displayOriginX = baseX;
+
+            if (this.body) {
+                const body = this.body as Phaser.Physics.Arcade.Body;
+                body.setOffset(103, 226); // Hardcoded safe offset
+            }
         }
 
         this.positionWeaponSprite();
@@ -589,13 +604,14 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             }
         });
         
+        // FIX 5: Safely cascade the queued actions
         this.once('animationcomplete', () => {
             if (hitZone.active) hitZone.destroy();
             
             if (this.queuedAction) { 
                 const next = this.queuedAction; 
                 this.queuedAction = null; 
-                this.isAttacking = false; 
+                this.isAttacking = false; // Reset to allow the new action to fire
                 this.executeAction(next); 
             } else { 
                 this.isAttacking = false; 
@@ -692,12 +708,13 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             if (this.scene.anims.exists(dmgAnim)) { 
                 this.isAttacking = true; 
                 this.clearTint(); 
+                if (this.tintClearTimer) this.tintClearTimer.remove();
                 this.setTint(0xff0000);
                 this.play(dmgAnim, true); 
-                this.scene.time.delayedCall(150, () => this.clearTint());
+                this.tintClearTimer = this.scene.time.delayedCall(150, () => this.clearTint());
                 this.once('animationcomplete', () => { this.isAttacking = false; }); 
             }
-            else { this.setTint(0xff0000); this.scene.time.delayedCall(200, () => this.clearTint()); }
+            else { this.setTint(0xff0000); this.tintClearTimer = this.scene.time.delayedCall(200, () => this.clearTint()); }
         }
         this.safeCall('updateReactHUD');
     }
@@ -721,11 +738,17 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             
             if (this.scene.anims.exists(anim)) {
                 this.isAttacking = true;
+                this.clearTint();
+                if (this.tintClearTimer) this.tintClearTimer.remove();
+                this.setTint(0xff0000);
                 this.play(anim, true);
+                this.tintClearTimer = this.scene.time.delayedCall(150, () => this.clearTint());
                 this.once('animationcomplete', () => { this.isAttacking = false; });
             } else {
+                this.clearTint();
+                if (this.tintClearTimer) this.tintClearTimer.remove();
                 this.setTint(0xff0000);
-                this.scene.time.delayedCall(200, () => this.clearTint());
+                this.tintClearTimer = this.scene.time.delayedCall(200, () => this.clearTint());
             }
         }
         this.safeCall('updateReactHUD');
