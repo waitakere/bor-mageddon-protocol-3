@@ -13,11 +13,10 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     public isDead: boolean = false;
     public isJumping: boolean = false;
 
-    // jumpVisualOffset is retained as a public property so the Phaser tween target
-    // still compiles. It is NOT used to drive displayOriginY. The tween drives this.y.
+    // Retained for any external HUD/Camera references, but no longer drives WebGL origins
     public jumpVisualOffset: number = 0;
 
-    // Ground Y captured at take-off so the tween can restore it exactly on landing.
+    // Ground Y captured at take-off so the tween can restore it exactly on landing
     private jumpGroundY: number = 0;
 
     public equippedWeapon: string | null = null;
@@ -43,10 +42,10 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private isRunning: boolean = false;
     private queuedAction: string | null = null;
 
-    // Cached weapon depth to avoid calling setDepth every frame.
+    // Cached weapon depth to avoid calling setDepth every frame
     private lastWeaponDepth: number = -1;
 
-    // Timer reference for the pickup tint so it can be cancelled if interrupted.
+    // Timer reference for the pickup tint so it can be cancelled if interrupted
     private pickupTintTimer: Phaser.Time.TimerEvent | null = null;
 
     private punchImpacts = ['punch_1','punch_2','punch_3','punch_4','punch_5','punch_6','punch_7','punch_8'];
@@ -270,7 +269,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         // Scale is always 1.7 — no per-frame branching on frame name.
         this.setScale(1.7);
 
-        // Origin is always (0.5, 1) — anchored bottom-centre.
         this.setOrigin(0.5, 1);
 
         this.positionWeaponSprite();
@@ -288,11 +286,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 this.play(`${this.characterName}-jump`, true);
             }
 
-            // CRITICAL: Disable physics collision during jump so moving this.y 
-            // completely outside the road belt doesn't cause the physics engine 
-            // to delete/cull Darko.
-            if (this.body) (this.body as Phaser.Physics.Arcade.Body).collideWorldBounds = false;
-
+            // Tween this.y directly for the visual arc.
             this.scene.tweens.add({
                 targets: this,
                 y: this.jumpGroundY - 220,
@@ -303,8 +297,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                     this.isJumping        = false;
                     this.jumpVisualOffset = 0;
                     this.y                = this.jumpGroundY; // snap to exact ground Y
-                    
-                    if (this.body) (this.body as Phaser.Physics.Arcade.Body).collideWorldBounds = true;
 
                     if (!this.isAttacking && this.scene.anims.exists(`${this.characterName}-idle`)) {
                         this.play(`${this.characterName}-idle`, true);
@@ -349,6 +341,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                         this.executeAction(requestedAction);
                     }
                 } else {
+                    // Never queue special/finisher mid-attack — they must go through the
+                    // SMF gate in executeAction() as a fresh call, not fire blind from queue.
                     if (requestedAction !== 'special' && requestedAction !== 'finisher') {
                         this.queuedAction = requestedAction;
                     }
@@ -411,8 +405,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             this.safeCall('playSFX', 'gun-shot-m70', 1.0);
 
             const spawnX = this.x + (150 * dirX);
-            // Raised projectile and muzzle flash height (formerly 230, now 270)
-            const spawnY = this.y - 270; 
+            const spawnY = this.y - 230;
             this.safeCall('spawnProjectile', this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
 
             const flash = this.scene.add.sprite(this.x + (170 * dirX), spawnY, 'muzzle-flash-m70');
@@ -471,17 +464,12 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         if      (this.scene.anims.exists(animKey))  this.play(animKey,  true);
         else if (this.scene.anims.exists(fallback))  this.play(fallback, true);
 
-        // IMPORTANT: Because Darko's physical Y moves during the jump, we MUST use jumpGroundY
-        // as the origin for the hitbox overlay, otherwise his kicks will literally miss enemies
-        // directly beneath him!
-        const baseY = this.isJumping ? this.jumpGroundY : this.y;
-
-        const hitZone = this.scene.add.zone(this.x + (this.flipX ? -60 : 60), baseY - 100, 140, 90);
+        const hitZone = this.scene.add.zone(this.x + (this.flipX ? -60 : 60), this.y - 100, 140, 90);
         this.scene.physics.add.existing(hitZone);
         let hasHit = false;
 
         this.scene.physics.add.overlap(hitZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_hz, target: any) => {
-            if (Math.abs(baseY - target.y) <= (target.isBreakable ? 140 : 60)) {
+            if (Math.abs(this.y - target.y) <= (target.isBreakable ? 140 : 60)) {
                 if (!hasHit) { this.safeCall('playSFX', action.includes('punch') ? this.punchImpacts : this.kickImpacts); hasHit = true; }
                 this.safeCall('spawnHitEffect', (this.x + target.x) / 2, target.y - 80);
                 if (target.takeDamage) target.takeDamage(15 * this.damageMultiplier);
@@ -496,26 +484,26 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     }
 
     private executeAction(action: string) {
-        // SMF gate — evaluated before any state mutation.
+        // TEMPORARY TEST OVERRIDE: SMF gate disabled.
         if (action === 'special') {
-            if (this.smfMeter >= 50) {
-                this.smfMeter -= 50;
-                this.safeCall('updateReactHUD');
+            // if (this.smfMeter >= 50) {
+            //     this.smfMeter -= 50;
+            //     this.safeCall('updateReactHUD');
                 this.executeDarkoSpecial();
-            } else {
-                this.executeAction('punch-2');
-            }
+            // } else {
+            //     this.executeAction('punch-2');
+            // }
             return;
         }
 
         if (action === 'finisher') {
-            if (this.smfMeter >= 100) {
-                this.smfMeter = 0;
-                this.safeCall('updateReactHUD');
+            // if (this.smfMeter >= 100) {
+            //     this.smfMeter = 0;
+            //     this.safeCall('updateReactHUD');
                 this.executeDarkoFinisher();
-            } else {
-                this.executeAction('kick-2');
-            }
+            // } else {
+            //     this.executeAction('kick-2');
+            // }
             return;
         }
 
@@ -566,7 +554,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         if (this.scene.anims.exists(anim)) this.play(anim, true);
 
         this.scene.time.delayedCall(200, () => {
-            // FIX: Special move plays generic punch impacts
             this.safeCall('playSFX', ['punch_4', 'punch_5']);
             this.safeCall('triggerScreenGlitch', 400);
             this.scene.cameras.main.shake(300, 0.015);
@@ -601,7 +588,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         if (this.scene.anims.exists(anim)) this.play(anim, true);
 
         this.scene.time.delayedCall(300, () => {
-            // FIX: Finisher now plays the heavy signature SFX array
             this.safeCall('playSFX', this.specialAudio, 1.0);
             this.safeCall('triggerScreenGlitch', 800);
             this.scene.cameras.main.shake(500, 0.03);
