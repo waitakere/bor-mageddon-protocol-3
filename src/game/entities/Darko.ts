@@ -12,7 +12,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     public isAttacking: boolean = false;
     public isDead: boolean = false;
     public isJumping: boolean = false;
-    public jumpVisualOffset: number = 0; 
+    public jumpVisualOffset: number = 0;
     
     public equippedWeapon: string | null = null;
     public weaponDurability: number = 0;
@@ -37,9 +37,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private isRunning: boolean = false;
     private queuedAction: string | null = null;
     
-    private lastWeaponDepth: number = -1;
-    private pickupTintTimer: Phaser.Time.TimerEvent | null = null;
-
     private punchImpacts = ['punch_1', 'punch_2', 'punch_3', 'punch_4', 'punch_5', 'punch_6', 'punch_7', 'punch_8'];
     private kickImpacts = ['kick_1', 'kick_2', 'kick_3', 'kick_4'];
     private grunts = ['grunt_m_1', 'grunt_m_2', 'grunt_m_3', 'grunt_m_4'];
@@ -99,25 +96,26 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             
             if (matchingFrames.length > 0) {
                 let fps = 15;
-                if      (animType === 'idle')                              fps = 6;
+                if (animType === 'idle') fps = 6;
                 else if (animType === 'walk' || animType === 'walk-rifle') fps = 12;
-                else if (animType === 'run')                               fps = 18;
-                else if (animType === 'jump')                              fps = 8;
-                else if (animType === 'melee')                             fps = 18;
-                else if (animType === 'kick-1' || animType === 'kick-2')   fps = 22;
-                else if (animType === 'pick-up')                           fps = 12; // Smooth pickup animation
+                else if (animType === 'run') fps = 18;
+                else if (animType === 'jump') fps = 8;
+                else if (animType === 'melee') fps = 18;
+                else if (animType === 'kick-1' || animType === 'kick-2') fps = 22;
                 
-                const frameConfig = matchingFrames.map(f => ({ key: this.characterName, frame: f }));
-
+                const frameConfig = matchingFrames.map(f => {
+                    return { key: this.characterName, frame: f };
+                });
+                
                 if (animType === 'shoot-with-rifle' && frameConfig.length === 1) {
                     frameConfig.push(frameConfig, frameConfig, frameConfig);
                 }
-
+                
                 anims.create({
                     key: animKey,
                     frames: frameConfig,
                     frameRate: fps,
-                    repeat: ['idle','walk','run','walk-rifle'].includes(animType) ? -1 : 0
+                    repeat: (animType === 'idle' || animType === 'walk' || animType === 'run' || animType === 'walk-rifle') ? -1 : 0
                 });
             }
         });
@@ -125,13 +123,12 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
     public equipWeapon(weaponKey: string) {
         if (this.weaponSprite) this.weaponSprite.destroy();
-        this.equippedWeapon  = weaponKey;
+        this.equippedWeapon = weaponKey;
         this.weaponHitsTaken = 0;
-        this.lastWeaponDepth = -1;
-
+        
         if (weaponKey === 'M70-FINAL rev') {
             this.weaponDurability = 5;
-            this.weaponSprite     = null;
+            this.weaponSprite = null;
         } else {
             this.weaponDurability = 5;
             this.weaponSprite = this.scene.add.sprite(this.x, this.y, weaponKey);
@@ -143,268 +140,150 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
     private dropAndFadeWeapon() {
         if (!this.equippedWeapon) return;
-
+        
         const drop = this.scene.add.sprite(this.x, this.y - 150, this.equippedWeapon);
-        drop.setScale(this.equippedWeapon === 'M70-FINAL rev' ? 1.0 : 1.3);
+        if (this.equippedWeapon === 'M70-FINAL rev') drop.setScale(1.0);
+        else drop.setScale(1.3);
+        
         drop.setFlipX(this.flipX);
-
-        this.scene.tweens.add({ targets: drop, x: this.x + (this.flipX ? -80 : 80), duration: 600, ease: 'Linear' });
-        this.scene.tweens.add({ targets: drop, y: this.y, angle: 0, duration: 600, ease: 'Bounce.easeOut' });
+        
         this.scene.tweens.add({
-            targets: drop, alpha: 0, duration: 150, delay: 1500, yoyo: true, repeat: 4,
+            targets: drop,
+            x: this.x + (this.flipX ? -80 : 80),
+            duration: 600,
+            ease: 'Linear'
+        });
+        
+        this.scene.tweens.add({
+            targets: drop,
+            y: this.y,
+            angle: 0,
+            duration: 600,
+            ease: 'Bounce.easeOut'
+        });
+        
+        this.scene.tweens.add({
+            targets: drop,
+            alpha: 0,
+            duration: 150,
+            delay: 1500,
+            yoyo: true,
+            repeat: 4,
             onComplete: () => {
-                this.scene.tweens.add({ targets: drop, alpha: 0, duration: 300, onComplete: () => drop.destroy() });
+                this.scene.tweens.add({
+                    targets: drop,
+                    alpha: 0,
+                    duration: 300,
+                    onComplete: () => drop.destroy()
+                });
             }
         });
-
+        
         this.equippedWeapon = null;
-        if (this.weaponSprite) { this.weaponSprite.destroy(); this.weaponSprite = null; }
+        if (this.weaponSprite) {
+            this.weaponSprite.destroy();
+            this.weaponSprite = null;
+        }
     }
 
     private positionWeaponSprite() {
         if (!this.weaponSprite || !this.equippedWeapon) return;
-
-        const currentAnimKey   = this.anims.currentAnim?.key.replace(`${this.characterName}-`, '') || 'idle';
+        
+        this.weaponSprite.visible = true;
+        
+        const currentAnimKey = this.anims.currentAnim?.key.replace(`${this.characterName}-`, '') || 'idle';
         const currentFrameName = this.frame.name;
         const dirX = this.flipX ? -1 : 1;
-
-        if (
-            ['special-attack','finish-move','jump-punch','jump-kick','knockdown-get-up', 'pick-up'].includes(currentAnimKey) ||
-            currentFrameName.includes('pick-up') ||
-            this.equippedWeapon === 'M70-FINAL rev'
-        ) {
+        const jumpSpriteOffset = this.height - this.displayOriginY;
+        
+        let targetX = this.x;
+        let targetY = this.y + jumpSpriteOffset;
+        let targetAngle = 0;
+        
+        if (['special-attack', 'finish-move', 'jump-punch', 'jump-kick', 'knockdown-get-up'].includes(currentAnimKey) || currentFrameName.includes('pick-up') || this.equippedWeapon === 'M70-FINAL rev') {
             this.weaponSprite.visible = false;
             return;
         }
-
-        let targetX = this.x;
-        let targetY = this.y;
-        let targetAngle = 0;
-
+        
         if (currentAnimKey === 'melee') {
-            if      (['018','019','020'].some(n => currentFrameName.includes(n))) { targetX += (-30*dirX); targetY -= 120; targetAngle = -30*dirX; }
-            else if (['004','005','006'].some(n => currentFrameName.includes(n))) { targetX += (-10*dirX); targetY -= 170; targetAngle =  30*dirX; }
-            else if (['021','022','023'].some(n => currentFrameName.includes(n))) { targetX += ( 85*dirX); targetY -= 105; targetAngle =  85*dirX; }
-            else if (['028','029','030'].some(n => currentFrameName.includes(n))) { targetX += ( 65*dirX); targetY -=  75; targetAngle = 135*dirX; }
-            else                                                                  { targetX += ( 40*dirX); targetY -= 135; targetAngle =  55*dirX; }
+            if (currentFrameName.includes('018') || currentFrameName.includes('019') || currentFrameName.includes('020')) {
+                targetX += (-30 * dirX); targetY -= 120; targetAngle = -30 * dirX;
+            } else if (currentFrameName.includes('004') || currentFrameName.includes('005') || currentFrameName.includes('006')) {
+                targetX += (-10 * dirX); targetY -= 170; targetAngle = 30 * dirX;
+            } else if (currentFrameName.includes('021') || currentFrameName.includes('022') || currentFrameName.includes('023')) {
+                targetX += (85 * dirX); targetY -= 105; targetAngle = 85 * dirX;
+            } else if (currentFrameName.includes('028') || currentFrameName.includes('029') || currentFrameName.includes('030')) {
+                targetX += (65 * dirX); targetY -= 75; targetAngle = 135 * dirX;
+            } else {
+                targetX += (40 * dirX); targetY -= 135; targetAngle = 55 * dirX;
+            }
         } else if (currentAnimKey === 'throw') {
-            if      (['000','001','002','003','004'].some(n => currentFrameName.includes(n)))                                                      { targetX += (-10*dirX); targetY -= 170; targetAngle = -30*dirX; }
-            else if (['005','006','007','008','009','010','011','012','013','014','015'].some(n => currentFrameName.includes(n))) { targetX += (-30*dirX); targetY -= 180; targetAngle = -60*dirX; }
-            else if (['016','017','018','019'].some(n => currentFrameName.includes(n)))                                                            { targetX += ( 20*dirX); targetY -= 170; targetAngle =  45*dirX; }
-            else                                                                                                                                   { targetX += ( 70*dirX); targetY -= 150; targetAngle =  90*dirX; }
+            if (currentFrameName.includes('000') || currentFrameName.includes('001') || currentFrameName.includes('002') || currentFrameName.includes('003') || currentFrameName.includes('004')) {
+                targetX += (-10 * dirX); targetY -= 170; targetAngle = -30 * dirX;
+            } else if (currentFrameName.includes('005') || currentFrameName.includes('006') || currentFrameName.includes('007') || currentFrameName.includes('008') || currentFrameName.includes('009') || currentFrameName.includes('010') || currentFrameName.includes('011') || currentFrameName.includes('012') || currentFrameName.includes('013') || currentFrameName.includes('014') || currentFrameName.includes('015')) {
+                targetX += (-30 * dirX); targetY -= 180; targetAngle = -60 * dirX;
+            } else if (currentFrameName.includes('016') || currentFrameName.includes('017') || currentFrameName.includes('018') || currentFrameName.includes('019')) {
+                targetX += (20 * dirX); targetY -= 170; targetAngle = 45 * dirX;
+            } else {
+                targetX += (70 * dirX); targetY -= 150; targetAngle = 90 * dirX;
+            }
         } else {
             const offset = this.weaponOffsets[currentAnimKey] || this.weaponOffsets['idle'];
             targetX += (offset.x * dirX);
             targetY += offset.y;
             targetAngle = offset.angle * dirX;
         }
-
+        
         this.weaponSprite.setPosition(targetX, targetY);
         this.weaponSprite.setAngle(targetAngle);
         this.weaponSprite.setFlipX(this.flipX);
-
-        const desiredDepth = this.depth + 1;
-        if (this.lastWeaponDepth !== desiredDepth) {
-            this.weaponSprite.setDepth(desiredDepth);
-            this.lastWeaponDepth = desiredDepth;
-        }
-
+        this.weaponSprite.setDepth(this.depth + 1);
         this.weaponSprite.visible = true;
     }
 
     private throwWeapon() {
         if (!this.equippedWeapon) return;
+        
         const dirX = this.flipX ? -1 : 1;
-        this.safeCall('spawnProjectile', this.y, this.x + (20*dirX), this.y - 120, this.equippedWeapon, dirX, 50, true);
+        this.safeCall('spawnProjectile', this.y, this.x + (20 * dirX), this.y - 120, this.equippedWeapon, dirX, 50, true);
+        
         this.equippedWeapon = null;
-        if (this.weaponSprite) { this.weaponSprite.destroy(); this.weaponSprite = null; }
-    }
-
-    // ─── Pickup Animation (Fully Animated Now) ──────────────────────────────────
-
-    public playPickupAnim() {
-        if (this.isDead || this.isJumping || this.isAttacking) return;
-        this.isAttacking = true;
-        this.setVelocity(0, 0);
-        this.anims.stop();
-
-        const animKey = `${this.characterName}-pick-up`;
-        
-        // Play the full 4-frame animation instead of freezing on frame_002
-        if (this.scene.anims.exists(animKey)) {
-            this.play(animKey, true);
-        } else {
-            // Failsafe just in case the JSON hasn't loaded properly
-            this.setFrame(`${this.characterName}-pick-up/frame_002.png`);
-        }
-
-        // Cancel any in-flight tint timer before applying a new one.
-        if (this.pickupTintTimer) { this.pickupTintTimer.remove(); this.pickupTintTimer = null; }
-        this.clearTint();
-        this.setTint(0x39ff14); // Glowing Radioactive Green
-        
-        this.pickupTintTimer = this.scene.time.delayedCall(120, () => {
-            this.clearTint();
-            this.pickupTintTimer = null;
-        });
-
-        // Release the attack lock dynamically when the animation completes
-        this.once('animationcomplete', () => { 
-            this.isAttacking = false; 
-        });
-    }
-
-    // ─── Main update ─────────────────────────────────────────────────────────────
-
-    public update(input: any) {
-        if (this.isDead) return;
-
-        this.setAngle(0);
-
-        // Scale is locked at 1.7 globally. 
-        // No more dynamic scaling hacks needed since the frames are resized.
-        this.setScale(1.7);
-        this.setOrigin(0.5, 1);
-
-        this.positionWeaponSprite();
-
-        // ── Jump ────────────────────────────────────────────────────────────────
-        if (input.space && !this.isJumping && !this.isAttacking) {
-            this.isJumping   = true;
-
-            if      (input.left)  this.jumpVelocityX = -this.runSpeed * 1.2;
-            else if (input.right) this.jumpVelocityX  =  this.runSpeed * 1.2;
-            else                  this.jumpVelocityX  =  0;
-
-            if (this.scene.anims.exists(`${this.characterName}-jump`)) {
-                this.play(`${this.characterName}-jump`, true);
-            }
-
-            const startOriginY = this.displayOriginY;
-
-            this.scene.tweens.add({
-                targets: this,
-                displayOriginY: startOriginY + 220,
-                duration: 400,
-                yoyo: true,
-                ease: 'Quad.easeOut',
-                onComplete: () => {
-                    this.isJumping        = false;
-                    this.displayOriginY   = startOriginY;
-
-                    if (!this.isAttacking && this.scene.anims.exists(`${this.characterName}-idle`)) {
-                        this.play(`${this.characterName}-idle`, true);
-                    }
-                }
-            });
-        }
-
-        // ── Double-tap run detection ─────────────────────────────────────────────
-        const now = this.scene.time.now;
-        if (input.left || input.right) {
-            const dir = input.left ? 'left' : 'right';
-            if (this.lastKey !== dir) {
-                if (now - this.lastKeyTime < 250) this.isRunning = true;
-                this.lastKey     = dir;
-                this.lastKeyTime = now;
-            }
-        } else {
-            this.isRunning = false;
-            this.lastKey   = '';
-        }
-
-        // ── Action input ─────────────────────────────────────────────────────────
-        let requestedAction: string | null = null;
-        if      (input.special)  requestedAction = 'special';
-        else if (input.finisher) requestedAction = 'finisher';
-        else if (input.p1)       requestedAction = 'punch-1';
-        else if (input.p2)       requestedAction = 'punch-2';
-        else if (input.k1)       requestedAction = 'kick-1';
-        else if (input.k2)       requestedAction = 'kick-2';
-
-        if (requestedAction) {
-            if (this.isJumping && !this.isAttacking) {
-                if (requestedAction.includes('punch') || requestedAction.includes('kick')) {
-                    this.executeJumpAttack(requestedAction);
-                }
-            } else if (!this.isJumping) {
-                if (!this.isAttacking) {
-                    if (this.equippedWeapon && (requestedAction === 'punch-1' || requestedAction === 'punch-2')) {
-                        this.executeWeaponAttack();
-                    } else {
-                        this.executeAction(requestedAction);
-                    }
-                } else {
-                    if (requestedAction !== 'special' && requestedAction !== 'finisher') {
-                        this.queuedAction = requestedAction;
-                    }
-                }
-            }
-            return;
-        }
-
-        // ── Movement ─────────────────────────────────────────────────────────────
-        if (!this.isAttacking) {
-            let vx = 0, vy = 0;
-
-            if (this.isJumping) {
-                vx = this.jumpVelocityX;
-            } else {
-                const speed = this.isRunning ? this.runSpeed : this.walkSpeed;
-                vx = input.left ? -speed : (input.right ? speed : 0);
-                vy = input.up   ? -speed * 0.6 : (input.down ? speed * 0.6 : 0);
-            }
-
-            this.setVelocity(vx, vy);
-            if (vx !== 0) this.setFlipX(vx < 0);
-
-            if (!this.isJumping) {
-                if (vx !== 0 || vy !== 0) {
-                    if (this.isRunning) {
-                        this.play(`${this.characterName}-run`, true);
-                    } else if (this.equippedWeapon === 'M70-FINAL rev') {
-                        const rifleWalk = `${this.characterName}-walk-rifle`;
-                        this.play(this.scene.anims.exists(rifleWalk) ? rifleWalk : `${this.characterName}-walk`, true);
-                    } else {
-                        this.play(`${this.characterName}-walk`, true);
-                    }
-                } else {
-                    if (this.equippedWeapon === 'M70-FINAL rev' && this.scene.anims.exists(`${this.characterName}-shoot-with-rifle`)) {
-                        this.play(`${this.characterName}-shoot-with-rifle`, true);
-                    } else {
-                        this.play(`${this.characterName}-idle`, true);
-                    }
-                }
-            }
-        } else {
-            if (this.isJumping) this.setVelocity(this.jumpVelocityX, 0);
+        if (this.weaponSprite) {
+            this.weaponSprite.destroy();
+            this.weaponSprite = null;
         }
     }
-
-    // ─── Attack execution ────────────────────────────────────────────────────────
 
     private executeWeaponAttack() {
         this.isAttacking = true;
         this.setVelocity(0, 0);
-
+        
         if (this.equippedWeapon === 'M70-FINAL rev') {
-            const shootAnim = this.scene.anims.exists(`${this.characterName}-shoot-with-rifle`)
-                ? `${this.characterName}-shoot-with-rifle`
-                : `${this.characterName}-shoot`;
-            if (this.scene.anims.exists(shootAnim)) this.play(shootAnim, true);
-
-            const dirX   = this.flipX ? -1 : 1;
+            if (this.scene.anims.exists(`${this.characterName}-shoot-with-rifle`)) {
+                this.play(`${this.characterName}-shoot-with-rifle`, true);
+            } else if (this.scene.anims.exists(`${this.characterName}-shoot`)) {
+                this.play(`${this.characterName}-shoot`, true);
+            }
+            
+            const dirX = this.flipX ? -1 : 1;
             this.safeCall('playSFX', 'gun-shot-m70', 1.0);
-
-            const spawnX = this.x + (150 * dirX);
-            const spawnY = this.y - 230;
+            
+            // FIX: Realigned to true chest/gun height (-110)
+            const spawnX = this.x + (100 * dirX);
+            const flashX = this.x + (130 * dirX);
+            const spawnY = this.y - 110; 
+            
             this.safeCall('spawnProjectile', this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
-
-            const flash = this.scene.add.sprite(this.x + (170 * dirX), spawnY, 'muzzle-flash-m70');
-            flash.setDepth(9999).setFlipX(this.flipX).setScale(1.2).setBlendMode(Phaser.BlendModes.ADD);
+            
+            const flash = this.scene.add.sprite(flashX, spawnY, 'muzzle-flash-m70');
+            flash.setDepth(9999);
+            flash.setFlipX(this.flipX);
+            flash.setScale(1.2);
+            flash.setBlendMode(Phaser.BlendModes.ADD);
+            
             this.scene.tweens.add({ targets: flash, alpha: 0, duration: 100, onComplete: () => flash.destroy() });
             this.scene.cameras.main.shake(100, 0.01);
-
+            
             this.weaponDurability--;
             if (this.weaponDurability <= 0) {
                 this.scene.time.delayedCall(150, () => {
@@ -422,25 +301,30 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 this.once('animationcomplete', () => { this.isAttacking = false; });
                 return;
             }
-
-            const animToPlay = this.scene.anims.exists(`${this.characterName}-melee`)
-                ? `${this.characterName}-melee`
-                : `${this.characterName}-punch-2`;
+            
+            const animToPlay = this.scene.anims.exists(`${this.characterName}-melee`) ? `${this.characterName}-melee` : `${this.characterName}-punch-2`;
             this.play(animToPlay, true);
-
+            
             const hitZone = this.scene.add.zone(this.x + (this.flipX ? -80 : 80), this.y - 60, 160, 100);
             this.scene.physics.add.existing(hitZone);
+            
             let hasHit = false;
-
-            this.scene.physics.add.overlap(hitZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_hz, target: any) => {
-                if (Math.abs(this.y - target.y) <= (target.isBreakable ? 140 : 60)) {
-                    if (!hasHit) { this.safeCall('playSFX', ['punch_4','punch_5']); hasHit = true; }
-                    this.safeCall('spawnBlood', (this.x + target.x) / 2, target.y - 50);
+            const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
+            
+            this.scene.physics.add.overlap(hitZone, targets, (hz, target: any) => {
+                const yTol = target.isBreakable ? 140 : 60;
+                if (Math.abs(this.y - target.y) <= yTol) {
+                    if (!hasHit) {
+                        this.safeCall('playSFX', ['punch_4', 'punch_5']);
+                        hasHit = true;
+                    }
+                    const hitX = (this.x + target.x) / 2;
+                    this.safeCall('spawnBlood', hitX, target.y - 50);
                     if (target.takeDamage) target.takeDamage(25 * this.damageMultiplier);
                     if (hitZone.body) (hitZone.body as Phaser.Physics.Arcade.Body).enable = false;
                 }
             });
-
+            
             this.once('animationcomplete', () => {
                 if (hitZone.active) hitZone.destroy();
                 this.isAttacking = false;
@@ -448,112 +332,238 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    private executeJumpAttack(action: string) {
+    private playVoice(marker: string | string[]) {
+        if (this.currentVoice && this.currentVoice.isPlaying) this.currentVoice.stop();
+        this.currentVoice = this.safeCall('playSFX', marker);
+    }
+
+    public playPickupAnim() {
+        if (this.isDead || this.isJumping || this.isAttacking) return;
         this.isAttacking = true;
-        const type     = action.includes('punch') ? 'jump-punch' : 'jump-kick';
-        const animKey  = `${this.characterName}-${type}`;
-        const fallback = `${this.characterName}-kick-1`;
-        if      (this.scene.anims.exists(animKey))  this.play(animKey,  true);
-        else if (this.scene.anims.exists(fallback))  this.play(fallback, true);
-
-        const hitZone = this.scene.add.zone(this.x + (this.flipX ? -60 : 60), this.y - 100, 140, 90);
-        this.scene.physics.add.existing(hitZone);
-        let hasHit = false;
-
-        this.scene.physics.add.overlap(hitZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_hz, target: any) => {
-            if (Math.abs(this.y - target.y) <= (target.isBreakable ? 140 : 60)) {
-                if (!hasHit) { this.safeCall('playSFX', action.includes('punch') ? this.punchImpacts : this.kickImpacts); hasHit = true; }
-                this.safeCall('spawnHitEffect', (this.x + target.x) / 2, target.y - 80);
-                if (target.takeDamage) target.takeDamage(15 * this.damageMultiplier);
-                if (hitZone.body) (hitZone.body as Phaser.Physics.Arcade.Body).enable = false;
-            }
-        });
-
-        this.once('animationcomplete', () => {
-            if (hitZone.active) hitZone.destroy();
+        this.setVelocity(0, 0);
+        this.anims.stop();
+        this.setFrame('darko-pick-up/frame_002.png');
+        
+        this.setTint(0x39ff14); 
+        
+        this.scene.time.delayedCall(100, () => this.clearTint());
+        this.scene.time.delayedCall(300, () => {
             this.isAttacking = false;
         });
     }
 
+    public update(input: any) {
+        if (this.isDead) return;
+
+        this.setAngle(0);
+
+        const currentFrameName = this.frame ? this.frame.name : '';
+        if (currentFrameName.includes('pick-up')) {
+            this.setScale(1.0); 
+        } else {
+            this.setScale(1.7); 
+        }
+
+        this.setOrigin(0.5, 1);
+
+        if (this.jumpVisualOffset > 0 && this.frame) {
+            let nativeY = this.frame.realHeight;
+            if (this.frame.trimmed) {
+                nativeY -= this.frame.trimY;
+            }
+            this.displayOriginY = nativeY + this.jumpVisualOffset;
+        }
+
+        this.positionWeaponSprite();
+
+        if (input.space && !this.isJumping && !this.isAttacking) {
+            this.isJumping = true;
+
+            if (input.left) this.jumpVelocityX = -this.runSpeed * 1.2;
+            else if (input.right) this.jumpVelocityX = this.runSpeed * 1.2;
+            else this.jumpVelocityX = 0;
+
+            if (this.scene.anims.exists(`${this.characterName}-jump`)) {
+                this.play(`${this.characterName}-jump`, true);
+            }
+
+            this.scene.tweens.add({
+                targets: this,
+                jumpVisualOffset: 220,
+                duration: 400,
+                yoyo: true,
+                ease: 'Quad.easeOut',
+                onComplete: () => {
+                    this.isJumping = false;
+                    this.jumpVisualOffset = 0; 
+                    
+                    if (!this.isAttacking && this.scene.anims.exists(`${this.characterName}-idle`)) {
+                        this.play(`${this.characterName}-idle`, true);
+                    }
+                }
+            });
+        }
+
+        const now = this.scene.time.now;
+
+        if (input.left || input.right) {
+            const dir = input.left ? 'left' : 'right';
+            if (this.lastKey !== dir) { 
+                if (now - this.lastKeyTime < 250) this.isRunning = true; 
+                this.lastKey = dir; 
+                this.lastKeyTime = now; 
+            }
+        } else { 
+            this.isRunning = false; 
+            this.lastKey = ''; 
+        }
+
+        let requestedAction: string | null = null;
+        
+        if (input.special) requestedAction = 'special';
+        else if (input.finisher) requestedAction = 'finisher';
+        else if (input.p1) requestedAction = 'punch-1';
+        else if (input.p2) requestedAction = 'punch-2';
+        else if (input.k1) requestedAction = 'kick-1';
+        else if (input.k2) requestedAction = 'kick-2';
+
+        if (requestedAction) {
+            if (this.isJumping && !this.isAttacking) {
+                if (requestedAction.includes('punch') || requestedAction.includes('kick')) {
+                    this.executeJumpAttack(requestedAction);
+                }
+            } else if (!this.isJumping) {
+                if (!this.isAttacking) {
+                    if (this.equippedWeapon && (requestedAction === 'punch-1' || requestedAction === 'punch-2')) {
+                        this.executeWeaponAttack();
+                    } else {
+                        this.executeAction(requestedAction);
+                    }
+                } else {
+                    this.queuedAction = requestedAction;
+                }
+            }
+            return;
+        }
+
+        if (!this.isAttacking) {
+            let vx = 0; let vy = 0;
+            
+            if (this.isJumping) {
+                vx = this.jumpVelocityX;
+            } else {
+                const speed = this.isRunning ? this.runSpeed : this.walkSpeed;
+                vx = input.left ? -speed : (input.right ? speed : 0);
+                vy = input.up ? -speed * 0.6 : (input.down ? speed * 0.6 : 0);
+            }
+            
+            this.setVelocity(vx, vy);
+            if (vx !== 0) this.setFlipX(vx < 0);
+            
+            if (!this.isJumping) {
+                if (vx !== 0 || vy !== 0) {
+                    if (this.isRunning) {
+                        this.play(`${this.characterName}-run`, true);
+                    } else {
+                        if (this.equippedWeapon === 'M70-FINAL rev' && this.scene.anims.exists(`${this.characterName}-walk-rifle`)) {
+                            this.play(`${this.characterName}-walk-rifle`, true);
+                        } else if (this.equippedWeapon === 'M70-FINAL rev' && this.scene.anims.exists(`${this.characterName}-shoot-with-rifle`)) {
+                            this.play(`${this.characterName}-shoot-with-rifle`, true);
+                        } else {
+                            this.play(`${this.characterName}-walk`, true);
+                        }
+                    }
+                } else {
+                    if (this.equippedWeapon === 'M70-FINAL rev' && this.scene.anims.exists(`${this.characterName}-shoot-with-rifle`)) {
+                        this.play(`${this.characterName}-shoot-with-rifle`, true);
+                    } else {
+                        this.play(`${this.characterName}-idle`, true);
+                    }
+                }
+            }
+        } else {
+            if (this.isJumping) {
+                this.setVelocity(this.jumpVelocityX, 0);
+            }
+        }
+    }
+
     private executeAction(action: string) {
-        if (action === 'special') {
-            if (this.smfMeter >= 50) {
-                this.smfMeter -= 50;
-                this.safeCall('updateReactHUD');
-                this.executeDarkoSpecial();
-            } else {
-                this.executeAction('punch-2');
-            }
-            return;
+        // FIX: Temporarily bypassed the SMF Meter cost for testing purposes!
+        if (action === 'special') { 
+            this.safeCall('updateReactHUD');
+            this.executeDarkoSpecial(); 
+            return; 
         }
-
-        if (action === 'finisher') {
-            if (this.smfMeter >= 100) {
-                this.smfMeter = 0;
-                this.safeCall('updateReactHUD');
-                this.executeDarkoFinisher();
-            } else {
-                this.executeAction('kick-2');
-            }
-            return;
+        
+        if (action === 'finisher') { 
+            this.safeCall('updateReactHUD');
+            this.executeDarkoFinisher(); 
+            return; 
         }
-
-        this.isAttacking = true;
-        this.setVelocity(0, 0);
-
+        
+        this.isAttacking = true; this.setVelocity(0, 0);
         const animToPlay = `${this.characterName}-${action}`;
+        
         if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
-
-        const offsetX   = action === 'kick-2' ? 110 : 80;
-        const zoneWidth = action === 'kick-2' ? 200 : 140;
-        const hitZone = this.scene.add.zone(
-            this.x + (this.flipX ? -offsetX : offsetX),
-            this.y - 40, zoneWidth, 80
-        );
+        
+        let zoneWidth = 140;
+        let offsetX = 80;
+        
+        if (action === 'kick-2') {
+            zoneWidth = 200;
+            offsetX = 110;
+        }
+        
+        const hitZone = this.scene.add.zone(this.x + (this.flipX ? -offsetX : offsetX), this.y - 40, zoneWidth, 80);
         hitZone.setName('basicAttackZone');
         this.scene.physics.add.existing(hitZone);
+        
         let hasHit = false;
-
-        this.scene.physics.add.overlap(hitZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_hz, target: any) => {
-            if (Math.abs(this.y - target.y) <= (target.isBreakable ? 140 : 60)) {
-                if (!hasHit) { this.safeCall('playSFX', action.includes('punch') ? this.punchImpacts : this.kickImpacts); hasHit = true; }
+        const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
+        
+        this.scene.physics.add.overlap(hitZone, targets, (hz, target: any) => {
+            const yTol = target.isBreakable ? 140 : 60;
+            if (Math.abs(this.y - target.y) <= yTol) {
+                if (!hasHit) {
+                    this.safeCall('playSFX', action.includes('punch') ? this.punchImpacts : this.kickImpacts);
+                    hasHit = true;
+                }
                 const damage = (action.includes('2') ? 15 : 10) * this.damageMultiplier;
-                this.safeCall('spawnHitEffect', (this.x + target.x) / 2, target.y - 50);
+                const hitX = (this.x + target.x) / 2;
+                this.safeCall('spawnHitEffect', hitX, target.y - 50);
+                
                 if (target.takeDamage) target.takeDamage(damage);
                 if (hitZone.body) (hitZone.body as Phaser.Physics.Arcade.Body).enable = false;
             }
         });
-
+        
         this.once('animationcomplete', () => {
             if (hitZone.active) hitZone.destroy();
-            if (this.queuedAction) {
-                const next = this.queuedAction;
-                this.queuedAction = null;
-                this.isAttacking  = false;
-                this.executeAction(next);
-            } else {
-                this.isAttacking = false;
-            }
+            if (this.queuedAction) { const next = this.queuedAction; this.queuedAction = null; this.executeAction(next); }
+            else { this.isAttacking = false; }
         });
     }
 
     private executeDarkoSpecial() {
         this.isAttacking = true;
         this.setVelocity(0, 0);
-        const anim = this.scene.anims.exists(`${this.characterName}-special-attack`)
-            ? `${this.characterName}-special-attack` : `${this.characterName}-punch-1`;
+        const anim = this.scene.anims.exists(`${this.characterName}-special-attack`) ? `${this.characterName}-special-attack` : `${this.characterName}-punch-1`;
+        
         if (this.scene.anims.exists(anim)) this.play(anim, true);
-
+        
         this.scene.time.delayedCall(200, () => {
             this.safeCall('playSFX', this.specialAudio);
             this.safeCall('triggerScreenGlitch', 400);
             this.scene.cameras.main.shake(300, 0.015);
-
+            
             const spinZone = this.scene.add.circle(this.x, this.y - 40, 180);
             this.scene.physics.add.existing(spinZone);
-
-            this.scene.physics.add.overlap(spinZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_sz, target: any) => {
-                if (Math.abs(this.y - target.y) <= (target.isBreakable ? 160 : 60)) {
+            const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
+            
+            this.scene.physics.add.overlap(spinZone, targets, (sz, target: any) => {
+                const yTol = target.isBreakable ? 160 : 60;
+                if (Math.abs(this.y - target.y) <= yTol) {
                     const pushDir = target.x > this.x ? 1 : -1;
                     if (target.takeDamage) {
                         target.takeDamage(40 * this.damageMultiplier);
@@ -564,74 +574,72 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                     this.safeCall('spawnHitEffect', target.x, target.y - 50);
                 }
             });
-
+            
             this.scene.time.delayedCall(200, () => { if (spinZone.active) spinZone.destroy(); });
         });
-
+        
         this.once('animationcomplete', () => { this.isAttacking = false; });
     }
 
     private executeDarkoFinisher() {
         this.isAttacking = true;
         this.setVelocity(0, 0);
-        const anim = this.scene.anims.exists(`${this.characterName}-finish-move`)
-            ? `${this.characterName}-finish-move` : `${this.characterName}-punch-1`;
+        const anim = this.scene.anims.exists(`${this.characterName}-finish-move`) ? `${this.characterName}-finish-move` : `${this.characterName}-punch-1`;
+        
         if (this.scene.anims.exists(anim)) this.play(anim, true);
-
+        
         this.scene.time.delayedCall(300, () => {
-            this.safeCall('playSFX', ['explosion_01','explosion_02'], 1.0);
+            this.safeCall('playSFX', ['explosion_01', 'explosion_02'], 1.0);
             this.safeCall('triggerScreenGlitch', 800);
             this.scene.cameras.main.shake(500, 0.03);
-
+            
             const hitZone = this.scene.add.zone(this.x + (this.flipX ? -150 : 150), this.y - 40, 260, 120);
             this.scene.physics.add.existing(hitZone);
-
-            this.scene.physics.add.overlap(hitZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_hz, target: any) => {
-                if (Math.abs(this.y - target.y) <= (target.isBreakable ? 140 : 60)) {
+            const targets = [(this.scene as any).enemies, (this.scene as any).breakables];
+            
+            this.scene.physics.add.overlap(hitZone, targets, (hz, target: any) => {
+                const yTol = target.isBreakable ? 140 : 60;
+                if (Math.abs(this.y - target.y) <= yTol) {
                     if (target.takeDamage) target.takeDamage(80 * this.damageMultiplier);
                     this.safeCall('spawnHitEffect', target.x, target.y - 50);
                     if (hitZone.body) (hitZone.body as Phaser.Physics.Arcade.Body).enable = false;
                 }
             });
-
+            
             this.scene.time.delayedCall(100, () => { if (hitZone.active) hitZone.destroy(); });
         });
-
+        
         this.once('animationcomplete', () => { this.isAttacking = false; });
     }
 
-    // ─── Damage / death ─────────────────────────────────────────────────────────
-
     public takeDamage(amount: number) {
-        this.health -= amount;
-        this.queuedAction = null;
+        this.health -= amount; this.queuedAction = null;
         this.safeCall('spawnHitEffect', this.x, this.y - 40);
         if (this.scene) (this.scene as any).lastPlayerHitTime = Date.now();
-
+        
         if (this.equippedWeapon) {
             this.weaponHitsTaken++;
-            if (this.weaponHitsTaken >= 4) this.dropAndFadeWeapon();
+            if (this.weaponHitsTaken >= 4) {
+                this.dropAndFadeWeapon();
+            }
         }
-
+        
         if (this.health <= 0) {
             this.safeCall('playSFX', this.agonies);
             this.die();
         } else {
             this.safeCall('playSFX', this.grunts);
-            if (this.pickupTintTimer) { this.pickupTintTimer.remove(); this.pickupTintTimer = null; }
-            this.clearTint();
-
             const dmgAnim = `${this.characterName}-damage`;
-            if (this.scene.anims.exists(dmgAnim)) {
-                this.isAttacking = true;
+            
+            if (this.scene.anims.exists(dmgAnim)) { 
+                this.isAttacking = true; 
+                this.clearTint(); 
                 this.setTint(0xff0000);
-                this.play(dmgAnim, true);
+                this.play(dmgAnim, true); 
                 this.scene.time.delayedCall(150, () => this.clearTint());
-                this.once('animationcomplete', () => { this.isAttacking = false; });
-            } else {
-                this.setTint(0xff0000);
-                this.scene.time.delayedCall(200, () => this.clearTint());
+                this.once('animationcomplete', () => { this.isAttacking = false; }); 
             }
+            else { this.setTint(0xff0000); this.scene.time.delayedCall(200, () => this.clearTint()); }
         }
         this.safeCall('updateReactHUD');
     }
@@ -641,18 +649,18 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.queuedAction = null;
         this.safeCall('spawnHitEffect', this.x, this.y - 40);
         if (this.scene) (this.scene as any).lastPlayerHitTime = Date.now();
-
-        if (this.equippedWeapon) this.dropAndFadeWeapon();
-
+        
+        if (this.equippedWeapon) {
+            this.dropAndFadeWeapon();
+        }
+        
         if (this.health <= 0) {
             this.safeCall('playSFX', this.agonies);
             this.die();
         } else {
             this.safeCall('playSFX', this.grunts);
-            if (this.pickupTintTimer) { this.pickupTintTimer.remove(); this.pickupTintTimer = null; }
-            this.clearTint();
-
             const anim = `${this.characterName}-knockdown-get-up`;
+            
             if (this.scene.anims.exists(anim)) {
                 this.isAttacking = true;
                 this.play(anim, true);
@@ -668,13 +676,14 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private die() {
         this.isDead = true;
         this.setVelocity(0, 0);
-        if (this.pickupTintTimer) { this.pickupTintTimer.remove(); this.pickupTintTimer = null; }
-        this.clearTint();
-
         const dieAnim = `${this.characterName}-dying`;
-        if (this.scene.anims.exists(dieAnim)) this.play(dieAnim, true);
-        else this.setTint(0xff0000);
-
+        
+        if (this.scene.anims.exists(dieAnim)) {
+            this.play(dieAnim, true);
+        } else {
+            this.setTint(0xff0000);
+        }
+        
         if (this.weaponSprite) this.weaponSprite.destroy();
     }
 }
