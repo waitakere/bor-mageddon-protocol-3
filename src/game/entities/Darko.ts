@@ -13,11 +13,10 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     public isDead: boolean = false;
     public isJumping: boolean = false;
 
-    // jumpVisualOffset is retained as a public property so the Phaser tween target
-    // still compiles. It is NOT used to drive displayOriginY. The tween drives this.y.
+    // Retained for any external HUD/Camera references, but no longer drives WebGL origins
     public jumpVisualOffset: number = 0;
 
-    // Ground Y captured at take-off so the tween can restore it exactly on landing.
+    // Ground Y captured at take-off so the tween can restore it exactly on landing
     private jumpGroundY: number = 0;
 
     public equippedWeapon: string | null = null;
@@ -43,10 +42,10 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private isRunning: boolean = false;
     private queuedAction: string | null = null;
 
-    // Cached weapon depth to avoid calling setDepth every frame.
+    // Cached weapon depth to avoid calling setDepth every frame
     private lastWeaponDepth: number = -1;
 
-    // Timer reference for the pickup tint so it can be cancelled if interrupted.
+    // Timer reference for the pickup tint so it can be cancelled if interrupted
     private pickupTintTimer: Phaser.Time.TimerEvent | null = null;
 
     private punchImpacts = ['punch_1','punch_2','punch_3','punch_4','punch_5','punch_6','punch_7','punch_8'];
@@ -58,7 +57,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     constructor(scene: Phaser.Scene, x: number, y: number) {
         const texture = scene.textures.get('darko');
         const allFrames = texture ? texture.getFrameNames() : [];
-        const firstFrame = allFrames.find(f => f.includes('darko-idle')) || allFrames[0];
+        const firstFrame = allFrames.find(f => f.includes('darko-idle')) || allFrames;
 
         super(scene, x, y, 'darko', firstFrame);
 
@@ -124,9 +123,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
             const frameConfig = matchingFrames.map(f => ({ key: this.characterName, frame: f }));
 
-            // FIX: original code pushed the whole array object (not individual frames).
             if (animType === 'shoot-with-rifle' && frameConfig.length === 1) {
-                frameConfig.push(frameConfig[0], frameConfig[0], frameConfig[0]);
+                frameConfig.push(frameConfig, frameConfig, frameConfig);
             }
 
             anims.create({
@@ -205,12 +203,12 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             else if (['004','005','006'].some(n => currentFrameName.includes(n))) { targetX += (-10*dirX); targetY -= 170; targetAngle =  30*dirX; }
             else if (['021','022','023'].some(n => currentFrameName.includes(n))) { targetX += ( 85*dirX); targetY -= 105; targetAngle =  85*dirX; }
             else if (['028','029','030'].some(n => currentFrameName.includes(n))) { targetX += ( 65*dirX); targetY -=  75; targetAngle = 135*dirX; }
-            else                                                                   { targetX += ( 40*dirX); targetY -= 135; targetAngle =  55*dirX; }
+            else                                                                  { targetX += ( 40*dirX); targetY -= 135; targetAngle =  55*dirX; }
         } else if (currentAnimKey === 'throw') {
-            if      (['000','001','002','003','004'].some(n => currentFrameName.includes(n)))                                                                              { targetX += (-10*dirX); targetY -= 170; targetAngle = -30*dirX; }
+            if      (['000','001','002','003','004'].some(n => currentFrameName.includes(n)))                                                      { targetX += (-10*dirX); targetY -= 170; targetAngle = -30*dirX; }
             else if (['005','006','007','008','009','010','011','012','013','014','015'].some(n => currentFrameName.includes(n))) { targetX += (-30*dirX); targetY -= 180; targetAngle = -60*dirX; }
-            else if (['016','017','018','019'].some(n => currentFrameName.includes(n)))                                                                                   { targetX += ( 20*dirX); targetY -= 170; targetAngle =  45*dirX; }
-            else                                                                                                                                                           { targetX += ( 70*dirX); targetY -= 150; targetAngle =  90*dirX; }
+            else if (['016','017','018','019'].some(n => currentFrameName.includes(n)))                                                            { targetX += ( 20*dirX); targetY -= 170; targetAngle =  45*dirX; }
+            else                                                                                                                                   { targetX += ( 70*dirX); targetY -= 150; targetAngle =  90*dirX; }
         } else {
             const offset = this.weaponOffsets[currentAnimKey] || this.weaponOffsets['idle'];
             targetX += (offset.x * dirX);
@@ -251,9 +249,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         // Cancel any in-flight tint timer before applying a new one.
         if (this.pickupTintTimer) { this.pickupTintTimer.remove(); this.pickupTintTimer = null; }
         this.clearTint();
-        // setTint = multiplicative colour tint (sprite texture still visible).
-        // setTintFill = replaces ALL channels → solid colour silhouette → white ghost bug.
         this.setTint(0x39ff14);
+        
         this.pickupTintTimer = this.scene.time.delayedCall(120, () => {
             this.clearTint();
             this.pickupTintTimer = null;
@@ -272,13 +269,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         // Scale is always 1.7 — no per-frame branching on frame name.
         this.setScale(1.7);
 
-        // Origin is always (0.5, 1) — anchored bottom-centre.
-        // !! NEVER write to this.displayOriginY !!
-        // On trimmed atlas sprites Phaser owns displayOriginY and uses it to compute
-        // the sprite's screen bounding box. Any external assignment corrupts that
-        // calculation and causes Phaser to physically resize the WebGL canvas element,
-        // which produces the "canvas collapses to a tiny strip / black screen" crash
-        // seen when pressing SPACE to jump.
         this.setOrigin(0.5, 1);
 
         this.positionWeaponSprite();
@@ -298,8 +288,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
             // Tween this.y directly for the visual arc.
             // The physics body offset (set in the constructor) keeps collision grounded.
-            // jumpVisualOffset is tweened as a side-effect but its value is irrelevant —
-            // we only tween it so external code that reads the property still sees 0→220→0.
             this.scene.tweens.add({
                 targets: this,
                 y: this.jumpGroundY - 220,
