@@ -396,14 +396,17 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 : `${this.characterName}-shoot`;
             if (this.scene.anims.exists(shootAnim)) this.play(shootAnim, true);
 
-            const dirX   = this.flipX ? -1 : 1;
+            const dirX = this.flipX ? -1 : 1;
             this.safeCall('playSFX', 'gun-shot-m70', 1.0);
 
-            // ADJUSTED: Re-tuned bullet origin Math
-            const spawnX = this.x + (145 * dirX);
-            const flashX = this.x + (175 * dirX);
-            const spawnY = this.y - 250;
-            
+            // ── FIXED: Muzzle flash & bullet spawn at rifle barrel height ──
+            // Origin is (0.5, 1) so this.y = feet.
+            // At 1.7 scale the rifle barrel tip is ~310px above feet (shoulder/chest height)
+            // and ~180px forward from sprite centre (end of barrel).
+            const spawnY = this.y - 310;
+            const spawnX = this.x + (180 * dirX);
+            const flashX = this.x + (210 * dirX);
+
             this.safeCall('spawnProjectile', this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
 
             const flash = this.scene.add.sprite(flashX, spawnY, 'muzzle-flash-m70');
