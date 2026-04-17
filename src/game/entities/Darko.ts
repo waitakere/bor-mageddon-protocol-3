@@ -401,9 +401,9 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
             // ── FIXED: Muzzle flash & bullet spawn at rifle barrel height ──
             // Origin is (0.5, 1) so this.y = feet.
-            // At 1.7 scale the rifle barrel tip is ~310px above feet (shoulder/chest height)
+            // At 1.7 scale the rifle barrel tip is ~330px above feet (barrel centre height)
             // and ~180px forward from sprite centre (end of barrel).
-            const spawnY = this.y - 310;
+            const spawnY = this.y - 330;
             const spawnX = this.x + (180 * dirX);
             const flashX = this.x + (210 * dirX);
 
