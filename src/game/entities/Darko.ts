@@ -120,6 +120,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             else if (animType === 'jump')                              fps = 8;
             else if (animType === 'melee')                             fps = 18;
             else if (animType === 'kick-1' || animType === 'kick-2')   fps = 22;
+            else if (animType === 'pick-up')                           fps = 12; 
 
             const frameConfig = matchingFrames.map(f => ({ key: this.characterName, frame: f }));
 
@@ -184,7 +185,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         const dirX = this.flipX ? -1 : 1;
 
         if (
-            ['special-attack','finish-move','jump-punch','jump-kick','knockdown-get-up'].includes(currentAnimKey) ||
+            ['special-attack','finish-move','jump-punch','jump-kick','knockdown-get-up', 'pick-up'].includes(currentAnimKey) ||
             currentFrameName.includes('pick-up') ||
             this.equippedWeapon === 'M70-FINAL rev'
         ) {
@@ -235,25 +236,34 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         if (this.weaponSprite) { this.weaponSprite.destroy(); this.weaponSprite = null; }
     }
 
-    // ─── Pickup flash ────────────────────────────────────────────────────────────
+    // ─── Pickup Animation ────────────────────────────────────────────────────────────
 
     public playPickupAnim() {
         if (this.isDead || this.isJumping || this.isAttacking) return;
         this.isAttacking = true;
         this.setVelocity(0, 0);
         this.anims.stop();
-        this.setFrame('darko-pick-up/frame_002.png');
+
+        const animKey = `${this.characterName}-pick-up`;
+        
+        if (this.scene.anims.exists(animKey)) {
+            this.play(animKey, true);
+        } else {
+            this.setFrame(`${this.characterName}-pick-up/frame_002.png`);
+        }
 
         if (this.pickupTintTimer) { this.pickupTintTimer.remove(); this.pickupTintTimer = null; }
         this.clearTint();
-        this.setTint(0x39ff14);
+        this.setTint(0x39ff14); 
         
         this.pickupTintTimer = this.scene.time.delayedCall(120, () => {
             this.clearTint();
             this.pickupTintTimer = null;
         });
 
-        this.scene.time.delayedCall(300, () => { this.isAttacking = false; });
+        this.once('animationcomplete', () => { 
+            this.isAttacking = false; 
+        });
     }
 
     // ─── Main update ─────────────────────────────────────────────────────────────
@@ -262,8 +272,17 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         if (this.isDead) return;
 
         this.setAngle(0);
-        this.setScale(1.7);
+        this.setScale(1.7); 
         this.setOrigin(0.5, 1);
+
+        if (this.jumpVisualOffset > 0 && this.frame) {
+            let nativeY = this.frame.realHeight;
+            if (this.frame.trimmed) {
+                nativeY -= this.frame.trimY;
+            }
+            this.displayOriginY = nativeY + this.jumpVisualOffset;
+        }
+
         this.positionWeaponSprite();
 
         // ── Jump ────────────────────────────────────────────────────────────────
@@ -398,9 +417,10 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             const dirX   = this.flipX ? -1 : 1;
             this.safeCall('playSFX', 'gun-shot-m70', 1.0);
 
-            const spawnX = this.x + (100 * dirX);
-            const flashX = this.x + (120 * dirX);
-            const spawnY = this.y - 300;
+            // FIX: Raised Y offset significantly (-325) and pulled X closer to the body (85)
+            const spawnX = this.x + (85 * dirX);
+            const flashX = this.x + (105 * dirX);
+            const spawnY = this.y - 325;
             
             this.safeCall('spawnProjectile', this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
 
@@ -432,18 +452,16 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 : `${this.characterName}-punch-2`;
             this.play(animToPlay, true);
 
-            // Elevated hitbox for melee weapon swings
-            const hitZone = this.scene.add.zone(this.x + (this.flipX ? -80 : 80), this.y - 150, 160, 100);
+            // Slightly wider melee zone
+            const hitZone = this.scene.add.zone(this.x + (this.flipX ? -90 : 90), this.y - 150, 180, 100);
             this.scene.physics.add.existing(hitZone);
             let hasHit = false;
 
             this.scene.physics.add.overlap(hitZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_hz, target: any) => {
-                if (Math.abs(this.y - target.y) <= (target.isBreakable ? 140 : 60)) {
+                // FIX: Extremely generous Y-tolerance (90) so swings don't whiff on fast enemies
+                if (Math.abs(this.y - target.y) <= (target.isBreakable ? 160 : 90)) {
                     if (!hasHit) { this.safeCall('playSFX', ['punch_4','punch_5']); hasHit = true; }
-                    
-                    // Spawn explosion exactly on the hitZone coordinate
                     this.safeCall('spawnHitEffect', hitZone.x, hitZone.y);
-                    
                     if (target.takeDamage) target.takeDamage(25 * this.damageMultiplier);
                     if (hitZone.body) (hitZone.body as Phaser.Physics.Arcade.Body).enable = false;
                 }
@@ -466,18 +484,16 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
         const baseY = this.isJumping ? this.jumpGroundY : this.y;
 
-        // Elevated Hitbox for Jump Attacks
-        const hitZone = this.scene.add.zone(this.x + (this.flipX ? -60 : 60), baseY - 160, 140, 90);
+        // Expanded Jump Hitbox
+        const hitZone = this.scene.add.zone(this.x + (this.flipX ? -60 : 60), baseY - 160, 160, 100);
         this.scene.physics.add.existing(hitZone);
         let hasHit = false;
 
         this.scene.physics.add.overlap(hitZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_hz, target: any) => {
-            if (Math.abs(baseY - target.y) <= (target.isBreakable ? 140 : 60)) {
+            // FIX: Extremely generous Y-tolerance (90)
+            if (Math.abs(baseY - target.y) <= (target.isBreakable ? 160 : 90)) {
                 if (!hasHit) { this.safeCall('playSFX', action.includes('punch') ? this.punchImpacts : this.kickImpacts); hasHit = true; }
-                
-                // Spawn explosion exactly on the hitZone coordinate
                 this.safeCall('spawnHitEffect', hitZone.x, hitZone.y);
-                
                 if (target.takeDamage) target.takeDamage(15 * this.damageMultiplier);
                 if (hitZone.body) (hitZone.body as Phaser.Physics.Arcade.Body).enable = false;
             }
@@ -492,24 +508,12 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private executeAction(action: string) {
         // TEMPORARY TEST OVERRIDE: SMF gate disabled.
         if (action === 'special') {
-            // if (this.smfMeter >= 50) {
-            //     this.smfMeter -= 50;
-            //     this.safeCall('updateReactHUD');
-                this.executeDarkoSpecial();
-            // } else {
-            //     this.executeAction('punch-2');
-            // }
+            this.executeDarkoSpecial();
             return;
         }
 
         if (action === 'finisher') {
-            // if (this.smfMeter >= 100) {
-            //     this.smfMeter = 0;
-            //     this.safeCall('updateReactHUD');
-                this.executeDarkoFinisher();
-            // } else {
-            //     this.executeAction('kick-2');
-            // }
+            this.executeDarkoFinisher();
             return;
         }
 
@@ -519,14 +523,14 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         const animToPlay = `${this.characterName}-${action}`;
         if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
 
-        let zoneWidth = 140;
-        let offsetX   = 80;
+        // FIX: Wider, more forgiving hitboxes
+        let zoneWidth = 160; 
+        let offsetX   = 90;  
         
-        // Dynamically elevate the Y offset so punches hit faces/chests and kicks hit midriffs
         let offsetY   = action.includes('punch') ? 160 : 120; 
 
         if (action === 'kick-2') {
-            zoneWidth = 200;
+            zoneWidth = 220;
             offsetX = 110;
         }
 
@@ -541,11 +545,11 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         let hasHit = false;
 
         this.scene.physics.add.overlap(hitZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_hz, target: any) => {
-            if (Math.abs(this.y - target.y) <= (target.isBreakable ? 140 : 60)) {
+            // FIX: Generous Y-tolerance (90) so attacks don't whiff
+            if (Math.abs(this.y - target.y) <= (target.isBreakable ? 160 : 90)) {
                 if (!hasHit) { this.safeCall('playSFX', action.includes('punch') ? this.punchImpacts : this.kickImpacts); hasHit = true; }
                 const damage = (action.includes('2') ? 15 : 10) * this.damageMultiplier;
                 
-                // Spawn explosion exactly on the hitZone coordinate
                 this.safeCall('spawnHitEffect', hitZone.x, hitZone.y);
                 
                 if (target.takeDamage) target.takeDamage(damage);
@@ -582,7 +586,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             this.scene.physics.add.existing(spinZone);
 
             this.scene.physics.add.overlap(spinZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_sz, target: any) => {
-                if (Math.abs(this.y - target.y) <= (target.isBreakable ? 160 : 60)) {
+                if (Math.abs(this.y - target.y) <= (target.isBreakable ? 160 : 90)) {
                     const pushDir = target.x > this.x ? 1 : -1;
                     if (target.takeDamage) {
                         target.takeDamage(40 * this.damageMultiplier);
@@ -616,7 +620,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             this.scene.physics.add.existing(hitZone);
 
             this.scene.physics.add.overlap(hitZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_hz, target: any) => {
-                if (Math.abs(this.y - target.y) <= (target.isBreakable ? 140 : 60)) {
+                if (Math.abs(this.y - target.y) <= (target.isBreakable ? 140 : 90)) {
                     if (target.takeDamage) target.takeDamage(80 * this.damageMultiplier);
                     this.safeCall('spawnHitEffect', target.x, this.y - 140);
                     if (hitZone.body) (hitZone.body as Phaser.Physics.Arcade.Body).enable = false;
@@ -634,7 +638,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     public takeDamage(amount: number) {
         this.health -= amount;
         this.queuedAction = null;
-        this.safeCall('spawnHitEffect', this.x, this.y - 150); // Raised hit effect
+        this.safeCall('spawnHitEffect', this.x, this.y - 150); 
         if (this.scene) (this.scene as any).lastPlayerHitTime = Date.now();
 
         if (this.equippedWeapon) {
@@ -668,7 +672,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     public takeKnockdown(amount: number = 15) {
         this.health -= amount;
         this.queuedAction = null;
-        this.safeCall('spawnHitEffect', this.x, this.y - 150); // Raised hit effect
+        this.safeCall('spawnHitEffect', this.x, this.y - 150); 
         if (this.scene) (this.scene as any).lastPlayerHitTime = Date.now();
 
         if (this.equippedWeapon) this.dropAndFadeWeapon();
