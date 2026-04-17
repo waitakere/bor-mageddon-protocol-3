@@ -13,7 +13,10 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     public isDead: boolean = false;
     public isJumping: boolean = false;
 
+    // Retained for any external HUD/Camera references, but no longer drives WebGL origins
     public jumpVisualOffset: number = 0;
+
+    // Ground Y captured at take-off so the tween can restore it exactly on landing
     private jumpGroundY: number = 0;
 
     public equippedWeapon: string | null = null;
@@ -30,8 +33,9 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     };
 
     private currentVoice: any = null;
-    private walkSpeed: number = CHARACTER_STATS.darko_1993.baseSpeed;
-    private runSpeed: number  = CHARACTER_STATS.darko_1993.runSpeed;
+    // FIX: Increased movement speeds for the "Speedster" archetype
+    private walkSpeed: number = 340; 
+    private runSpeed: number  = 480; 
     private jumpVelocityX: number = 0;
 
     private lastKey: string = '';
@@ -39,7 +43,10 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private isRunning: boolean = false;
     private queuedAction: string | null = null;
 
+    // Cached weapon depth to avoid calling setDepth every frame
     private lastWeaponDepth: number = -1;
+
+    // Timer reference for the pickup tint so it can be cancelled if interrupted
     private pickupTintTimer: Phaser.Time.TimerEvent | null = null;
 
     private punchImpacts = ['punch_1','punch_2','punch_3','punch_4','punch_5','punch_6','punch_7','punch_8'];
@@ -62,6 +69,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.setScale(1.7);
 
         if (this.body) {
+            // Physics body sized and offset ONCE here, never modified in update().
+            // Values calibrated for 256×256 source atlas frames at scale 1.7.
             this.body.setSize(50, 30);
             this.body.setOffset(103, 226);
             (this.body as Phaser.Physics.Arcade.Body).setAllowRotation(false);
@@ -70,12 +79,16 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.createAnimations();
     }
 
+    // ─── Helpers ────────────────────────────────────────────────────────────────
+
     private safeCall(methodName: string, ...args: any[]) {
         if (this.scene && typeof (this.scene as any)[methodName] === 'function') {
             return (this.scene as any)[methodName](...args);
         }
         return null;
     }
+
+    // ─── Animation setup ────────────────────────────────────────────────────────
 
     private createAnimations() {
         const anims = this.scene.anims;
@@ -124,6 +137,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             });
         });
     }
+
+    // ─── Weapon management ──────────────────────────────────────────────────────
 
     public equipWeapon(weaponKey: string) {
         if (this.weaponSprite) this.weaponSprite.destroy();
@@ -267,6 +282,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
         this.positionWeaponSprite();
 
+        // ── Jump ────────────────────────────────────────────────────────────────
         if (input.space && !this.isJumping && !this.isAttacking) {
             this.isJumping   = true;
             this.jumpGroundY = this.y;
@@ -301,6 +317,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             });
         }
 
+        // ── Double-tap run detection ─────────────────────────────────────────────
         const now = this.scene.time.now;
         if (input.left || input.right) {
             const dir = input.left ? 'left' : 'right';
@@ -314,6 +331,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             this.lastKey   = '';
         }
 
+        // ── Action input ─────────────────────────────────────────────────────────
         let requestedAction: string | null = null;
         if      (input.special)  requestedAction = 'special';
         else if (input.finisher) requestedAction = 'finisher';
@@ -343,6 +361,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
+        // ── Movement ─────────────────────────────────────────────────────────────
         if (!this.isAttacking) {
             let vx = 0, vy = 0;
 
@@ -380,6 +399,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
+    // ─── Attack execution ────────────────────────────────────────────────────────
+
     private executeWeaponAttack() {
         this.isAttacking = true;
         this.setVelocity(0, 0);
@@ -393,10 +414,10 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             const dirX   = this.flipX ? -1 : 1;
             this.safeCall('playSFX', 'gun-shot-m70', 1.0);
 
-            // FIX: Raised Y offset (-355) and pulled X left/inward to clear the body (50)
-            const spawnX = this.x + (50 * dirX);
-            const flashX = this.x + (70 * dirX);
-            const spawnY = this.y - 355;
+            // FIX: Pushed X further right/forward (110) to move flash out of Darko's face
+            const spawnX = this.x + (110 * dirX);
+            const flashX = this.x + (130 * dirX);
+            const spawnY = this.y - 325;
             
             this.safeCall('spawnProjectile', this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
 
@@ -478,6 +499,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     }
 
     private executeAction(action: string) {
+        // TEMPORARY TEST OVERRIDE: SMF gate disabled.
         if (action === 'special') {
             this.executeDarkoSpecial();
             return;
@@ -514,7 +536,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         let hasHit = false;
 
         this.scene.physics.add.overlap(hitZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_hz, target: any) => {
-            // FIX: Expanded Y-tolerance to 120px
             if (Math.abs(this.y - target.y) <= (target.isBreakable ? 160 : 120)) {
                 if (!hasHit) { this.safeCall('playSFX', action.includes('punch') ? this.punchImpacts : this.kickImpacts); hasHit = true; }
                 const damage = (action.includes('2') ? 15 : 10) * this.damageMultiplier;
@@ -601,6 +622,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
         this.once('animationcomplete', () => { this.isAttacking = false; });
     }
+
+    // ─── Damage / death ─────────────────────────────────────────────────────────
 
     public takeDamage(amount: number) {
         this.health -= amount;
