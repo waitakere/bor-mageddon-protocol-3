@@ -34,8 +34,9 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
 
         const body = this.body as Phaser.Physics.Arcade.Body;
         
-        body.setSize(120, 160);
-        body.setOffset(this.width / 2 - 60, this.height - 160); 
+        // FIX: Expanded hitbox significantly to match his visual bulk and make him easier to hit
+        body.setSize(160, 220);
+        body.setOffset(this.width / 2 - 80, this.height - 220); 
         
         body.setCollideWorldBounds(true);
         body.setAllowGravity(false); 
@@ -122,7 +123,7 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
         (this.scene as any).lastEnemyHitTime = Date.now();
         (this.scene as any).updateReactHUD();
 
-        (this.scene as any).spawnHitEffect(this.x, this.y - 80);
+        (this.scene as any).spawnHitEffect(this.x, this.y - 120); // Raised hit effect visually
 
         if (this.health <= 0) {
             this.die();
@@ -158,6 +159,16 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
              this.scene.time.delayedCall(1200, () => { this.emit('animationcomplete'); });
         }
 
+        // FIX: Bulletproof delayedCall ensures the state machine never deadlocks 
+        // if the animation frame gets interrupted or dropped.
+        this.scene.time.delayedCall(2000, () => {
+            if (this.health <= 0) return;
+            this.isKnockedDown = false;
+            this.isInvulnerable = false;
+            this.isHurt = false;
+            if (this.scene.anims.exists('miner-walk')) this.play('miner-walk', true);
+        });
+
         this.once('animationcomplete', () => {
             if (this.health <= 0) return;
             this.isKnockedDown = false;
@@ -169,6 +180,10 @@ export class Miner extends Phaser.Physics.Arcade.Sprite {
 
     protected die() {
         this.isDead = true;
+        // Lock invincibility on death to prevent overlapping attacks running damage logic
+        this.isInvulnerable = true; 
+        this.isHurt = false;
+        
         this.setVelocity(0, 0);
         (this.body as Phaser.Physics.Arcade.Body).enable = false;
 
