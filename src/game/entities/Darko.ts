@@ -351,6 +351,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
+        // ── Movement ─────────────────────────────────────────────────────────────
         if (!this.isAttacking) {
             let vx = 0, vy = 0;
 
@@ -388,6 +389,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
+    // ─── Attack execution ────────────────────────────────────────────────────────
+
     private executeWeaponAttack() {
         this.isAttacking = true;
         this.setVelocity(0, 0);
@@ -401,10 +404,10 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             const dirX   = this.flipX ? -1 : 1;
             this.safeCall('playSFX', 'gun-shot-m70', 1.0);
 
-            // FIX: Repositioned up and to the left to perfectly align with the rifle barrel
-            const spawnX = this.x + (110 * dirX);
-            const flashX = this.x + (130 * dirX);
-            const spawnY = this.y - 285;
+            // FIX: Raised Y offset (-295) and pulled X left/inward to clear the body (95)
+            const spawnX = this.x + (95 * dirX);
+            const flashX = this.x + (115 * dirX);
+            const spawnY = this.y - 295;
             
             this.safeCall('spawnProjectile', this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
 
@@ -486,7 +489,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     }
 
     private executeAction(action: string) {
-        // TEMPORARY TEST OVERRIDE: SMF gate disabled.
         if (action === 'special') {
             this.executeDarkoSpecial();
             return;
@@ -497,11 +499,9 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
-        // COMBO TRACKING LOGIC: If a punch is requested, verify if it's the second punch in a row
         if (action === 'punch-1' || action === 'punch-2') {
             const now = this.scene.time.now;
             
-            // If the last punch was less than 800ms ago, increment the combo counter
             if (now - this.lastPunchTime < 800) {
                 this.consecutivePunches++;
             } else {
@@ -509,10 +509,9 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             }
             this.lastPunchTime = now;
 
-            // Trigger the devastating 3-hit combo on the second consecutive punch
             if (this.consecutivePunches >= 2) {
                 action = 'punch-combo';
-                this.consecutivePunches = 0; // Reset after triggering
+                this.consecutivePunches = 0; 
             }
         }
 
@@ -522,7 +521,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         const animToPlay = `${this.characterName}-${action}`;
         if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
 
-        let zoneWidth = 180; // FIX: Expanded from 160 to 180 to catch fast-moving targets
+        let zoneWidth = 180; 
         let offsetX   = 90;  
         let offsetY   = action.includes('punch') ? 160 : 120; 
         let damage    = (action.includes('2') ? 15 : 10) * this.damageMultiplier;
@@ -534,7 +533,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             zoneWidth = 200;
             offsetX = 100;
             offsetY = 160;
-            damage = 40 * this.damageMultiplier; // Heavy damage for the 3-hit combo
+            damage = 40 * this.damageMultiplier; 
         }
 
         const hitZone = this.scene.add.zone(
@@ -548,7 +547,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         let hasHit = false;
 
         this.scene.physics.add.overlap(hitZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_hz, target: any) => {
-            // FIX: Extremely generous Y-tolerance (130) to prevent whiffing Dizelaši
             if (Math.abs(this.y - target.y) <= (target.isBreakable ? 160 : 130)) {
                 if (!hasHit) { 
                     this.safeCall('playSFX', action.includes('punch') ? this.punchImpacts : this.kickImpacts); 
