@@ -89,6 +89,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         if (!texture || texture.key === '__MISSING') return;
 
         const allFrames = texture.getFrameNames();
+        
+        // FIX: 'punch-combo' must be in this array or Phaser will crash when trying to play it
         const animTypes = [
             'idle', 'walk', 'run', 'jump', 'punch-1', 'punch-2', 'punch-combo', 'kick-1', 'kick-2',
             'melee', 'jump-punch', 'jump-kick', 'special-attack', 'finish-move',
@@ -389,6 +391,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
+    // ─── Attack execution ────────────────────────────────────────────────────────
+
     private executeWeaponAttack() {
         this.isAttacking = true;
         this.setVelocity(0, 0);
@@ -402,10 +406,10 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             const dirX   = this.flipX ? -1 : 1;
             this.safeCall('playSFX', 'gun-shot-m70', 1.0);
 
-            // PRECISE CALIBRATION: Up and Left relative to the previous iteration
-            const spawnX = this.x + (75 * dirX);
-            const flashX = this.x + (95 * dirX);
-            const spawnY = this.y - 315;
+            // FIX: Spawn X moved significantly forward. Spawn Y moved up to perfectly align with barrel.
+            const spawnX = this.x + (160 * dirX);
+            const flashX = this.x + (180 * dirX);
+            const spawnY = this.y - 335;
             
             this.safeCall('spawnProjectile', this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
 
@@ -517,7 +521,15 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.setVelocity(0, 0);
 
         const animToPlay = `${this.characterName}-${action}`;
-        if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
+        
+        // FIX: Safety check to prevent engine crash if an animation is missing from the JSON
+        if (this.scene.anims.exists(animToPlay)) {
+            this.play(animToPlay, true);
+        } else {
+            console.warn(`Animation ${animToPlay} missing! Falling back to punch-1`);
+            this.play(`${this.characterName}-punch-1`, true);
+            action = 'punch-1'; // Ensure hitbox math doesn't break
+        }
 
         let zoneWidth = 180; 
         let offsetX   = 90;  
