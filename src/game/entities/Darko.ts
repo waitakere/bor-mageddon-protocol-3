@@ -128,20 +128,19 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             });
         });
 
-        // ─── REFINED COMBO ANIMATION ───
+        // ─── UPDATED COMBO ANIMATION (WITH NEW FOLLOW-THROUGH FRAME) ───
         const comboKey = `${this.characterName}-punch-combo`;
         if (!anims.exists(comboKey)) {
             const comboFramesInAtlas = allFrames.filter(f => f.includes('punch-combo'));
             
             if (comboFramesInAtlas.length > 0) {
-                // FIX: Removed hit-stop from 008. Re-used 008 and 007 AFTER the hit to create a smooth recovery phase.
+                // Weave in the new 011 frame and use 010 for the airborne follow-through
                 const frameSequence = [
                     '000', '001', '002', '003', '004', '005', '006', '007', 
                     '008', // Fast dip/windup 
-                    '009', '009', '009', '009', // MASSIVE Hit-stop freeze on the uppercut
-                    '008', // Recovery drop
-                    '007', // Recovery guard
-                    '010'  // Idle finish
+                    '009', '009', '009', // Hit-stop freeze on impact
+                    '010', '010', // NEW: Emphasized high follow-through
+                    '011'  // NEW: Landing recovery
                 ];
                 
                 const frames = frameSequence.map(num => ({
@@ -340,7 +339,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             });
         }
 
-        // ── Double-tap run detection ─────────────────────────────────────────────
         const now = this.scene.time.now;
         if (input.left || input.right) {
             const dir = input.left ? 'left' : 'right';
@@ -354,7 +352,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             this.lastKey   = '';
         }
 
-        // ── Action input ─────────────────────────────────────────────────────────
         let requestedAction: string | null = null;
         if      (input.special)  requestedAction = 'special';
         else if (input.finisher) requestedAction = 'finisher';
@@ -384,7 +381,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
-        // ── Movement ─────────────────────────────────────────────────────────────
         if (!this.isAttacking) {
             let vx = 0, vy = 0;
 
@@ -421,8 +417,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             if (this.isJumping) this.setVelocity(this.jumpVelocityX, 0);
         }
     }
-
-    // ─── Attack execution ────────────────────────────────────────────────────────
 
     private executeWeaponAttack() {
         this.isAttacking = true;
@@ -557,6 +551,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         if (this.scene.anims.exists(animToPlay)) {
             this.play(animToPlay, true);
         } else {
+            console.warn(`Animation ${animToPlay} missing! Falling back to punch-1`);
             this.play(`${this.characterName}-punch-1`, true);
             action = 'punch-1'; 
         }
@@ -575,7 +570,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             offsetY = 160;
             damage = 40 * this.damageMultiplier; 
             
-            // FIX: Smooth cubic easing lunge instead of a blocky setVelocity
             const dirX = this.flipX ? -1 : 1;
             this.scene.tweens.add({
                 targets: this,
@@ -600,7 +594,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 if (!hasHit) { 
                     this.safeCall('playSFX', action.includes('punch') ? this.punchImpacts : this.kickImpacts); 
                     
-                    // FIX: Sell the heavy impact of the combo by shaking the camera
                     if (action === 'punch-combo') {
                         this.scene.cameras.main.shake(150, 0.015);
                     }
