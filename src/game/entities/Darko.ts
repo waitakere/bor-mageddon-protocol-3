@@ -389,8 +389,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    // ─── Attack execution ────────────────────────────────────────────────────────
-
     private executeWeaponAttack() {
         this.isAttacking = true;
         this.setVelocity(0, 0);
@@ -404,10 +402,10 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             const dirX   = this.flipX ? -1 : 1;
             this.safeCall('playSFX', 'gun-shot-m70', 1.0);
 
-            // FIX: Raised Y offset (-295) and pulled X left/inward to clear the body (95)
-            const spawnX = this.x + (95 * dirX);
-            const flashX = this.x + (115 * dirX);
-            const spawnY = this.y - 295;
+            // PRECISE CALIBRATION: Up and Left relative to the previous iteration
+            const spawnX = this.x + (75 * dirX);
+            const flashX = this.x + (95 * dirX);
+            const spawnY = this.y - 315;
             
             this.safeCall('spawnProjectile', this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
 

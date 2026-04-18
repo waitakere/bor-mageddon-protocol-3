@@ -119,8 +119,6 @@ export class MainLevel extends Phaser.Scene {
 
         this.physics.add.overlap(this.player, this.items, this.collectItem, undefined, this);
         
-        // Note: Projectile overlaps have been fully moved to the Update loop for manual check
-        
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
     }
 
@@ -304,7 +302,10 @@ export class MainLevel extends Phaser.Scene {
                         
                         if (p.hit) p.hit(); else p.destroy();
                         
+                        // Spawn blood and perfectly aligned chest/face explosion!
                         this.spawnBlood(e.x, e.y - 50);
+                        this.spawnHitEffect(e.x, e.y - 130); 
+
                         if (e.takeDamage) e.takeDamage(p.damage || 60);
 
                         // FORCE ENEMY DAMAGE ANIMATION
