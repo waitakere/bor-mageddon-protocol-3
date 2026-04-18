@@ -39,9 +39,9 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private isRunning: boolean = false;
     private queuedAction: string | null = null;
 
-    // Combo Tracking
+    // FIX: Combo Tracking Variables updated for reliable timing
+    private lastPunchTime: number = 0;
     private comboCounter: number = 0;
-    private comboTimer: Phaser.Time.TimerEvent | null = null;
 
     private lastWeaponDepth: number = -1;
     private pickupTintTimer: Phaser.Time.TimerEvent | null = null;
@@ -112,7 +112,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             else if (animType === 'run')                               fps = 18;
             else if (animType === 'jump')                              fps = 8;
             else if (animType === 'melee')                             fps = 18;
-            else if (animType === 'punch-combo')                       fps = 14; 
+            else if (animType === 'punch-combo')                       fps = 12; // FIX: Slowed down to make the sequence readable
             else if (animType === 'kick-1' || animType === 'kick-2')   fps = 22;
             else if (animType === 'pick-up')                           fps = 12; 
 
@@ -122,11 +122,13 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 frameConfig.push(frameConfig, frameConfig, frameConfig);
             }
 
+            // FIX: "Hit-Stop" logic. This duplicates the heavy uppercut frames so Darko visually 
+            // "holds" the devastating impact poses longer than the fast jabs.
             if (animType === 'punch-combo') {
                 const emphasizedFrames: Phaser.Types.Animations.AnimationFrameConfig[] = [];
                 frameConfig.forEach(fc => {
                     emphasizedFrames.push(fc);
-                    if (typeof fc.frame === 'string' && fc.frame.includes('009')) {
+                    if (typeof fc.frame === 'string' && (fc.frame.includes('008') || fc.frame.includes('009') || fc.frame.includes('010'))) {
                         emphasizedFrames.push(fc, fc); 
                     }
                 });
@@ -510,27 +512,25 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
-        // NEW COMBO LOGIC: Check if it's a consecutive punch
+        // FIX: Re-engineered Combo Tracking to be highly responsive and guaranteed.
+        // By giving a 1500ms window, the player can easily queue the combo even if 
+        // they wait for the entire first animation to complete before pressing the button again.
         if (action === 'punch-1' || action === 'punch-2') {
-            this.comboCounter++;
+            const now = this.scene.time.now;
             
-            if (this.comboCounter >= 3) {
-                action = 'punch-combo';
-                this.comboCounter = 0; // Reset after triggering
+            if (this.lastPunchTime === 0 || now - this.lastPunchTime > 1500) {
+                this.comboCounter = 1;
+            } else {
+                this.comboCounter++;
             }
+            this.lastPunchTime = now;
 
-            // Set a window of 800ms for the player to input the next punch
-            if (this.comboTimer) this.comboTimer.remove();
-            this.comboTimer = this.scene.time.delayedCall(800, () => {
-                this.comboCounter = 0; // If they wait too long, reset the combo
-            });
-        } else {
-            // If they kick or do anything else, break the combo
-            this.comboCounter = 0;
-            if (this.comboTimer) {
-                this.comboTimer.remove();
-                this.comboTimer = null;
+            if (this.comboCounter >= 2) {
+                action = 'punch-combo';
+                this.comboCounter = 0; 
             }
+        } else {
+            this.comboCounter = 0;
         }
 
         this.isAttacking = true;
@@ -555,10 +555,17 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             zoneWidth = 220;
             offsetX = 110;
         } else if (action === 'punch-combo') {
-            zoneWidth = 200;
-            offsetX = 100;
+            zoneWidth = 240; // Wider hit zone for the massive uppercut sequence
+            offsetX = 120;
             offsetY = 160;
             damage = 40 * this.damageMultiplier; 
+            
+            // FIX: Add a dynamic forward lunge to the combo so Darko rapidly closes the distance
+            const dirX = this.flipX ? -1 : 1;
+            this.setVelocityX(150 * dirX);
+            this.scene.time.delayedCall(300, () => {
+                if (this.active && !this.isDead) this.setVelocityX(0);
+            });
         }
 
         const hitZone = this.scene.add.zone(
@@ -581,6 +588,13 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 this.safeCall('spawnHitEffect', target.x, target.y - 130);
                 
                 if (target.takeDamage) target.takeDamage(damage);
+                
+                // Add a nice physics pushback when enemies eat the full combo
+                if (action === 'punch-combo' && target.body && target.type !== 'obj_kiosk' && target.type !== 'obj_kontejner') {
+                    const pushDir = target.x > this.x ? 1 : -1;
+                    target.setVelocityX(200 * pushDir);
+                }
+
                 if (hitZone.body) (hitZone.body as Phaser.Physics.Arcade.Body).enable = false;
             }
         });
