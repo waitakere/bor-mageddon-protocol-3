@@ -39,7 +39,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private isRunning: boolean = false;
     private queuedAction: string | null = null;
 
-    // Combo Tracking
     private lastPunchTime: number = 0;
     private comboCounter: number = 0;
 
@@ -97,7 +96,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             'shoot', 'shoot-recoil', 'shoot-up', 'shoot-with-rifle', 'walk-rifle'
         ];
 
-        // 1. Build standard animations
         animTypes.forEach(animType => {
             const animKey = `${this.characterName}-${animType}`;
             if (anims.exists(animKey)) return;
@@ -130,18 +128,20 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             });
         });
 
-        // 2. Explicitly build the Combo animation with Hit-Stop mechanics
+        // ─── REFINED COMBO ANIMATION ───
         const comboKey = `${this.characterName}-punch-combo`;
         if (!anims.exists(comboKey)) {
             const comboFramesInAtlas = allFrames.filter(f => f.includes('punch-combo'));
             
             if (comboFramesInAtlas.length > 0) {
-                // By duplicating frames 8, 9, and 10, we force the engine to hold the apex of the uppercut longer.
+                // FIX: Removed hit-stop from 008. Re-used 008 and 007 AFTER the hit to create a smooth recovery phase.
                 const frameSequence = [
                     '000', '001', '002', '003', '004', '005', '006', '007', 
-                    '008', '008', '008', // Massive hit-stop on the left hook
-                    '009', '009', '009', // Hit-stop on the uppercut apex
-                    '010', '010'
+                    '008', // Fast dip/windup 
+                    '009', '009', '009', '009', // MASSIVE Hit-stop freeze on the uppercut
+                    '008', // Recovery drop
+                    '007', // Recovery guard
+                    '010'  // Idle finish
                 ];
                 
                 const frames = frameSequence.map(num => ({
@@ -158,7 +158,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                     });
                 }
             } else {
-                console.error(`🚨 ATLAS CACHE ERROR: 'punch-combo' frames are completely missing from the loaded darko.json. Please Hard Refresh (Ctrl+F5) or restart your Vite server! 🚨`);
+                console.error(`🚨 ATLAS CACHE ERROR: 'punch-combo' frames missing. Hard Refresh (Ctrl+F5)! 🚨`);
             }
         }
     }
@@ -531,29 +531,21 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
-        // COMBO TRACKING LOGIC
         if (action === 'punch-1' || action === 'punch-2') {
             const now = this.scene.time.now;
             
-            // If the last punch was within 1.5 seconds, advance the combo
-            if (this.lastPunchTime > 0 && (now - this.lastPunchTime) < 1500) {
-                this.comboCounter++;
-            } else {
+            if (this.lastPunchTime === 0 || now - this.lastPunchTime > 1500) {
                 this.comboCounter = 1;
+            } else {
+                this.comboCounter++;
             }
             this.lastPunchTime = now;
 
-            // Trigger the massive combo on the second consecutive punch
             if (this.comboCounter >= 2) {
-                if (this.scene.anims.exists(`${this.characterName}-punch-combo`)) {
-                    action = 'punch-combo';
-                    this.comboCounter = 0; 
-                } else {
-                    console.warn(`Combo triggered, but animation missing. Check the red atlas error in console!`);
-                }
+                action = 'punch-combo';
+                this.comboCounter = 0; 
             }
         } else {
-            // Reset combo if a kick or block is thrown
             this.comboCounter = 0;
         }
 
@@ -583,11 +575,13 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             offsetY = 160;
             damage = 40 * this.damageMultiplier; 
             
-            // Forward momentum to close distance during the combo
+            // FIX: Smooth cubic easing lunge instead of a blocky setVelocity
             const dirX = this.flipX ? -1 : 1;
-            this.setVelocityX(150 * dirX);
-            this.scene.time.delayedCall(300, () => {
-                if (this.active && !this.isDead) this.setVelocityX(0);
+            this.scene.tweens.add({
+                targets: this,
+                x: this.x + (60 * dirX),
+                duration: 300,
+                ease: 'Cubic.easeOut'
             });
         }
 
@@ -605,12 +599,24 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             if (Math.abs(this.y - target.y) <= (target.isBreakable ? 160 : 130)) {
                 if (!hasHit) { 
                     this.safeCall('playSFX', action.includes('punch') ? this.punchImpacts : this.kickImpacts); 
+                    
+                    // FIX: Sell the heavy impact of the combo by shaking the camera
+                    if (action === 'punch-combo') {
+                        this.scene.cameras.main.shake(150, 0.015);
+                    }
+
                     hasHit = true; 
                 }
                 
                 this.safeCall('spawnHitEffect', target.x, target.y - 130);
                 
                 if (target.takeDamage) target.takeDamage(damage);
+                
+                if (action === 'punch-combo' && target.body && target.type !== 'obj_kiosk' && target.type !== 'obj_kontejner') {
+                    const pushDir = target.x > this.x ? 1 : -1;
+                    target.setVelocityX(200 * pushDir);
+                }
+
                 if (hitZone.body) (hitZone.body as Phaser.Physics.Arcade.Body).enable = false;
             }
         });
