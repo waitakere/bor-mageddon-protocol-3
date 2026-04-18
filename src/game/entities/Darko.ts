@@ -111,7 +111,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             else if (animType === 'run')                               fps = 18;
             else if (animType === 'jump')                              fps = 8;
             else if (animType === 'melee')                             fps = 18;
-            else if (animType === 'kick-1' || animType === 'kick-2')   fps = 22;
+            // FIX: Slowed kicks down from 22 fps to 14 fps to match the combo pacing and add weight
+            else if (animType === 'kick-1' || animType === 'kick-2')   fps = 14; 
             else if (animType === 'pick-up')                           fps = 12; 
 
             let frameConfig: Phaser.Types.Animations.AnimationFrameConfig[] = matchingFrames.map(f => ({ key: this.characterName, frame: f }));
@@ -620,7 +621,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.once('animationcomplete', () => {
             if (hitZone.active) hitZone.destroy();
             
-            // FIX: Wipe the input queue if we just finished a combo so we don't accidentally throw a delayed jab
             if (action === 'punch-combo') {
                 this.queuedAction = null;
             }
