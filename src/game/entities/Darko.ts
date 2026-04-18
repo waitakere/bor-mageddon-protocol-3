@@ -90,7 +90,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
         const allFrames = texture.getFrameNames();
         
-        // FIX: 'punch-combo' must be in this array or Phaser will crash when trying to play it
         const animTypes = [
             'idle', 'walk', 'run', 'jump', 'punch-1', 'punch-2', 'punch-combo', 'kick-1', 'kick-2',
             'melee', 'jump-punch', 'jump-kick', 'special-attack', 'finish-move',
@@ -406,10 +405,10 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             const dirX   = this.flipX ? -1 : 1;
             this.safeCall('playSFX', 'gun-shot-m70', 1.0);
 
-            // FIX: Spawn X moved significantly forward. Spawn Y moved up to perfectly align with barrel.
-            const spawnX = this.x + (160 * dirX);
-            const flashX = this.x + (180 * dirX);
-            const spawnY = this.y - 335;
+            // FIX: Spawn X pushed further out past the hand (185) and Y pushed further up (-350)
+            const spawnX = this.x + (185 * dirX);
+            const flashX = this.x + (205 * dirX);
+            const spawnY = this.y - 350;
             
             this.safeCall('spawnProjectile', this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
 
@@ -522,13 +521,12 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
         const animToPlay = `${this.characterName}-${action}`;
         
-        // FIX: Safety check to prevent engine crash if an animation is missing from the JSON
         if (this.scene.anims.exists(animToPlay)) {
             this.play(animToPlay, true);
         } else {
             console.warn(`Animation ${animToPlay} missing! Falling back to punch-1`);
             this.play(`${this.characterName}-punch-1`, true);
-            action = 'punch-1'; // Ensure hitbox math doesn't break
+            action = 'punch-1'; 
         }
 
         let zoneWidth = 180; 
