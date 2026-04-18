@@ -40,8 +40,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private queuedAction: string | null = null;
 
     // Combo Tracking
-    private lastPunchTime: number = 0;
-    private consecutivePunches: number = 0;
+    private comboCounter: number = 0;
+    private comboTimer: Phaser.Time.TimerEvent | null = null;
 
     private lastWeaponDepth: number = -1;
     private pickupTintTimer: Phaser.Time.TimerEvent | null = null;
@@ -112,7 +112,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             else if (animType === 'run')                               fps = 18;
             else if (animType === 'jump')                              fps = 8;
             else if (animType === 'melee')                             fps = 18;
-            else if (animType === 'punch-combo')                       fps = 14; // Slowed down from 18 to make hooks readable
+            else if (animType === 'punch-combo')                       fps = 14; 
             else if (animType === 'kick-1' || animType === 'kick-2')   fps = 22;
             else if (animType === 'pick-up')                           fps = 12; 
 
@@ -122,12 +122,10 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 frameConfig.push(frameConfig, frameConfig, frameConfig);
             }
 
-            // VISUAL FIX: Emphasize the uppercut in the combo by holding the apex frame longer (Hit-Stop)
             if (animType === 'punch-combo') {
                 const emphasizedFrames: Phaser.Types.Animations.AnimationFrameConfig[] = [];
                 frameConfig.forEach(fc => {
                     emphasizedFrames.push(fc);
-                    // frame_009 is the fully extended uppercut. Duplicate it to create a heavy impact pause.
                     if (typeof fc.frame === 'string' && fc.frame.includes('009')) {
                         emphasizedFrames.push(fc, fc); 
                     }
@@ -418,7 +416,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             const dirX   = this.flipX ? -1 : 1;
             this.safeCall('playSFX', 'gun-shot-m70', 1.0);
 
-            // FINAL ALIGNMENT: Pushed fully out to clear the supporting hand, raised perfectly to the barrel tip.
             const spawnX = this.x + (185 * dirX);
             const flashX = this.x + (205 * dirX);
             const spawnY = this.y - 350;
@@ -513,19 +510,26 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
+        // NEW COMBO LOGIC: Check if it's a consecutive punch
         if (action === 'punch-1' || action === 'punch-2') {
-            const now = this.scene.time.now;
+            this.comboCounter++;
             
-            if (now - this.lastPunchTime < 800) {
-                this.consecutivePunches++;
-            } else {
-                this.consecutivePunches = 1;
-            }
-            this.lastPunchTime = now;
-
-            if (this.consecutivePunches >= 2) {
+            if (this.comboCounter >= 3) {
                 action = 'punch-combo';
-                this.consecutivePunches = 0; 
+                this.comboCounter = 0; // Reset after triggering
+            }
+
+            // Set a window of 800ms for the player to input the next punch
+            if (this.comboTimer) this.comboTimer.remove();
+            this.comboTimer = this.scene.time.delayedCall(800, () => {
+                this.comboCounter = 0; // If they wait too long, reset the combo
+            });
+        } else {
+            // If they kick or do anything else, break the combo
+            this.comboCounter = 0;
+            if (this.comboTimer) {
+                this.comboTimer.remove();
+                this.comboTimer = null;
             }
         }
 
