@@ -484,4 +484,257 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.scene.physics.add.existing(hitZone);
         let hasHit = false;
 
-        this.scene.physics.add.overlap(hitZone, [(this.scene as any).enemies
+        this.scene.physics.add.overlap(hitZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_hz, target: any) => {
+            if (Math.abs(baseY - target.y) <= (target.isBreakable ? 160 : 130)) {
+                if (!hasHit) { this.safeCall('playSFX', action.includes('punch') ? this.punchImpacts : this.kickImpacts); hasHit = true; }
+                this.safeCall('spawnHitEffect', target.x, target.y - 130);
+                if (target.takeDamage) target.takeDamage(15 * this.damageMultiplier);
+                if (hitZone.body) (hitZone.body as Phaser.Physics.Arcade.Body).enable = false;
+            }
+        });
+
+        this.once('animationcomplete', () => {
+            if (hitZone.active) hitZone.destroy();
+            this.isAttacking = false;
+        });
+    }
+
+    private executeAction(action: string) {
+        if (action === 'special') {
+            this.executeDarkoSpecial();
+            return;
+        }
+
+        if (action === 'finisher') {
+            this.executeDarkoFinisher();
+            return;
+        }
+
+        if (action === 'punch-1' || action === 'punch-2') {
+            const now = this.scene.time.now;
+            
+            if (this.lastPunchTime === 0 || now - this.lastPunchTime > 1500) {
+                this.comboCounter = 1;
+            } else {
+                this.comboCounter++;
+            }
+            this.lastPunchTime = now;
+
+            if (this.comboCounter >= 2) {
+                action = 'punch-combo';
+                this.comboCounter = 0; 
+            }
+        } else {
+            this.comboCounter = 0;
+        }
+
+        this.isAttacking = true;
+        this.setVelocity(0, 0);
+
+        const animToPlay = `${this.characterName}-${action}`;
+        
+        if (this.scene.anims.exists(animToPlay)) {
+            this.play(animToPlay, true);
+        } else {
+            console.warn(`Animation ${animToPlay} missing! Falling back to punch-1`);
+            this.play(`${this.characterName}-punch-1`, true);
+            action = 'punch-1'; 
+        }
+
+        let zoneWidth = 180; 
+        let offsetX   = 90;  
+        let offsetY   = action.includes('punch') ? 160 : 120; 
+        let damage    = (action.includes('2') ? 15 : 10) * this.damageMultiplier;
+
+        if (action === 'kick-2') {
+            zoneWidth = 220;
+            offsetX = 110;
+        } else if (action === 'punch-combo') {
+            zoneWidth = 240; 
+            offsetX = 120;
+            offsetY = 160;
+            damage = 40 * this.damageMultiplier; 
+            
+            const dirX = this.flipX ? -1 : 1;
+            this.setVelocityX(150 * dirX);
+            this.scene.time.delayedCall(300, () => {
+                if (this.active && !this.isDead) this.setVelocityX(0);
+            });
+        }
+
+        const hitZone = this.scene.add.zone(
+            this.x + (this.flipX ? -offsetX : offsetX),
+            this.y - 60, 
+            zoneWidth, 
+            120
+        );
+        hitZone.setName('basicAttackZone');
+        this.scene.physics.add.existing(hitZone);
+        let hasHit = false;
+
+        this.scene.physics.add.overlap(hitZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_hz, target: any) => {
+            if (Math.abs(this.y - target.y) <= (target.isBreakable ? 160 : 130)) {
+                if (!hasHit) { 
+                    this.safeCall('playSFX', action.includes('punch') ? this.punchImpacts : this.kickImpacts); 
+                    hasHit = true; 
+                }
+                
+                this.safeCall('spawnHitEffect', target.x, target.y - 130);
+                
+                if (target.takeDamage) target.takeDamage(damage);
+                if (hitZone.body) (hitZone.body as Phaser.Physics.Arcade.Body).enable = false;
+            }
+        });
+
+        this.once('animationcomplete', () => {
+            if (hitZone.active) hitZone.destroy();
+            if (this.queuedAction) {
+                const next = this.queuedAction;
+                this.queuedAction = null;
+                this.isAttacking  = false;
+                this.executeAction(next);
+            } else {
+                this.isAttacking = false;
+            }
+        });
+    }
+
+    private executeDarkoSpecial() {
+        this.isAttacking = true;
+        this.setVelocity(0, 0);
+        const anim = this.scene.anims.exists(`${this.characterName}-special-attack`)
+            ? `${this.characterName}-special-attack` : `${this.characterName}-punch-1`;
+        if (this.scene.anims.exists(anim)) this.play(anim, true);
+
+        this.scene.time.delayedCall(200, () => {
+            this.safeCall('playSFX', ['punch_4', 'punch_5']);
+            this.safeCall('triggerScreenGlitch', 400);
+            this.scene.cameras.main.shake(300, 0.015);
+
+            const spinZone = this.scene.add.circle(this.x, this.y - 60, 180);
+            this.scene.physics.add.existing(spinZone);
+
+            this.scene.physics.add.overlap(spinZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_sz, target: any) => {
+                if (Math.abs(this.y - target.y) <= (target.isBreakable ? 160 : 130)) {
+                    const pushDir = target.x > this.x ? 1 : -1;
+                    if (target.takeDamage) {
+                        target.takeDamage(40 * this.damageMultiplier);
+                        if (target.body && target.type !== 'obj_kiosk' && target.type !== 'obj_kontejner') {
+                            target.setVelocityX(400 * pushDir);
+                        }
+                    }
+                    this.safeCall('spawnHitEffect', target.x, target.y - 130);
+                }
+            });
+
+            this.scene.time.delayedCall(200, () => { if (spinZone.active) spinZone.destroy(); });
+        });
+
+        this.once('animationcomplete', () => { this.isAttacking = false; });
+    }
+
+    private executeDarkoFinisher() {
+        this.isAttacking = true;
+        this.setVelocity(0, 0);
+        const anim = this.scene.anims.exists(`${this.characterName}-finish-move`)
+            ? `${this.characterName}-finish-move` : `${this.characterName}-punch-1`;
+        if (this.scene.anims.exists(anim)) this.play(anim, true);
+
+        this.scene.time.delayedCall(300, () => {
+            this.safeCall('playSFX', this.specialAudio, 1.0);
+            this.safeCall('triggerScreenGlitch', 800);
+            this.scene.cameras.main.shake(500, 0.03);
+
+            const hitZone = this.scene.add.zone(this.x + (this.flipX ? -150 : 150), this.y - 60, 260, 160);
+            this.scene.physics.add.existing(hitZone);
+
+            this.scene.physics.add.overlap(hitZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_hz, target: any) => {
+                if (Math.abs(this.y - target.y) <= (target.isBreakable ? 140 : 130)) {
+                    if (target.takeDamage) target.takeDamage(80 * this.damageMultiplier);
+                    this.safeCall('spawnHitEffect', target.x, target.y - 130);
+                    if (hitZone.body) (hitZone.body as Phaser.Physics.Arcade.Body).enable = false;
+                }
+            });
+
+            this.scene.time.delayedCall(100, () => { if (hitZone.active) hitZone.destroy(); });
+        });
+
+        this.once('animationcomplete', () => { this.isAttacking = false; });
+    }
+
+    public takeDamage(amount: number) {
+        this.health -= amount;
+        this.queuedAction = null;
+        this.safeCall('spawnHitEffect', this.x, this.y - 150); 
+        if (this.scene) (this.scene as any).lastPlayerHitTime = Date.now();
+
+        if (this.equippedWeapon) {
+            this.weaponHitsTaken++;
+            if (this.weaponHitsTaken >= 4) this.dropAndFadeWeapon();
+        }
+
+        if (this.health <= 0) {
+            this.safeCall('playSFX', this.agonies);
+            this.die();
+        } else {
+            this.safeCall('playSFX', this.grunts);
+            if (this.pickupTintTimer) { this.pickupTintTimer.remove(); this.pickupTintTimer = null; }
+            this.clearTint();
+
+            const dmgAnim = `${this.characterName}-damage`;
+            if (this.scene.anims.exists(dmgAnim)) {
+                this.isAttacking = true;
+                this.setTint(0xff0000);
+                this.play(dmgAnim, true);
+                this.scene.time.delayedCall(150, () => this.clearTint());
+                this.once('animationcomplete', () => { this.isAttacking = false; });
+            } else {
+                this.setTint(0xff0000);
+                this.scene.time.delayedCall(200, () => this.clearTint());
+            }
+        }
+        this.safeCall('updateReactHUD');
+    }
+
+    public takeKnockdown(amount: number = 15) {
+        this.health -= amount;
+        this.queuedAction = null;
+        this.safeCall('spawnHitEffect', this.x, this.y - 150); 
+        if (this.scene) (this.scene as any).lastPlayerHitTime = Date.now();
+
+        if (this.equippedWeapon) this.dropAndFadeWeapon();
+
+        if (this.health <= 0) {
+            this.safeCall('playSFX', this.agonies);
+            this.die();
+        } else {
+            this.safeCall('playSFX', this.grunts);
+            if (this.pickupTintTimer) { this.pickupTintTimer.remove(); this.pickupTintTimer = null; }
+            this.clearTint();
+
+            const anim = `${this.characterName}-knockdown-get-up`;
+            if (this.scene.anims.exists(anim)) {
+                this.isAttacking = true;
+                this.play(anim, true);
+                this.once('animationcomplete', () => { this.isAttacking = false; });
+            } else {
+                this.setTint(0xff0000);
+                this.scene.time.delayedCall(200, () => this.clearTint());
+            }
+        }
+        this.safeCall('updateReactHUD');
+    }
+
+    private die() {
+        this.isDead = true;
+        this.setVelocity(0, 0);
+        if (this.pickupTintTimer) { this.pickupTintTimer.remove(); this.pickupTintTimer = null; }
+        this.clearTint();
+
+        const dieAnim = `${this.characterName}-dying`;
+        if (this.scene.anims.exists(dieAnim)) this.play(dieAnim, true);
+        else this.setTint(0xff0000);
+
+        if (this.weaponSprite) this.weaponSprite.destroy();
+    }
+}
