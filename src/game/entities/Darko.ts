@@ -112,14 +112,27 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             else if (animType === 'run')                               fps = 18;
             else if (animType === 'jump')                              fps = 8;
             else if (animType === 'melee')                             fps = 18;
-            else if (animType === 'punch-combo')                       fps = 18;
+            else if (animType === 'punch-combo')                       fps = 14; // Slowed down from 18 to make hooks readable
             else if (animType === 'kick-1' || animType === 'kick-2')   fps = 22;
             else if (animType === 'pick-up')                           fps = 12; 
 
-            const frameConfig = matchingFrames.map(f => ({ key: this.characterName, frame: f }));
+            let frameConfig: Phaser.Types.Animations.AnimationFrameConfig[] = matchingFrames.map(f => ({ key: this.characterName, frame: f }));
 
             if (animType === 'shoot-with-rifle' && frameConfig.length === 1) {
                 frameConfig.push(frameConfig, frameConfig, frameConfig);
+            }
+
+            // VISUAL FIX: Emphasize the uppercut in the combo by holding the apex frame longer (Hit-Stop)
+            if (animType === 'punch-combo') {
+                const emphasizedFrames: Phaser.Types.Animations.AnimationFrameConfig[] = [];
+                frameConfig.forEach(fc => {
+                    emphasizedFrames.push(fc);
+                    // frame_009 is the fully extended uppercut. Duplicate it to create a heavy impact pause.
+                    if (typeof fc.frame === 'string' && fc.frame.includes('009')) {
+                        emphasizedFrames.push(fc, fc); 
+                    }
+                });
+                frameConfig = emphasizedFrames;
             }
 
             anims.create({
@@ -405,7 +418,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             const dirX   = this.flipX ? -1 : 1;
             this.safeCall('playSFX', 'gun-shot-m70', 1.0);
 
-            // FIX: Spawn X pushed further out past the hand (185) and Y pushed further up (-350)
+            // FINAL ALIGNMENT: Pushed fully out to clear the supporting hand, raised perfectly to the barrel tip.
             const spawnX = this.x + (185 * dirX);
             const flashX = this.x + (205 * dirX);
             const spawnY = this.y - 350;
