@@ -38,8 +38,11 @@ interface SettingsMenuProps {
   onClose: () => void;
   crtEnabled: boolean;
   onCrtToggle: (enabled: boolean) => void;
-  volume: number;
-  onVolumeChange: (volume: number) => void;
+  // Replaced master volume with dedicated audio buses
+  bgmVolume: number;
+  sfxVolume: number;
+  onBgmVolumeChange: (volume: number) => void;
+  onSfxVolumeChange: (volume: number) => void;
 }
 
 export const SettingsMenu: React.FC<SettingsMenuProps> = ({
@@ -47,23 +50,22 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
   onClose,
   crtEnabled,
   onCrtToggle,
-  volume,
-  onVolumeChange
+  bgmVolume,
+  sfxVolume,
+  onBgmVolumeChange,
+  onSfxVolumeChange
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // 1. PAUSE THE GAME WHEN OPEN & LISTEN FOR ESCAPE KEY
   useEffect(() => {
-    // Handle Escape Key
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
 
-    // Pause/Resume Phaser Engine
     if ((window as any).phaserGame) {
       if (isOpen) {
-        // Pausing MainLevel halts movement, AI, and physics
         (window as any).phaserGame.scene.pause('MainLevel'); 
       } else {
         (window as any).phaserGame.scene.resume('MainLevel');
@@ -82,15 +84,21 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
 
   if (!isOpen) return null;
 
-  // Sends volume data directly to the Phaser engine
-  const handleVolumeChange = (newVolume: number) => {
-    onVolumeChange(newVolume);
+  // Dispatch specific events to the Phaser Engine rather than hacking the global Web Audio node
+  const handleBgmChange = (newVolume: number) => {
+    onBgmVolumeChange(newVolume);
     if ((window as any).phaserGame) {
-      (window as any).phaserGame.sound.volume = newVolume;
+      (window as any).phaserGame.events.emit('set-bgm-volume', newVolume);
     }
   };
 
-  // Browser Fullscreen API
+  const handleSfxChange = (newVolume: number) => {
+    onSfxVolumeChange(newVolume);
+    if ((window as any).phaserGame) {
+      (window as any).phaserGame.events.emit('set-sfx-volume', newVolume);
+    }
+  };
+
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch((err) => console.log(err));
@@ -103,7 +111,6 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 font-mono backdrop-blur-sm">
       <div className="bg-[#121212] border-2 border-[#b87333] p-8 w-96 shadow-[0_0_30px_rgba(184,115,51,0.4)] relative">
         
-        {/* Close Button */}
         <button 
           onClick={onClose}
           className="absolute top-3 right-4 text-zinc-500 hover:text-red-500 font-bold text-xl cursor-pointer"
@@ -150,16 +157,30 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
             </button>
           </div>
 
-          {/* Master Volume Slider */}
+          {/* BGM Volume Slider */}
           <div>
             <div className="flex justify-between mb-2">
-              <label className="text-[#b87333] uppercase text-sm font-bold">GLAVNI AUDIO</label>
-              <span className="text-[#39ff14] text-sm">{Math.round(volume * 100)}%</span>
+              <label className="text-[#b87333] uppercase text-sm font-bold">MUZIKA (BGM)</label>
+              <span className="text-[#39ff14] text-sm">{Math.round(bgmVolume * 100)}%</span>
             </div>
             <input 
               type="range" min="0" max="1" step="0.05" 
-              value={volume}
-              onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+              value={bgmVolume}
+              onChange={(e) => handleBgmChange(parseFloat(e.target.value))}
+              className="w-full accent-[#b87333] h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
+
+          {/* SFX Volume Slider */}
+          <div>
+            <div className="flex justify-between mb-2">
+              <label className="text-[#b87333] uppercase text-sm font-bold">EFEKTI (SFX)</label>
+              <span className="text-[#39ff14] text-sm">{Math.round(sfxVolume * 100)}%</span>
+            </div>
+            <input 
+              type="range" min="0" max="1" step="0.05" 
+              value={sfxVolume}
+              onChange={(e) => handleSfxChange(parseFloat(e.target.value))}
               className="w-full accent-[#b87333] h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
             />
           </div>
