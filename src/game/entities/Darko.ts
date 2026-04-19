@@ -30,7 +30,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private walkSpeed: number = CHARACTER_STATS.darko_1993.baseSpeed;
     private runSpeed: number = CHARACTER_STATS.darko_1993.runSpeed;
     private jumpVelocityX: number = 0;
-    private jumpVisualHeight: number = 0; // Safe jump tracking
+    private jumpVisualHeight: number = 0; 
     
     private lastKey: string = '';
     private lastKeyTime: number = 0;
@@ -96,9 +96,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             if (matchingFrames.length > 0) {
                 let fps = 15;
                 if (animType === 'idle') fps = 6;
-                // ⬇️ Framerate reduced to 10 to balance the new 320px baseSpeed
                 else if (animType === 'walk' || animType === 'walk-rifle') fps = 10; 
-                // ⬇️ Framerate reduced to 14 to balance the new 580px runSpeed
                 else if (animType === 'run') fps = 14; 
                 else if (animType === 'jump') fps = 8;
                 else if (animType === 'melee') fps = 18;
@@ -286,6 +284,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             const dirX = this.flipX ? -1 : 1;
             this.safeCall('playSFX', 'gun-shot-m70', 1.0);
 
+            // Reverted to previous, stable positions
             const spawnX = this.x + (150 * dirX);
             const flashX = this.x + (170 * dirX);
             const spawnY = this.y - 230;
@@ -373,10 +372,19 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         if (this.isDead) return;
         
         this.setAngle(0);
-        this.setScale(1.7); // ALWAYS strictly lock scale to prevent ballooning
+        this.setScale(1.7); 
 
         // =======================================================
-        // DYNAMIC ORIGIN FIX (PREVENTS FLOATING, SKYWALKING, & SLICING)
+        // HARD Y-AXIS CLAMP TO PREVENT WALKING ON PAVEMENT
+        // =======================================================
+        // The upper bound of the street is around Y=920 based on your game's perspective
+        const MIN_STREET_Y = 920; 
+        if (this.y < MIN_STREET_Y) {
+            this.y = MIN_STREET_Y;
+        }
+
+        // =======================================================
+        // DYNAMIC ORIGIN FIX 
         // =======================================================
         const currentAnimKeyForOrigin = this.anims.currentAnim?.key.replace(`${this.characterName}-`, '') || 'idle';
         let baseOriginY = 1.0;
@@ -390,7 +398,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         const realHeight = this.frame?.realHeight || 260;
         const jumpOriginShift = this.jumpVisualHeight / realHeight;
 
-        // Flawlessly maps his feet to the ground
         this.setOrigin(0.5, baseOriginY + jumpOriginShift);
         this.positionWeaponSprite();
 
@@ -404,7 +411,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 this.play(`${this.characterName}-jump`, true);
             }
 
-            // Safe jump tween that manipulates the visual origin offset instead of display coordinates
             this.scene.tweens.add({
                 targets: this,
                 jumpVisualHeight: 220,
@@ -461,7 +467,12 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                         this.executeAction(requestedAction);
                     }
                 } else {
-                    this.queuedAction = requestedAction;
+                    // AUTO-COMBO FLIP: If they mash p1 while p1 is active, queue p2 instead to prevent lockup
+                    if (requestedAction === 'punch-1' && this.anims.currentAnim?.key.includes('punch-1')) {
+                        this.queuedAction = 'punch-2';
+                    } else {
+                        this.queuedAction = requestedAction;
+                    }
                 }
             }
             return;
@@ -538,6 +549,14 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             }
         });
         
+        // Failsafe timer just in case animationcomplete fails
+        this.scene.time.delayedCall(400, () => {
+            if (this.isAttacking) {
+                if (hitZone.active) hitZone.destroy();
+                this.isAttacking = false;
+            }
+        });
+
         this.once('animationcomplete', () => {
             if (hitZone.active) hitZone.destroy();
             this.isAttacking = false;
@@ -583,10 +602,24 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             }
         });
         
+        // Failsafe timer to ensure state unlocks
+        this.scene.time.delayedCall(400, () => {
+            if (this.isAttacking) {
+                if (hitZone.active) hitZone.destroy();
+                this.isAttacking = false;
+                this.queuedAction = null;
+            }
+        });
+
         this.once('animationcomplete', () => {
             if (hitZone.active) hitZone.destroy();
-            if (this.queuedAction) { const next = this.queuedAction; this.queuedAction = null; this.executeAction(next); }
-            else { this.isAttacking = false; }
+            if (this.queuedAction) { 
+                const next = this.queuedAction; 
+                this.queuedAction = null; 
+                this.executeAction(next); 
+            } else { 
+                this.isAttacking = false; 
+            }
         });
     }
 
@@ -623,6 +656,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             this.scene.time.delayedCall(200, () => { if (spinZone.active) spinZone.destroy(); });
         });
         
+        this.scene.time.delayedCall(600, () => { this.isAttacking = false; });
         this.once('animationcomplete', () => { this.isAttacking = false; });
     }
 
@@ -654,6 +688,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             this.scene.time.delayedCall(100, () => { if (hitZone.active) hitZone.destroy(); });
         });
         
+        this.scene.time.delayedCall(800, () => { this.isAttacking = false; });
         this.once('animationcomplete', () => { this.isAttacking = false; });
     }
 
@@ -679,6 +714,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             if (this.scene.anims.exists(dmgAnim)) { 
                 this.isAttacking = true; 
                 this.play(dmgAnim, true);
+                this.scene.time.delayedCall(400, () => { this.isAttacking = false; });
                 this.once('animationcomplete', () => { this.isAttacking = false; }); 
             } else { 
                 this.setTint(0xff0000); 
@@ -709,6 +745,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             if (this.scene.anims.exists(anim)) {
                 this.isAttacking = true;
                 this.play(anim, true);
+                this.scene.time.delayedCall(600, () => { this.isAttacking = false; });
                 this.once('animationcomplete', () => { this.isAttacking = false; });
             } else {
                 this.setTint(0xff0000);
