@@ -32,6 +32,10 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
     private isRunning: boolean = false;
     private queuedAction: string | null = null;
 
+    // --- COMBO STATE (3-hit: punch → punch → combo finisher) ---
+    private lastPunchTime: number = 0;
+    private comboCounter: number = 0;
+
     private punchImpacts = ['punch_1', 'punch_2', 'punch_3', 'punch_4', 'punch_5', 'punch_6', 'punch_7', 'punch_8'];
     private kickImpacts = ['kick_1', 'kick_2', 'kick_3', 'kick_4'];
     private grunts = ['grunt_m_1', 'grunt_m_2', 'grunt_m_3', 'grunt_m_4'];
@@ -115,6 +119,64 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
                 });
             }
         });
+
+        // ─── COMBO ANIMATION (PUNCH-PUNCH-KICK FINISHER) ────────────
+        // Frames 000:      first punch windup
+        // Frame  001:      FIRST PUNCH IMPACT — held for emphasis
+        // Frames 002-006:  return / transition to 2nd punch
+        // Frame  007:      SECOND PUNCH IMPACT — held for emphasis
+        // Frames 008-011:  transition to kick
+        // Frame  012:      KICK IMPACT — held longest for max read
+        // Frame  013:      recovery
+        //
+        // Per-frame `duration` (ms) overrides the base frameRate.
+        // Early transition frames play at base 18fps (~55ms each),
+        // while the 3 impact frames hold much longer.
+        // ─────────────────────────────────────────────────────────────
+        const comboKey = `${this.characterName}-punch-combo`;
+        if (!anims.exists(comboKey)) {
+            const comboFramesInAtlas = allFrames.filter(f => f.includes('punch-combo'));
+
+            if (comboFramesInAtlas.length > 0) {
+                const frameSequence: { num: string, duration?: number }[] = [
+                    { num: '000' },                 // 1st punch windup
+                    { num: '001', duration: 140 },  // 1ST PUNCH IMPACT — hold
+                    { num: '002' },                 // return
+                    { num: '003' },                 // transition
+                    { num: '004' },                 // transition
+                    { num: '005' },                 // transition
+                    { num: '006' },                 // windup 2nd punch
+                    { num: '007', duration: 140 },  // 2ND PUNCH IMPACT — hold
+                    { num: '008' },                 // transition
+                    { num: '009' },                 // transition
+                    { num: '010' },                 // kick windup
+                    { num: '011' },                 // kick swing
+                    { num: '012', duration: 200 },  // KICK IMPACT — held longest
+                    { num: '013', duration: 120 },  // recovery
+                ];
+
+                const frames = frameSequence
+                    .map(f => {
+                        const frameName = `${this.characterName}-punch-combo/frame_${f.num}.png`;
+                        if (!comboFramesInAtlas.includes(frameName)) return null;
+                        return {
+                            key: this.characterName,
+                            frame: frameName,
+                            duration: f.duration
+                        };
+                    })
+                    .filter(f => f !== null) as Phaser.Types.Animations.AnimationFrameConfig[];
+
+                if (frames.length > 0) {
+                    anims.create({
+                        key: comboKey,
+                        frames: frames,
+                        frameRate: 18,
+                        repeat: 0
+                    });
+                }
+            }
+        }
     }
 
     public equipWeapon(weaponKey: string) {
@@ -530,11 +592,65 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
         if (action === 'special') { this.executeMegaphoneScream(); return; }
         if (action === 'finisher') { this.executeChainWhip(); return; }
 
-        this.isAttacking = true; this.setVelocity(0, 0);
-        const animToPlay = `${this.characterName}-${action}`;
-        if (this.scene.anims.exists(animToPlay)) this.play(animToPlay, true);
+        // ─── 3-HIT COMBO: punch → punch → punch-combo finisher on 3rd ───
+        // The player must land 2 quick punches (Q or W) within the combo
+        // window (1500ms). The 3rd consecutive punch triggers the combo
+        // finisher animation (punch-punch-kick) with triple-staggered SFX.
+        // Kicks or any non-punch action resets the counter.
+        // ──────────────────────────────────────────────────────────────────
+        if (action === 'punch-1' || action === 'punch-2') {
+            const now = this.scene.time.now;
 
-        const hitZone = this.scene.add.zone(this.x + (this.flipX ? -80 : 80), this.y - 40, 140, 80);
+            if (this.lastPunchTime === 0 || now - this.lastPunchTime > 1500) {
+                this.comboCounter = 1;
+            } else {
+                this.comboCounter++;
+            }
+            this.lastPunchTime = now;
+
+            if (this.comboCounter >= 3) {
+                action = 'punch-combo';
+                this.comboCounter = 0;
+            }
+        } else {
+            this.comboCounter = 0;
+        }
+
+        this.isAttacking = true; this.setVelocity(0, 0);
+
+        const animToPlay = `${this.characterName}-${action}`;
+        if (this.scene.anims.exists(animToPlay)) {
+            this.play(animToPlay, true);
+        } else {
+            console.warn(`Animation ${animToPlay} missing! Falling back to punch-1`);
+            this.play(`${this.characterName}-punch-1`, true);
+            action = 'punch-1';
+        }
+
+        let zoneWidth = 140;
+        let offsetX = 80;
+        let damage = (action.includes('2') ? 15 : 10) * this.damageMultiplier;
+
+        if (action === 'punch-combo') {
+            zoneWidth = 240;
+            offsetX = 120;
+            damage = 40 * this.damageMultiplier;
+
+            const dirX = this.flipX ? -1 : 1;
+            this.scene.tweens.add({
+                targets: this,
+                x: this.x + (60 * dirX),
+                duration: 300,
+                ease: 'Cubic.easeOut'
+            });
+        }
+
+        const hitZone = this.scene.add.zone(
+            this.x + (this.flipX ? -offsetX : offsetX),
+            this.y - 40,
+            zoneWidth,
+            80
+        );
         hitZone.setName('basicAttackZone');
         this.scene.physics.add.existing(hitZone);
 
@@ -545,20 +661,45 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             const yTol = target.isBreakable ? 140 : 60;
             if (Math.abs(this.y - target.y) <= yTol) {
                 if (!hasHit) {
-                    this.safeCall('playSFX', action.includes('punch') ? this.punchImpacts : this.kickImpacts);
+                    // ─── COMBO FINISHER: 3 rapid staggered impact SFXs ───
+                    if (action === 'punch-combo') {
+                        this.safeCall('playSFX', this.punchImpacts);
+                        this.scene.time.delayedCall(60, () => this.safeCall('playSFX', this.punchImpacts));
+                        this.scene.time.delayedCall(120, () => this.safeCall('playSFX', this.kickImpacts));
+                        this.scene.cameras.main.shake(150, 0.015);
+                    } else {
+                        this.safeCall('playSFX', action.includes('punch') ? this.punchImpacts : this.kickImpacts);
+                    }
                     hasHit = true;
                 }
-                const damage = (action.includes('2') ? 15 : 10) * this.damageMultiplier;
+
                 const hitX = (this.x + target.x) / 2;
                 this.safeCall('spawnHitEffect', hitX, target.y - 50);
                 if (target.takeDamage) target.takeDamage(damage);
+
+                if (action === 'punch-combo' && target.body && target.type !== 'obj_kiosk' && target.type !== 'obj_kontejner') {
+                    const pushDir = target.x > this.x ? 1 : -1;
+                    target.setVelocityX(200 * pushDir);
+                }
+
                 if (hitZone.body) (hitZone.body as Phaser.Physics.Arcade.Body).enable = false;
+            }
+        });
+
+        // Failsafe timer — extended for combo so the slower impact frames
+        // have time to complete without being cut short
+        const failsafeMs = action === 'punch-combo' ? 1200 : 400;
+        this.scene.time.delayedCall(failsafeMs, () => {
+            if (this.isAttacking && hitZone.active) {
+                hitZone.destroy();
+                this.isAttacking = false;
+                this.queuedAction = null;
             }
         });
 
         this.once('animationcomplete', () => {
             if (hitZone.active) hitZone.destroy();
-            if (this.queuedAction) { const next = this.queuedAction; this.queuedAction = null; this.executeAction(next); }
+            if (this.queuedAction) { const next = this.queuedAction; this.queuedAction = null; this.isAttacking = false; this.executeAction(next); }
             else { this.isAttacking = false; }
         });
     }
