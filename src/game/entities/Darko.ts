@@ -318,14 +318,18 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.setOrigin(0.5, 1);
 
         // =======================================================
-        // HARD Y-AXIS CLAMP — top of walkable street area.
-        // This should match the physics world bounds top (820).
-        // Darko (and all characters) can walk up to the base of
-        // the buildings / top of the pavement.
+        // HARD Y-AXIS CLAMP — walkable street area.
+        // MIN: top of street at building base (matches world bounds top)
+        // MAX: bottom edge of screen (1080) so sprite doesn't get cut off.
+        //      Since origin is (0.5, 1), this.y = feet position.
         // =======================================================
         const MIN_STREET_Y = 820; 
+        const MAX_STREET_Y = 1080;
         if (this.y < MIN_STREET_Y) {
             this.y = MIN_STREET_Y;
+        }
+        if (this.y > MAX_STREET_Y) {
+            this.y = MAX_STREET_Y;
         }
 
         if (this.jumpVisualOffset > 0 && this.frame) {
