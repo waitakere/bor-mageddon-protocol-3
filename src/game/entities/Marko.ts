@@ -366,6 +366,21 @@ export class Marko extends Phaser.Physics.Arcade.Sprite {
             this.setScale(1.7);
         }
 
+        // =======================================================
+        // HARD Y-AXIS CLAMP — walkable street area.
+        // MIN: top of street at building base (matches world bounds top)
+        // MAX: bottom edge of screen so sprite doesn't get cut off.
+        //      Since origin is (0.5, 1), this.y = feet position.
+        // =======================================================
+        const MIN_STREET_Y = 820;
+        const MAX_STREET_Y = 1080;
+        if (this.y < MIN_STREET_Y) {
+            this.y = MIN_STREET_Y;
+        }
+        if (this.y > MAX_STREET_Y) {
+            this.y = MAX_STREET_Y;
+        }
+
         this.positionWeaponSprite();
 
         if (input.space && !this.isJumping && !this.isAttacking) {
