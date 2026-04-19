@@ -39,7 +39,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     private isRunning: boolean = false;
     private queuedAction: string | null = null;
 
-    // --- RESTORED COMBO STATE ---
+    // --- COMBO STATE (3-hit: punch → punch → combo finisher) ---
     private lastPunchTime: number = 0;
     private comboCounter: number = 0;
 
@@ -129,7 +129,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             });
         });
 
-        // ─── RESTORED COMBO ANIMATION (WITH FOLLOW-THROUGH FRAME) ───
+        // ─── COMBO ANIMATION (WITH FOLLOW-THROUGH FRAME) ───
         const comboKey = `${this.characterName}-punch-combo`;
         if (!anims.exists(comboKey)) {
             const comboFramesInAtlas = allFrames.filter(f => f.includes('punch-combo'));
@@ -434,14 +434,26 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 : `${this.characterName}-shoot`;
             if (this.scene.anims.exists(shootAnim)) this.play(shootAnim, true);
 
-            const dirX   = this.flipX ? -1 : 1;
+            const dirX = this.flipX ? -1 : 1;
             this.safeCall('playSFX', 'gun-shot-m70', 1.0);
 
-            // Reverted to correct stable coordinates
-            const spawnX = this.x + (150 * dirX);
-            const flashX = this.x + (170 * dirX);
-            const spawnY = this.y - 230;
-           
+            // ─── RIFLE MUZZLE & BULLET SPAWN POSITION ───────────────────
+            // Darko uses setOrigin(0.5, 1) at scale 1.7, so this.y = feet.
+            // The rifle is held at roughly chest/shoulder height.
+            //
+            // muzzleOffsetX: horizontal px from sprite center to muzzle tip.
+            //                Increase to push muzzle further forward.
+            // muzzleOffsetY: vertical px measured UP from feet to muzzle.
+            //                Increase to raise the muzzle flash higher.
+            //
+            // If Darko's scale or sprite changes, tweak these two values.
+            // ─────────────────────────────────────────────────────────────
+            const muzzleOffsetX = 120; // horizontal distance center → muzzle
+            const muzzleOffsetY = 280; // vertical distance feet → muzzle
+            const spawnX = this.x + (muzzleOffsetX * dirX);
+            const flashX = this.x + ((muzzleOffsetX + 20) * dirX); // flash slightly ahead
+            const spawnY = this.y - muzzleOffsetY;
+
             this.safeCall('spawnProjectile', this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
 
             const flash = this.scene.add.sprite(flashX, spawnY, 'muzzle-flash-m70');
@@ -532,10 +544,16 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
-        // ─── RESTORED 3-HIT COMBO LOGIC ───
+        // ─── 3-HIT COMBO: punch → punch → punch-combo finisher on 3rd ───
+        // The player must land 2 quick punches (Q or W) within the combo
+        // window (1500ms). The 3rd consecutive punch triggers the combo
+        // finisher animation with triple-staggered impact SFX.
+        // Kicks or any non-punch action resets the counter.
+        // ──────────────────────────────────────────────────────────────────
         if (action === 'punch-1' || action === 'punch-2') {
             const now = this.scene.time.now;
-           
+
+            // Reset combo if too much time has passed since last punch
             if (this.lastPunchTime === 0 || now - this.lastPunchTime > 1500) {
                 this.comboCounter = 1;
             } else {
@@ -543,7 +561,8 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             }
             this.lastPunchTime = now;
 
-            if (this.comboCounter >= 2) {
+            // 3rd consecutive punch triggers the combo finisher
+            if (this.comboCounter >= 3) {
                 action = 'punch-combo';
                 this.comboCounter = 0;
             }
@@ -598,10 +617,14 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.scene.physics.add.overlap(hitZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_hz, target: any) => {
             if (Math.abs(this.y - target.y) <= (target.isBreakable ? 160 : 130)) {
                 if (!hasHit) {
-                    this.safeCall('playSFX', action.includes('punch') ? this.punchImpacts : this.kickImpacts);
-                   
+                    // ─── COMBO FINISHER: 3 rapid staggered punch SFXs ───
                     if (action === 'punch-combo') {
+                        this.safeCall('playSFX', this.punchImpacts);
+                        this.scene.time.delayedCall(60, () => this.safeCall('playSFX', this.punchImpacts));
+                        this.scene.time.delayedCall(120, () => this.safeCall('playSFX', this.punchImpacts));
                         this.scene.cameras.main.shake(150, 0.015);
+                    } else {
+                        this.safeCall('playSFX', action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     }
 
                     hasHit = true;
