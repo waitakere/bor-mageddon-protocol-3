@@ -718,16 +718,35 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             const spinZone = this.scene.add.circle(this.x, this.y - 60, 180);
             this.scene.physics.add.existing(spinZone);
 
+            // Track which targets have already been hit so each is only
+            // damaged once, but ALL nearby enemies/breakables get hit
+            const alreadyHit = new Set<any>();
+
             this.scene.physics.add.overlap(spinZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_sz, target: any) => {
+                if (alreadyHit.has(target)) return;
                 if (Math.abs(this.y - target.y) <= (target.isBreakable ? 160 : 130)) {
+                    alreadyHit.add(target);
                     const pushDir = target.x > this.x ? 1 : -1;
+
+                    // Explosion VFX on each impacted target
+                    this.safeCall('spawnHitEffect', target.x, target.y - 130);
+                    this.safeCall('playSFX', this.punchImpacts);
+
                     if (target.takeDamage) {
                         target.takeDamage(40 * this.damageMultiplier);
                         if (target.body && target.type !== 'obj_kiosk' && target.type !== 'obj_kontejner') {
                             target.setVelocityX(400 * pushDir);
                         }
                     }
-                    this.safeCall('spawnHitEffect', target.x, target.y - 130);
+
+                    // Force enemy damage animation if they survived
+                    if (!target.isDead && target.anims) {
+                        const prefix = target.skinPrefix || target.characterName || 'enemy';
+                        const dmgAnim = `${prefix}-damage`;
+                        if (this.scene.anims.exists(dmgAnim)) {
+                            target.play(dmgAnim, true);
+                        }
+                    }
                 }
             });
 
@@ -752,11 +771,29 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             const hitZone = this.scene.add.zone(this.x + (this.flipX ? -150 : 150), this.y - 60, 260, 160);
             this.scene.physics.add.existing(hitZone);
 
+            // Track per-enemy hits so each nearby target is damaged
+            // exactly once, but the zone does NOT disable after the first
+            const alreadyHit = new Set<any>();
+
             this.scene.physics.add.overlap(hitZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_hz, target: any) => {
+                if (alreadyHit.has(target)) return;
                 if (Math.abs(this.y - target.y) <= (target.isBreakable ? 140 : 130)) {
-                    if (target.takeDamage) target.takeDamage(80 * this.damageMultiplier);
+                    alreadyHit.add(target);
+
+                    // Explosion VFX + SFX on each impacted target
                     this.safeCall('spawnHitEffect', target.x, target.y - 130);
-                    if (hitZone.body) (hitZone.body as Phaser.Physics.Arcade.Body).enable = false;
+                    this.safeCall('playSFX', this.punchImpacts);
+
+                    if (target.takeDamage) target.takeDamage(80 * this.damageMultiplier);
+
+                    // Force enemy damage animation if they survived
+                    if (!target.isDead && target.anims) {
+                        const prefix = target.skinPrefix || target.characterName || 'enemy';
+                        const dmgAnim = `${prefix}-damage`;
+                        if (this.scene.anims.exists(dmgAnim)) {
+                            target.play(dmgAnim, true);
+                        }
+                    }
                 }
             });
 
