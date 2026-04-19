@@ -479,11 +479,12 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             //   v1 (original): X=150, Y=230 — too low (hip), too far left
             //   v2:            X=120, Y=280 — still too low (mid-torso)
             //   v3:            X=155, Y=340 — upper chest / barrel tip
-            //   v4 (current):  X=165, Y=340 — slightly further out
+            //   v4:            X=165, Y=340 — overshot to the right
+            //   v5 (current):  X=145, Y=340 — pulled back slightly
             //
             // If Darko's scale or shoot sprite changes, adjust these.
             // ─────────────────────────────────────────────────────────────
-            const muzzleOffsetX = 165; // horizontal: center → barrel tip
+            const muzzleOffsetX = 145; // horizontal: center → barrel tip
             const muzzleOffsetY = 340; // vertical:   feet → barrel tip (upper chest)
             const spawnX = this.x + (muzzleOffsetX * dirX);
             const flashX = this.x + ((muzzleOffsetX + 15) * dirX); // flash slightly ahead of bullet origin
