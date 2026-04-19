@@ -13,7 +13,10 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [crtEnabled, setCrtEnabled] = useState(true);
-  const [volume, setVolume] = useState(0.5);
+  
+  // Audio state split into dedicated BGM and SFX buses
+  const [bgmVolume, setBgmVolume] = useState(0.5);
+  const [sfxVolume, setSfxVolume] = useState(0.8);
 
   const handleCharacterSelect = (characterId: string) => {
     console.log("Protocol Initiated for Agent:", characterId);
@@ -68,8 +71,10 @@ export default function App() {
         onClose={() => setIsSettingsOpen(false)} 
         crtEnabled={crtEnabled} 
         onCrtToggle={setCrtEnabled}
-        volume={volume} 
-        onVolumeChange={setVolume}
+        bgmVolume={bgmVolume} 
+        onBgmVolumeChange={setBgmVolume}
+        sfxVolume={sfxVolume}
+        onSfxVolumeChange={setSfxVolume}
       />
 
       {isMapOpen && <WorldMap onClose={() => setIsMapOpen(false)} />}
