@@ -129,30 +129,55 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             });
         });
 
-        // ─── COMBO ANIMATION (WITH FOLLOW-THROUGH FRAME) ───
+        // ─── COMBO ANIMATION (WITH PRONOUNCED UPPERCUT FINISH) ──────
+        // Frames 000-006: fast jab sequence leading into combo
+        // Frame  007:      uppercut windup / crouch telegraph
+        // Frame  008:      uppercut swing — the big rising punch
+        // Frame  009:      impact peak — hit-stop freeze
+        // Frame  010:      follow-through — arm extended high
+        // Frame  011:      recovery / landing
+        //
+        // Per-frame `duration` (ms) overrides the base frameRate for
+        // that specific frame only. This lets the early jabs play fast
+        // while the uppercut holds long enough to read visually.
+        // ─────────────────────────────────────────────────────────────
         const comboKey = `${this.characterName}-punch-combo`;
         if (!anims.exists(comboKey)) {
             const comboFramesInAtlas = allFrames.filter(f => f.includes('punch-combo'));
            
             if (comboFramesInAtlas.length > 0) {
-                const frameSequence = [
-                    '000', '001', '002', '003', '004', '005', '006', '007',
-                    '008', // Fast dip/windup
-                    '009', '009', '009', // Hit-stop freeze on impact
-                    '010', '010', // Emphasized high follow-through
-                    '011'  // Landing recovery
+                const frameSequence: { num: string, duration?: number }[] = [
+                    { num: '000' },                 // Jab start
+                    { num: '001' },                 // Jab follow
+                    { num: '002' },                 // Jab hit
+                    { num: '003' },                 // Return
+                    { num: '004' },                 // 2nd punch wind
+                    { num: '005' },                 // 2nd punch swing
+                    { num: '006' },                 // 2nd punch connect
+                    { num: '007', duration: 100 },  // Uppercut windup — brief telegraph
+                    { num: '008', duration: 120 },  // Uppercut swing — big motion, hold it
+                    { num: '009', duration: 200 },  // IMPACT PEAK — hit-stop freeze
+                    { num: '010', duration: 180 },  // Follow-through arm HIGH — let it read
+                    { num: '011', duration: 120 },  // Recovery / landing
                 ];
                
-                const frames = frameSequence.map(num => ({
-                    key: this.characterName,
-                    frame: `${this.characterName}-punch-combo/frame_${num}.png`
-                })).filter(f => comboFramesInAtlas.includes(f.frame as string));
+                const frames = frameSequence
+                    .map(f => {
+                        const frameName = `${this.characterName}-punch-combo/frame_${f.num}.png`;
+                        if (!comboFramesInAtlas.includes(frameName)) return null;
+                        return {
+                            key: this.characterName,
+                            frame: frameName,
+                            duration: f.duration  // per-frame duration override (ms)
+                        };
+                    })
+                    .filter(f => f !== null) as Phaser.Types.Animations.AnimationFrameConfig[];
 
                 if (frames.length > 0) {
                     anims.create({
                         key: comboKey,
                         frames: frames,
-                        frameRate: 15,
+                        frameRate: 18,   // base rate for early jab frames (overridden by per-frame duration on later frames)
                         repeat: 0
                     });
                 }
@@ -439,19 +464,25 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
             // ─── RIFLE MUZZLE & BULLET SPAWN POSITION ───────────────────
             // Darko uses setOrigin(0.5, 1) at scale 1.7, so this.y = feet.
-            // The rifle is held at roughly chest/shoulder height.
+            // The rifle barrel tip sits at roughly upper-chest / shoulder
+            // height when in the shoot-with-rifle stance.
             //
-            // muzzleOffsetX: horizontal px from sprite center to muzzle tip.
-            //                Increase to push muzzle further forward.
-            // muzzleOffsetY: vertical px measured UP from feet to muzzle.
-            //                Increase to raise the muzzle flash higher.
+            // muzzleOffsetX: horizontal px from sprite center to barrel tip.
+            //                Increase → flash moves further in front of Darko.
+            // muzzleOffsetY: vertical px measured UP from feet to barrel tip.
+            //                Increase → flash moves higher on the sprite.
             //
-            // If Darko's scale or sprite changes, tweak these two values.
+            // TUNING HISTORY:
+            //   v1 (original): X=150, Y=230 — too low (hip), too far left
+            //   v2:            X=120, Y=280 — still too low (mid-torso)
+            //   v3 (current):  X=155, Y=340 — upper chest / barrel tip
+            //
+            // If Darko's scale or shoot sprite changes, adjust these.
             // ─────────────────────────────────────────────────────────────
-            const muzzleOffsetX = 120; // horizontal distance center → muzzle
-            const muzzleOffsetY = 280; // vertical distance feet → muzzle
+            const muzzleOffsetX = 155; // horizontal: center → barrel tip
+            const muzzleOffsetY = 340; // vertical:   feet → barrel tip (upper chest)
             const spawnX = this.x + (muzzleOffsetX * dirX);
-            const flashX = this.x + ((muzzleOffsetX + 20) * dirX); // flash slightly ahead
+            const flashX = this.x + ((muzzleOffsetX + 15) * dirX); // flash slightly ahead of bullet origin
             const spawnY = this.y - muzzleOffsetY;
 
             this.safeCall('spawnProjectile', this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
@@ -643,8 +674,10 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             }
         });
 
-        // Failsafe timer to ensure state unlocks if animationcomplete is missed
-        this.scene.time.delayedCall(400, () => {
+        // Failsafe timer — extended for combo so the slower uppercut frames
+        // have time to complete without being cut short
+        const failsafeMs = action === 'punch-combo' ? 1200 : 400;
+        this.scene.time.delayedCall(failsafeMs, () => {
             if (this.isAttacking && hitZone.active) {
                 hitZone.destroy();
                 this.isAttacking = false;
