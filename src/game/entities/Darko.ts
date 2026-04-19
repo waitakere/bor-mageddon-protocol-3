@@ -112,7 +112,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             else if (animType === 'run')                               fps = 14;
             else if (animType === 'jump')                              fps = 8;
             else if (animType === 'melee')                             fps = 18;
-            else if (animType === 'kick-1' || animType === 'kick-2')   fps = 22;
+            else if (animType === 'kick-1' || animType === 'kick-2')   fps = 16;
             else if (animType === 'pick-up')                           fps = 12;
 
             let frameConfig: Phaser.Types.Animations.AnimationFrameConfig[] = matchingFrames.map(f => ({ key: this.characterName, frame: f }));
@@ -318,9 +318,12 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.setOrigin(0.5, 1);
 
         // =======================================================
-        // HARD Y-AXIS CLAMP TO PREVENT WALKING ON PAVEMENT
+        // HARD Y-AXIS CLAMP — top of walkable street area.
+        // This should match the physics world bounds top (820).
+        // Darko (and all characters) can walk up to the base of
+        // the buildings / top of the pavement.
         // =======================================================
-        const MIN_STREET_Y = 920; 
+        const MIN_STREET_Y = 820; 
         if (this.y < MIN_STREET_Y) {
             this.y = MIN_STREET_Y;
         }
@@ -475,11 +478,12 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             // TUNING HISTORY:
             //   v1 (original): X=150, Y=230 — too low (hip), too far left
             //   v2:            X=120, Y=280 — still too low (mid-torso)
-            //   v3 (current):  X=155, Y=340 — upper chest / barrel tip
+            //   v3:            X=155, Y=340 — upper chest / barrel tip
+            //   v4 (current):  X=165, Y=340 — slightly further out
             //
             // If Darko's scale or shoot sprite changes, adjust these.
             // ─────────────────────────────────────────────────────────────
-            const muzzleOffsetX = 155; // horizontal: center → barrel tip
+            const muzzleOffsetX = 165; // horizontal: center → barrel tip
             const muzzleOffsetY = 340; // vertical:   feet → barrel tip (upper chest)
             const spawnX = this.x + (muzzleOffsetX * dirX);
             const flashX = this.x + ((muzzleOffsetX + 15) * dirX); // flash slightly ahead of bullet origin
