@@ -42,6 +42,10 @@ export class MainLevel extends Phaser.Scene {
     public lastPlayerHitTime!: number;
     public lastEnemyHitTime!: number;
 
+    // --- AUDIO BUS ROUTING ---
+    private currentBgm: Phaser.Sound.BaseSound | null = null;
+    private globalSfxVolume: number = 0.8;
+
     constructor() { super({ key: 'MainLevel' }); }
 
     init() {
@@ -57,13 +61,22 @@ export class MainLevel extends Phaser.Scene {
         window.addEventListener('request-scene-restart', this.handleRestart);
         window.addEventListener('request-continue', this.handleContinue as EventListener);
         
+        // Listen to the React bridge audio events
+        this.game.events.on('set-bgm-volume', this.handleBgmVolume, this);
+        this.game.events.on('set-sfx-volume', this.handleSfxVolume, this);
+
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
             window.removeEventListener('request-scene-restart', this.handleRestart);
             window.removeEventListener('request-continue', this.handleContinue as EventListener);
+            // Clean up audio listeners to prevent memory leaks
+            this.game.events.off('set-bgm-volume', this.handleBgmVolume, this);
+            this.game.events.off('set-sfx-volume', this.handleSfxVolume, this);
         });
 
         this.sound.stopAll(); 
-        this.sound.play('1993_ambient', { loop: true, volume: 0.4 });
+        // Store reference to BGM for volume manipulation
+        this.currentBgm = this.sound.add('1993_ambient', { loop: true, volume: 0.5 });
+        this.currentBgm.play();
 
         this.actionKeys = this.input.keyboard!.addKeys({
             q: Phaser.Input.Keyboard.KeyCodes.Q,
@@ -103,6 +116,17 @@ export class MainLevel extends Phaser.Scene {
         this.updateReactHUD();
         this.scene.pause();
         window.dispatchEvent(new CustomEvent('phaser-ready'));
+    }
+
+    // --- AUDIO EVENT HANDLERS ---
+    private handleBgmVolume(vol: number) {
+        if (this.currentBgm) {
+            (this.currentBgm as Phaser.Sound.WebAudioSound).setVolume(vol);
+        }
+    }
+
+    private handleSfxVolume(vol: number) {
+        this.globalSfxVolume = vol;
     }
 
     private spawnPlayer(charKey: string, x: number, y: number) {
@@ -376,21 +400,25 @@ export class MainLevel extends Phaser.Scene {
         }
     }
 
-    public playSFX(marker: string | string[], volume: number = 0.8) {
+    // --- UPDATED SFX METHOD ---
+    public playSFX(marker: string | string[], localVolume: number = 0.8) {
         try {
             if (this.sound.context.state === 'suspended') this.sound.context.resume();
             const finalMarker = Array.isArray(marker) ? marker[Math.floor(Math.random() * marker.length)] : marker;
+
+            // Apply the globalSFX bus multiplier 
+            const scaledVolume = localVolume * this.globalSfxVolume;
 
             if (this.cache.json.exists('sfx_atlas')) {
                 const json = this.cache.json.get('sfx_atlas');
                 if (json && json.spritemap && json.spritemap[finalMarker]) {
                     const sound = this.sound.addAudioSprite('sfx_atlas');
-                    sound.play(finalMarker, { volume });
+                    sound.play(finalMarker, { volume: scaledVolume });
                     return sound;
                 }
             }
             if (this.cache.audio.exists(finalMarker)) {
-                this.sound.play(finalMarker, { volume });
+                this.sound.play(finalMarker, { volume: scaledVolume });
                 return;
             }
             return null;
