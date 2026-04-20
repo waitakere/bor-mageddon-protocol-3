@@ -130,56 +130,36 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         });
 
         // ─── COMBO ANIMATION (WITH PRONOUNCED UPPERCUT FINISH) ──────
-        // Frames 000-006: fast jab sequence leading into combo
-        // Frame  007:      uppercut windup / crouch telegraph
-        // Frame  008:      uppercut swing — the big rising punch
-        // Frame  009:      impact peak — hit-stop freeze
-        // Frame  010:      follow-through — arm extended high
-        // Frame  011:      recovery / landing
-        //
-        // Per-frame `duration` (ms) overrides the base frameRate for
-        // that specific frame only. This lets the early jabs play fast
-        // while the uppercut holds long enough to read visually.
-        // ─────────────────────────────────────────────────────────────
         const comboKey = `${this.characterName}-punch-combo`;
         if (!anims.exists(comboKey)) {
             const comboFramesInAtlas = allFrames.filter(f => f.includes('punch-combo'));
            
             if (comboFramesInAtlas.length > 0) {
                 const frameSequence: { num: string, duration?: number }[] = [
-                    { num: '000' },                 // Jab start
-                    { num: '001' },                 // Jab follow
-                    { num: '002' },                 // Jab hit
-                    { num: '003' },                 // Return
-                    { num: '004' },                 // 2nd punch wind
-                    { num: '005' },                 // 2nd punch swing
-                    { num: '006' },                 // 2nd punch connect
-                    { num: '007', duration: 100 },  // Uppercut windup — brief telegraph
-                    { num: '008', duration: 120 },  // Uppercut swing — big motion, hold it
-                    { num: '009', duration: 200 },  // IMPACT PEAK — hit-stop freeze
-                    { num: '010', duration: 180 },  // Follow-through arm HIGH — let it read
-                    { num: '011', duration: 120 },  // Recovery / landing
+                    { num: '000' },
+                    { num: '001' },
+                    { num: '002' },
+                    { num: '003' },
+                    { num: '004' },
+                    { num: '005' },
+                    { num: '006' },
+                    { num: '007', duration: 100 },
+                    { num: '008', duration: 120 },
+                    { num: '009', duration: 200 },  // IMPACT PEAK
+                    { num: '010', duration: 180 },  // Follow-through
+                    { num: '011', duration: 120 },
                 ];
                
                 const frames = frameSequence
                     .map(f => {
                         const frameName = `${this.characterName}-punch-combo/frame_${f.num}.png`;
                         if (!comboFramesInAtlas.includes(frameName)) return null;
-                        return {
-                            key: this.characterName,
-                            frame: frameName,
-                            duration: f.duration  // per-frame duration override (ms)
-                        };
+                        return { key: this.characterName, frame: frameName, duration: f.duration };
                     })
                     .filter(f => f !== null) as Phaser.Types.Animations.AnimationFrameConfig[];
 
                 if (frames.length > 0) {
-                    anims.create({
-                        key: comboKey,
-                        frames: frames,
-                        frameRate: 18,   // base rate for early jab frames (overridden by per-frame duration on later frames)
-                        repeat: 0
-                    });
+                    anims.create({ key: comboKey, frames: frames, frameRate: 18, repeat: 0 });
                 }
             }
         }
@@ -321,28 +301,21 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         // HARD Y-AXIS CLAMP — walkable street area.
         // MIN: top of street at building base (matches world bounds top)
         // MAX: bottom edge of screen (1080) so sprite doesn't get cut off.
-        //      Since origin is (0.5, 1), this.y = feet position.
         // =======================================================
         const MIN_STREET_Y = 820; 
         const MAX_STREET_Y = 1080;
-        if (this.y < MIN_STREET_Y) {
-            this.y = MIN_STREET_Y;
-        }
-        if (this.y > MAX_STREET_Y) {
-            this.y = MAX_STREET_Y;
-        }
+        if (this.y < MIN_STREET_Y) this.y = MIN_STREET_Y;
+        if (this.y > MAX_STREET_Y) this.y = MAX_STREET_Y;
 
         if (this.jumpVisualOffset > 0 && this.frame) {
             let nativeY = this.frame.realHeight;
-            if (this.frame.trimmed) {
-                nativeY -= this.frame.trimY;
-            }
+            if (this.frame.trimmed) nativeY -= this.frame.trimY;
             this.displayOriginY = nativeY + this.jumpVisualOffset;
         }
 
         this.positionWeaponSprite();
 
-        // ── Jump ────────────────────────────────────────────────────────────────
+        // ── Jump ────────────────────────────────────────────────────
         if (input.space && !this.isJumping && !this.isAttacking) {
             this.isJumping   = true;
             this.jumpGroundY = this.y;
@@ -367,9 +340,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                     this.isJumping        = false;
                     this.jumpVisualOffset = 0;
                     this.y                = this.jumpGroundY;
-
                     if (this.body) (this.body as Phaser.Physics.Arcade.Body).collideWorldBounds = true;
-
                     if (!this.isAttacking && this.scene.anims.exists(`${this.characterName}-idle`)) {
                         this.play(`${this.characterName}-idle`, true);
                     }
@@ -382,7 +353,7 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             const dir = input.left ? 'left' : 'right';
             if (this.lastKey !== dir) {
                 if (now - this.lastKeyTime < 250) this.isRunning = true;
-                this.lastKey    = dir;
+                this.lastKey     = dir;
                 this.lastKeyTime = now;
             }
         } else {
@@ -469,29 +440,12 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             const dirX = this.flipX ? -1 : 1;
             this.safeCall('playSFX', 'gun-shot-m70', 1.0);
 
-            // ─── RIFLE MUZZLE & BULLET SPAWN POSITION ───────────────────
-            // Darko uses setOrigin(0.5, 1) at scale 1.7, so this.y = feet.
-            // The rifle barrel tip sits at roughly upper-chest / shoulder
-            // height when in the shoot-with-rifle stance.
-            //
-            // muzzleOffsetX: horizontal px from sprite center to barrel tip.
-            //                Increase → flash moves further in front of Darko.
-            // muzzleOffsetY: vertical px measured UP from feet to barrel tip.
-            //                Increase → flash moves higher on the sprite.
-            //
-            // TUNING HISTORY:
-            //   v1 (original): X=150, Y=230 — too low (hip), too far left
-            //   v2:            X=120, Y=280 — still too low (mid-torso)
-            //   v3:            X=155, Y=340 — upper chest / barrel tip
-            //   v4:            X=165, Y=340 — overshot to the right
-            //   v5 (current):  X=145, Y=340 — pulled back slightly
-            //
-            // If Darko's scale or shoot sprite changes, adjust these.
-            // ─────────────────────────────────────────────────────────────
-            const muzzleOffsetX = 145; // horizontal: center → barrel tip
-            const muzzleOffsetY = 340; // vertical:   feet → barrel tip (upper chest)
+            // ─── RIFLE MUZZLE & BULLET SPAWN POSITION ───────────────
+            // TUNING: v5 — X=145, Y=340
+            const muzzleOffsetX = 145;
+            const muzzleOffsetY = 340;
             const spawnX = this.x + (muzzleOffsetX * dirX);
-            const flashX = this.x + ((muzzleOffsetX + 15) * dirX); // flash slightly ahead of bullet origin
+            const flashX = this.x + ((muzzleOffsetX + 15) * dirX);
             const spawnY = this.y - muzzleOffsetY;
 
             this.safeCall('spawnProjectile', this.y, spawnX, spawnY, 'bullet', dirX, 60, false);
@@ -574,26 +528,17 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
     }
 
     private executeAction(action: string) {
-        if (action === 'special') {
-            this.executeDarkoSpecial();
-            return;
-        }
-
-        if (action === 'finisher') {
-            this.executeDarkoFinisher();
-            return;
-        }
+        if (action === 'special') { this.executeDarkoSpecial(); return; }
+        if (action === 'finisher') { this.executeDarkoFinisher(); return; }
 
         // ─── 3-HIT COMBO: punch → punch → punch-combo finisher on 3rd ───
-        // The player must land 2 quick punches (Q or W) within the combo
-        // window (1500ms). The 3rd consecutive punch triggers the combo
-        // finisher animation with triple-staggered impact SFX.
+        // Works identically for Q (punch-1) and W (punch-2).
+        // The player must land 2 quick punches within 1500ms.
+        // The 3rd consecutive punch triggers the combo finisher.
         // Kicks or any non-punch action resets the counter.
         // ──────────────────────────────────────────────────────────────────
         if (action === 'punch-1' || action === 'punch-2') {
             const now = this.scene.time.now;
-
-            // Reset combo if too much time has passed since last punch
             if (this.lastPunchTime === 0 || now - this.lastPunchTime > 1500) {
                 this.comboCounter = 1;
             } else {
@@ -601,7 +546,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             }
             this.lastPunchTime = now;
 
-            // 3rd consecutive punch triggers the combo finisher
             if (this.comboCounter >= 3) {
                 action = 'punch-combo';
                 this.comboCounter = 0;
@@ -614,7 +558,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.setVelocity(0, 0);
 
         const animToPlay = `${this.characterName}-${action}`;
-       
         if (this.scene.anims.exists(animToPlay)) {
             this.play(animToPlay, true);
         } else {
@@ -634,21 +577,12 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
             zoneWidth = 240;
             offsetX = 120;
             damage = 40 * this.damageMultiplier;
-           
             const dirX = this.flipX ? -1 : 1;
-            this.scene.tweens.add({
-                targets: this,
-                x: this.x + (60 * dirX),
-                duration: 300,
-                ease: 'Cubic.easeOut'
-            });
+            this.scene.tweens.add({ targets: this, x: this.x + (60 * dirX), duration: 300, ease: 'Cubic.easeOut' });
         }
 
         const hitZone = this.scene.add.zone(
-            this.x + (this.flipX ? -offsetX : offsetX),
-            this.y - 60,
-            zoneWidth,
-            120
+            this.x + (this.flipX ? -offsetX : offsetX), this.y - 60, zoneWidth, 120
         );
         hitZone.setName('basicAttackZone');
         this.scene.physics.add.existing(hitZone);
@@ -657,7 +591,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
         this.scene.physics.add.overlap(hitZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_hz, target: any) => {
             if (Math.abs(this.y - target.y) <= (target.isBreakable ? 160 : 130)) {
                 if (!hasHit) {
-                    // ─── COMBO FINISHER: 3 rapid staggered punch SFXs ───
                     if (action === 'punch-combo') {
                         this.safeCall('playSFX', this.punchImpacts);
                         this.scene.time.delayedCall(60, () => this.safeCall('playSFX', this.punchImpacts));
@@ -666,31 +599,34 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                     } else {
                         this.safeCall('playSFX', action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     }
-
                     hasHit = true;
                 }
-               
                 this.safeCall('spawnHitEffect', target.x, target.y - 130);
-               
                 if (target.takeDamage) target.takeDamage(damage);
-               
                 if (action === 'punch-combo' && target.body && target.type !== 'obj_kiosk' && target.type !== 'obj_kontejner') {
-                    const pushDir = target.x > this.x ? 1 : -1;
-                    target.setVelocityX(200 * pushDir);
+                    target.setVelocityX(200 * (target.x > this.x ? 1 : -1));
                 }
-
                 if (hitZone.body) (hitZone.body as Phaser.Physics.Arcade.Body).enable = false;
             }
         });
 
-        // Failsafe timer — extended for combo so the slower uppercut frames
-        // have time to complete without being cut short
+        // ─── FAILSAFE TIMER ─────────────────────────────────────────
+        // If animationcomplete doesn't fire, this unlocks the player.
+        // IMPORTANT: process queued action instead of discarding it,
+        // so the combo counter stays alive across chained punches.
+        // ─────────────────────────────────────────────────────────────
         const failsafeMs = action === 'punch-combo' ? 1200 : 400;
         this.scene.time.delayedCall(failsafeMs, () => {
             if (this.isAttacking && hitZone.active) {
                 hitZone.destroy();
-                this.isAttacking = false;
-                this.queuedAction = null;
+                if (this.queuedAction) {
+                    const next = this.queuedAction;
+                    this.queuedAction = null;
+                    this.isAttacking = false;
+                    this.executeAction(next);
+                } else {
+                    this.isAttacking = false;
+                }
             }
         });
 
@@ -721,9 +657,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
             const spinZone = this.scene.add.circle(this.x, this.y - 60, 180);
             this.scene.physics.add.existing(spinZone);
-
-            // Track which targets have already been hit so each is only
-            // damaged once, but ALL nearby enemies/breakables get hit
             const alreadyHit = new Set<any>();
 
             this.scene.physics.add.overlap(spinZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_sz, target: any) => {
@@ -732,7 +665,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                     alreadyHit.add(target);
                     const pushDir = target.x > this.x ? 1 : -1;
 
-                    // Explosion VFX on each impacted target
                     this.safeCall('spawnHitEffect', target.x, target.y - 130);
                     this.safeCall('playSFX', this.punchImpacts);
 
@@ -774,9 +706,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
 
             const hitZone = this.scene.add.zone(this.x + (this.flipX ? -150 : 150), this.y - 60, 260, 160);
             this.scene.physics.add.existing(hitZone);
-
-            // Track per-enemy hits so each nearby target is damaged
-            // exactly once, but the zone does NOT disable after the first
             const alreadyHit = new Set<any>();
 
             this.scene.physics.add.overlap(hitZone, [(this.scene as any).enemies, (this.scene as any).breakables], (_hz, target: any) => {
@@ -784,7 +713,6 @@ export class Darko extends Phaser.Physics.Arcade.Sprite {
                 if (Math.abs(this.y - target.y) <= (target.isBreakable ? 140 : 130)) {
                     alreadyHit.add(target);
 
-                    // Explosion VFX + SFX on each impacted target
                     this.safeCall('spawnHitEffect', target.x, target.y - 130);
                     this.safeCall('playSFX', this.punchImpacts);
 
