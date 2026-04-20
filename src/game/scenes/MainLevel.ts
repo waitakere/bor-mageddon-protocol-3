@@ -42,7 +42,6 @@ export class MainLevel extends Phaser.Scene {
     public lastPlayerHitTime!: number;
     public lastEnemyHitTime!: number;
 
-    // --- AUDIO BUS ROUTING ---
     private currentBgm: Phaser.Sound.BaseSound | null = null;
     private globalSfxVolume: number = 0.8;
 
@@ -61,20 +60,17 @@ export class MainLevel extends Phaser.Scene {
         window.addEventListener('request-scene-restart', this.handleRestart);
         window.addEventListener('request-continue', this.handleContinue as EventListener);
         
-        // Listen to the React bridge audio events
         this.game.events.on('set-bgm-volume', this.handleBgmVolume, this);
         this.game.events.on('set-sfx-volume', this.handleSfxVolume, this);
 
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
             window.removeEventListener('request-scene-restart', this.handleRestart);
             window.removeEventListener('request-continue', this.handleContinue as EventListener);
-            // Clean up audio listeners to prevent memory leaks
             this.game.events.off('set-bgm-volume', this.handleBgmVolume, this);
             this.game.events.off('set-sfx-volume', this.handleSfxVolume, this);
         });
 
         this.sound.stopAll(); 
-        // Store reference to BGM for volume manipulation
         this.currentBgm = this.sound.add('1993_ambient', { loop: true, volume: 0.5 });
         this.currentBgm.play();
 
@@ -118,7 +114,6 @@ export class MainLevel extends Phaser.Scene {
         window.dispatchEvent(new CustomEvent('phaser-ready'));
     }
 
-    // --- AUDIO EVENT HANDLERS ---
     private handleBgmVolume(vol: number) {
         if (this.currentBgm) {
             (this.currentBgm as Phaser.Sound.WebAudioSound).setVolume(vol);
@@ -140,7 +135,6 @@ export class MainLevel extends Phaser.Scene {
         
         this.physics.add.collider(this.player, this.enemies);
         this.physics.add.collider(this.player, this.breakables);
-
         this.physics.add.overlap(this.player, this.items, this.collectItem, undefined, this);
         
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
@@ -154,15 +148,10 @@ export class MainLevel extends Phaser.Scene {
         proj.setDepth(9999);
 
         if (key === 'bullet') {
-            proj.setScale(0.45); // SLIGHTLY SMALLER BULLET
+            proj.setScale(0.45);
             const body = proj.body as Phaser.Physics.Arcade.Body;
-            if (body) {
-                body.setAllowGravity(false); 
-            }
-            
-            this.time.delayedCall(1000, () => {
-                if (proj && proj.active) proj.destroy();
-            });
+            if (body) body.setAllowGravity(false); 
+            this.time.delayedCall(1000, () => { if (proj && proj.active) proj.destroy(); });
         }
         
         this.projectiles.add(proj);
@@ -171,12 +160,10 @@ export class MainLevel extends Phaser.Scene {
     public spawnHitEffect(x: number, y: number) {
         const exps = ['explosion_01', 'explosion_02', 'explosion_03', 'explosion_04'];
         const key = Phaser.Utils.Array.GetRandom(exps);
-
         if (!this.textures.exists(key)) return;
 
         const explosion = this.add.sprite(x, y, key);
-        explosion.setDepth(9999); 
-        explosion.setOrigin(0.5, 0.5); 
+        explosion.setDepth(9999).setOrigin(0.5, 0.5); 
         
         let baseScale = 1.0;
         if (key === 'explosion_01') baseScale = 2.5; 
@@ -184,30 +171,17 @@ export class MainLevel extends Phaser.Scene {
         else baseScale = 1.2; 
 
         explosion.setScale(baseScale); 
-        
         this.tweens.add({
-            targets: explosion,
-            scale: baseScale * 1.3, 
-            alpha: 0, 
-            duration: 250,
-            ease: 'Quad.easeOut',
-            onComplete: () => explosion.destroy()
+            targets: explosion, scale: baseScale * 1.3, alpha: 0, duration: 250,
+            ease: 'Quad.easeOut', onComplete: () => explosion.destroy()
         });
     }
 
     public spawnBlood(x: number, y: number) {
         if (!this.textures.exists('blood_splat')) return;
         const splat = this.add.sprite(x, y, 'blood_splat');
-        splat.setDepth(9999);
-        splat.setScale(0.3); 
-        this.tweens.add({
-            targets: splat,
-            y: y + 20,
-            alpha: 0,
-            duration: 600,
-            ease: 'Sine.easeIn',
-            onComplete: () => splat.destroy()
-        });
+        splat.setDepth(9999).setScale(0.3); 
+        this.tweens.add({ targets: splat, y: y + 20, alpha: 0, duration: 600, ease: 'Sine.easeIn', onComplete: () => splat.destroy() });
     }
 
     private handleContinue = (e: CustomEvent) => {
@@ -229,14 +203,10 @@ export class MainLevel extends Phaser.Scene {
 
     private scatterBreakables() {
         const props = [
-            { x: 600, y: 880, type: 'barrel' }, 
-            { x: 1200, y: 1000, type: 'crate' },
-            { x: 1800, y: 920, type: 'kontejner' }, 
-            { x: 2600, y: 980, type: 'kiosk' }, 
-            { x: 3200, y: 1040, type: 'barrel' }, 
-            { x: 3700, y: 900, type: 'crate' },
-            { x: 4100, y: 950, type: 'barrel' }, 
-            { x: 4400, y: 880, type: 'crate' },
+            { x: 600, y: 880, type: 'barrel' }, { x: 1200, y: 1000, type: 'crate' },
+            { x: 1800, y: 920, type: 'kontejner' }, { x: 2600, y: 980, type: 'kiosk' }, 
+            { x: 3200, y: 1040, type: 'barrel' }, { x: 3700, y: 900, type: 'crate' },
+            { x: 4100, y: 950, type: 'barrel' }, { x: 4400, y: 880, type: 'crate' },
             { x: 4800, y: 1000, type: 'crate' }
         ];
         props.forEach(p => { this.breakables.add(new BreakableObject(this, p.x, p.y, p.type as BreakableType)); });
@@ -245,35 +215,24 @@ export class MainLevel extends Phaser.Scene {
     private createEnemyAnimations() {
         const texture = this.textures.get('enemies_1993');
         if (!texture || texture.key === '__MISSING') return;
-
         const allFrames = texture.getFrameNames();
 
         const enemyPrefixes = [
-            { id: 'mup', search: 'mup' },
-            { id: 'dizel', search: 'dizel' },
-            { id: 'dizelcic', search: 'dizelcic' },
-            { id: 'miner', search: 'miner' }, 
+            { id: 'mup', search: 'mup' }, { id: 'dizel', search: 'dizel' },
+            { id: 'dizelcic', search: 'dizelcic' }, { id: 'miner', search: 'miner' }, 
             { id: 'slobodan', search: 'slobodan' }
         ];
-
         const animTypes = ['walk', 'run', 'attack', 'punch-1', 'punch-2', 'melee', 'damage', 'dying', 'knockdown-get-up', 'jump', 'jump-punch', 'special-attack'];
 
         enemyPrefixes.forEach(enemy => {
             animTypes.forEach(animType => {
                 const animKey = `${enemy.id}-${animType}`;
                 if (this.anims.exists(animKey)) return;
-
-                const searchStr = `${enemy.search}-${animType}/frame_`;
-                const matchingFrames = allFrames.filter(f => f.includes(searchStr)).sort();
-
+                const matchingFrames = allFrames.filter(f => f.includes(`${enemy.search}-${animType}/frame_`)).sort();
                 if (matchingFrames.length > 0) {
-                    const frameConfig: Phaser.Types.Animations.AnimationFrameConfig[] = matchingFrames.map(f => {
-                        return { key: 'enemies_1993', frame: f };
-                    });
-
                     this.anims.create({
                         key: animKey,
-                        frames: frameConfig,
+                        frames: matchingFrames.map(f => ({ key: 'enemies_1993', frame: f })),
                         frameRate: 10,
                         repeat: (animType === 'walk' || animType === 'run') ? -1 : 0
                     });
@@ -312,51 +271,34 @@ export class MainLevel extends Phaser.Scene {
                 }
             }
 
-            // Check manual overlap with enemies (bypasses physics hitboxes entirely)
             this.enemies.getChildren().forEach((e: any) => {
                 if (e.isDead || !e.active) return;
-                
-                const yTolerance = 90; // Extremely generous vertical floor lane allowance
-                const xTolerance = 60; // Generous horizontal strike zone
-
                 const shooterGroundY = p.sourceGroundY || p.y + 180;
-                
-                if (Math.abs(shooterGroundY - e.y) <= yTolerance) {
-                    if (Math.abs(p.x - e.x) <= xTolerance) {
-                        
-                        if (p.hit) p.hit(); else p.destroy();
-                        
-                        // Spawn blood and perfectly aligned chest/face explosion!
-                        this.spawnBlood(e.x, e.y - 50);
-                        this.spawnHitEffect(e.x, e.y - 130); 
+                if (Math.abs(shooterGroundY - e.y) <= 90 && Math.abs(p.x - e.x) <= 60) {
+                    if (p.hit) p.hit(); else p.destroy();
+                    this.spawnBlood(e.x, e.y - 50);
+                    this.spawnHitEffect(e.x, e.y - 130); 
+                    if (e.takeDamage) e.takeDamage(p.damage || 60);
 
-                        if (e.takeDamage) e.takeDamage(p.damage || 60);
-
-                        // FORCE ENEMY DAMAGE ANIMATION
-                        if (!e.isDead && e.anims && e.anims.currentAnim) {
-                            const prefix = e.anims.currentAnim.key.split('-'); 
-                            const dmgAnim = `${prefix}-damage`;
-                            if (this.anims.exists(dmgAnim)) {
-                                e.play(dmgAnim, true);
-                                if (e.setVelocity) e.setVelocity(0, 0); // Stops them instantly!
-                            }
+                    if (!e.isDead && e.anims && e.anims.currentAnim) {
+                        const prefix = e.skinPrefix || e.characterName || e.anims.currentAnim.key.split('-')[0];
+                        const dmgAnim = `${prefix}-damage`;
+                        if (this.anims.exists(dmgAnim)) {
+                            e.play(dmgAnim, true);
+                            if (e.setVelocity) e.setVelocity(0, 0);
                         }
-
-                        if (p.isThrownWeapon && e.takeKnockdown) e.takeKnockdown();
                     }
+                    if (p.isThrownWeapon && e.takeKnockdown) e.takeKnockdown();
                 }
             });
             
-            // Check manual overlap with breakables
             this.breakables.getChildren().forEach((prop: any) => {
                 if (prop.isDead || !prop.active) return;
                 const shooterGroundY = p.sourceGroundY || p.y + 180;
-                if (Math.abs(shooterGroundY - prop.y) <= 100) {
-                    if (Math.abs(p.x - prop.x) <= 60) {
-                        if (p.hit) p.hit(); else p.destroy();
-                        this.spawnHitEffect(prop.x, prop.y - 50);
-                        if (prop.takeDamage) prop.takeDamage(p.damage || 60);
-                    }
+                if (Math.abs(shooterGroundY - prop.y) <= 100 && Math.abs(p.x - prop.x) <= 60) {
+                    if (p.hit) p.hit(); else p.destroy();
+                    this.spawnHitEffect(prop.x, prop.y - 50);
+                    if (prop.takeDamage) prop.takeDamage(p.damage || 60);
                 }
             });
         });
@@ -389,9 +331,18 @@ export class MainLevel extends Phaser.Scene {
         this.player.update(keys);
         this.enemies.getChildren().forEach((e: any) => { if (e.updateAI && !e.isDead) e.updateAI(this.player); });
         
+        // ─── DEPTH SORTING ──────────────────────────────────────────
+        // All game objects sorted by Y (lower = in front).
+        // Player gets +1 so they always render ON TOP of enemies
+        // at the same Y lane — never hidden behind a mob.
+        // ─────────────────────────────────────────────────────────────
         this.children.each((c: any) => { 
             if (c.y && c.type !== 'Image' && c.type !== 'Graphics' && c.type !== 'TileSprite' && !c.isWeaponSprite && !(c instanceof Projectile)) {
-                c.setDepth(c.y); 
+                if (c === this.player) {
+                    c.setDepth(c.y + 1);
+                } else {
+                    c.setDepth(c.y); 
+                }
             } 
         });
         
@@ -400,13 +351,10 @@ export class MainLevel extends Phaser.Scene {
         }
     }
 
-    // --- UPDATED SFX METHOD ---
     public playSFX(marker: string | string[], localVolume: number = 0.8) {
         try {
             if (this.sound.context.state === 'suspended') this.sound.context.resume();
             const finalMarker = Array.isArray(marker) ? marker[Math.floor(Math.random() * marker.length)] : marker;
-
-            // Apply the globalSFX bus multiplier 
             const scaledVolume = localVolume * this.globalSfxVolume;
 
             if (this.cache.json.exists('sfx_atlas')) {
@@ -422,24 +370,18 @@ export class MainLevel extends Phaser.Scene {
                 return;
             }
             return null;
-        } catch (e) {
-            return null;
-        }
+        } catch (e) { return null; }
     }
 
     public dropItem(x: number, y: number) {
         if (Math.random() < 0.25) {
             const drop = this.physics.add.sprite(x, y - 40, 'M70-FINAL rev');
-            drop.setOrigin(0.5, 0.5);
-            drop.setScale(1.0); 
-
+            drop.setOrigin(0.5, 0.5).setScale(1.0); 
             (drop as any).isWeaponPickup = true;
             (drop as any).weaponType = 'M70-FINAL rev';
-
             this.items.add(drop);
             const body = drop.body as Phaser.Physics.Arcade.Body;
             if (body) { body.setSize(drop.displayWidth, 20); body.setOffset(0, drop.displayHeight / 2); }
-            
             this.tweens.add({ targets: drop, alpha: 0.2, duration: 100, yoyo: true, repeat: 5, ease: 'Linear' });
             this.tweens.add({ targets: drop, y: y, duration: 350, ease: 'Bounce.easeOut' });
             return; 
@@ -504,27 +446,19 @@ export class MainLevel extends Phaser.Scene {
             if (currentSector.isBossWave) {
                 if (activeEnemies < currentSector.maxActive && this.spawnedThisWave < currentSector.totalEnemies) {
                     const gangTypes = ['dizel', 'dizelcic', 'miner'];
-                    const randomType = gangTypes[Math.floor(Math.random() * gangTypes.length)];
-                    this.spawnEnemyOffScreen(cam.worldView, randomType);
+                    this.spawnEnemyOffScreen(cam.worldView, gangTypes[Math.floor(Math.random() * gangTypes.length)]);
                 }
-                
                 if (this.spawnedThisWave >= currentSector.totalEnemies && activeEnemies === 0 && !this.bossSpawned) {
                     this.spawnEnemyOffScreen(cam.worldView, 'slobodan');
                     this.bossSpawned = true;
                 }
-                
-                if (this.bossSpawned && activeEnemies === 0) {
-                    this.unlockCamera();
-                }
+                if (this.bossSpawned && activeEnemies === 0) this.unlockCamera();
             } else {
                 if (activeEnemies < currentSector.maxActive && this.spawnedThisWave < currentSector.totalEnemies) {
                     const gangTypes = ['dizel', 'dizelcic', 'miner'];
-                    const randomType = gangTypes[Math.floor(Math.random() * gangTypes.length)];
-                    this.spawnEnemyOffScreen(cam.worldView, randomType);
+                    this.spawnEnemyOffScreen(cam.worldView, gangTypes[Math.floor(Math.random() * gangTypes.length)]);
                 }
-                if (this.spawnedThisWave >= currentSector.totalEnemies && activeEnemies === 0) {
-                    this.unlockCamera();
-                }
+                if (this.spawnedThisWave >= currentSector.totalEnemies && activeEnemies === 0) this.unlockCamera();
             }
         }
     }
@@ -542,7 +476,6 @@ export class MainLevel extends Phaser.Scene {
             case 'slobodan': enemy = new SlobodanCEO(this, spawnX, spawnY); break; 
             default: enemy = new Enemy(this, spawnX, spawnY, type); break;
         }
-        
         this.enemies.add(enemy);
         this.spawnedThisWave++;
     }
@@ -558,22 +491,11 @@ export class MainLevel extends Phaser.Scene {
         
         if (this.currentSectorIndex < this.sectors.length) {
             const goText = this.add.text(this.player.x + 100, this.player.y - 150, 'GO! ➡', { 
-                font: '900 64px "Space Mono"', 
-                color: '#39ff14', 
-                stroke: '#000', 
-                strokeThickness: 8 
+                font: '900 64px "Space Mono"', color: '#39ff14', stroke: '#000', strokeThickness: 8 
             }).setOrigin(0.5);
-            
             this.tweens.add({ 
-                targets: goText, 
-                x: goText.x + 60, 
-                scale: 1.2,
-                duration: 500, 
-                yoyo: true,
-                repeat: 3, 
-                onComplete: () => {
-                    this.tweens.add({ targets: goText, alpha: 0, duration: 500, onComplete: () => goText.destroy() });
-                }
+                targets: goText, x: goText.x + 60, scale: 1.2, duration: 500, yoyo: true, repeat: 3, 
+                onComplete: () => { this.tweens.add({ targets: goText, alpha: 0, duration: 500, onComplete: () => goText.destroy() }); }
             });
         }
     }
@@ -588,13 +510,10 @@ export class MainLevel extends Phaser.Scene {
         if (this.lastEngagedEnemy) {
             eMaxHealth = this.lastEngagedEnemy.skinPrefix === 'slobodan' ? 500 : 100;
         }
-
         window.dispatchEvent(new CustomEvent('update-phaser-hud', {
             detail: { 
-                health: this.player?.health, 
-                maxHealth: this.player?.maxHealth,
-                smf: this.player?.smfMeter, 
-                score: this.score,
+                health: this.player?.health, maxHealth: this.player?.maxHealth,
+                smf: this.player?.smfMeter, score: this.score,
                 playerName: this.player?.characterName,
                 enemyName: this.lastEngagedEnemy && !this.lastEngagedEnemy.isDead ? this.lastEngagedEnemy.skinPrefix : null,
                 enemyHealth: this.lastEngagedEnemy ? this.lastEngagedEnemy.health : 0,
