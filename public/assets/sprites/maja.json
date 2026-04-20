@@ -1186,6 +1186,27 @@
 					}
 				},
 				{
+					"filename": "maja-punch-combo/frame_006.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 256,
+						"h": 256
+					},
+					"spriteSourceSize": {
+						"x": 55,
+						"y": 16,
+						"w": 160,
+						"h": 226
+					},
+					"frame": {
+						"x": 1245,
+						"y": 1190,
+						"w": 160,
+						"h": 226
+					}
+				},
+				{
 					"filename": "maja-punch-combo/frame_004.png",
 					"rotated": false,
 					"trimmed": true,
@@ -1201,7 +1222,7 @@
 					},
 					"frame": {
 						"x": 1245,
-						"y": 1190,
+						"y": 1418,
 						"w": 160,
 						"h": 222
 					}
@@ -1222,7 +1243,7 @@
 					},
 					"frame": {
 						"x": 1245,
-						"y": 1414,
+						"y": 1642,
 						"w": 157,
 						"h": 250
 					}
@@ -3307,7 +3328,7 @@
 					}
 				},
 				{
-					"filename": "maja-punch-combo/frame_006.png",
+					"filename": "maja-punch-combo/frame_008.png",
 					"rotated": false,
 					"trimmed": true,
 					"sourceSize": {
@@ -3328,7 +3349,7 @@
 					}
 				},
 				{
-					"filename": "maja-punch-combo/frame_007.png",
+					"filename": "maja-punch-combo/frame_009.png",
 					"rotated": false,
 					"trimmed": true,
 					"sourceSize": {
@@ -3349,7 +3370,7 @@
 					}
 				},
 				{
-					"filename": "maja-punch-combo/frame_008.png",
+					"filename": "maja-punch-combo/frame_010.png",
 					"rotated": false,
 					"trimmed": true,
 					"sourceSize": {
@@ -3370,7 +3391,7 @@
 					}
 				},
 				{
-					"filename": "maja-punch-combo/frame_009.png",
+					"filename": "maja-punch-combo/frame_011.png",
 					"rotated": false,
 					"trimmed": true,
 					"sourceSize": {
@@ -3455,6 +3476,27 @@
 				},
 				{
 					"filename": "maja-punch-combo/frame_005.png",
+					"rotated": false,
+					"trimmed": true,
+					"sourceSize": {
+						"w": 221,
+						"h": 258
+					},
+					"spriteSourceSize": {
+						"x": 57,
+						"y": 5,
+						"w": 120,
+						"h": 252
+					},
+					"frame": {
+						"x": 875,
+						"y": 3760,
+						"w": 120,
+						"h": 252
+					}
+				},
+				{
+					"filename": "maja-punch-combo/frame_007.png",
 					"rotated": false,
 					"trimmed": true,
 					"sourceSize": {
