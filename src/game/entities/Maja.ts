@@ -124,17 +124,19 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             }
         });
 
-        // ─── COMBO ANIMATION (PUNCH-PUNCH-KICK FINISHER) ────────────
+        // ─── COMBO ANIMATION (PUNCH-PUNCH-PUNCH-KICK FINISHER) ─────
         // Frames 000:      ready stance
         // Frame  001:      first punch windup
-        // Frame  002:      FIRST PUNCH IMPACT — held for emphasis
+        // Frame  002:      1ST PUNCH IMPACT (right arm) — held
         // Frame  003:      return / transition
-        // Frame  004:      SECOND PUNCH IMPACT — held for emphasis
-        // Frame  005:      return / transition to kick
-        // Frame  006:      kick windup (knee lift)
-        // Frame  007:      KICK IMPACT — held longest for max read
-        // Frame  008:      kick follow-through
-        // Frame  009:      recovery
+        // Frame  004:      2ND PUNCH IMPACT (left arm) — held
+        // Frame  005:      return / transition
+        // Frame  006:      3RD PUNCH IMPACT (right arm, grin) — held
+        // Frame  007:      return / transition to kick
+        // Frame  008:      kick windup (knee lift)
+        // Frame  009:      KICK IMPACT — held longest, camera shake
+        // Frame  010:      kick follow-through
+        // Frame  011:      recovery
         // ─────────────────────────────────────────────────────────────
         const comboKey = `${this.characterName}-punch-combo`;
         if (!anims.exists(comboKey)) {
@@ -144,14 +146,16 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                 const frameSequence: { num: string, duration?: number }[] = [
                     { num: '000' },                 // Ready stance
                     { num: '001' },                 // 1st punch windup
-                    { num: '002', duration: 140 },  // 1ST PUNCH IMPACT — hold
+                    { num: '002', duration: 120 },  // 1ST PUNCH IMPACT (right) — hold
                     { num: '003' },                 // return
-                    { num: '004', duration: 140 },  // 2ND PUNCH IMPACT — hold
-                    { num: '005' },                 // transition to kick
-                    { num: '006' },                 // kick windup (knee lift)
-                    { num: '007', duration: 200 },  // KICK IMPACT — held longest
-                    { num: '008' },                 // kick follow-through
-                    { num: '009', duration: 120 },  // recovery
+                    { num: '004', duration: 120 },  // 2ND PUNCH IMPACT (left) — hold
+                    { num: '005' },                 // return
+                    { num: '006', duration: 130 },  // 3RD PUNCH IMPACT (right, grin) — hold
+                    { num: '007' },                 // transition to kick
+                    { num: '008' },                 // kick windup (knee lift)
+                    { num: '009', duration: 200 },  // KICK IMPACT — held longest
+                    { num: '010' },                 // kick follow-through
+                    { num: '011', duration: 120 },  // recovery
                 ];
 
                 const frames = frameSequence
@@ -628,12 +632,19 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
             const yTol = target.isBreakable ? 140 : 60;
             if (Math.abs(this.y - target.y) <= yTol) {
                 if (!hasHit) {
-                    // ─── COMBO FINISHER: 3 rapid staggered impact SFXs ───
+                    // ─── COMBO FINISHER: 3 punch SFXs + 1 kick SFX staggered ───
+                    // Plus a VFX explosion and camera shake on the final kick
                     if (action === 'punch-combo') {
                         this.safeCall('playSFX', this.punchImpacts);
-                        this.scene.time.delayedCall(60, () => this.safeCall('playSFX', this.punchImpacts));
-                        this.scene.time.delayedCall(120, () => this.safeCall('playSFX', this.kickImpacts));
-                        this.scene.cameras.main.shake(150, 0.015);
+                        this.scene.time.delayedCall(80, () => this.safeCall('playSFX', this.punchImpacts));
+                        this.scene.time.delayedCall(160, () => this.safeCall('playSFX', this.punchImpacts));
+                        this.scene.time.delayedCall(240, () => {
+                            this.safeCall('playSFX', this.kickImpacts);
+                            this.scene.cameras.main.shake(200, 0.02);
+                            // Extra VFX burst on the finishing kick
+                            this.safeCall('spawnHitEffect', target.x, target.y - 130);
+                            this.safeCall('spawnHitEffect', target.x + 15, target.y - 80);
+                        });
                     } else {
                         this.safeCall('playSFX', action.includes('punch') ? this.punchImpacts : this.kickImpacts);
                     }
