@@ -388,9 +388,7 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
         const currentAnimKeyForScale = this.anims.currentAnim?.key || '';
         const currentFrameName = this.frame.name;
         
-        if (currentAnimKeyForScale.includes('walk-rifle')) {
-            this.setScale(1.59);
-        } else if (currentFrameName.includes('pick-up')) {
+        if (currentFrameName.includes('pick-up')) {
             this.setScale(1.9);
         } else {
             this.setScale(1.7);
@@ -502,11 +500,8 @@ export class Maja extends Phaser.Physics.Arcade.Sprite {
                     if (this.isRunning) {
                         this.play(`${this.characterName}-run`, true);
                     } else {
-                        if (this.equippedWeapon === 'M70-FINAL rev' && this.scene.anims.exists(`${this.characterName}-walk-rifle`)) {
-                            this.play(`${this.characterName}-walk-rifle`, true);
-                        } else {
-                            this.play(`${this.characterName}-walk`, true);
-                        }
+                        // Maja always uses her regular walk — no walk-rifle variant
+                        this.play(`${this.characterName}-walk`, true);
                     }
                 } else {
                     if (this.equippedWeapon === 'M70-FINAL rev' && this.scene.anims.exists(`${this.characterName}-shoot-with-rifle`)) {
