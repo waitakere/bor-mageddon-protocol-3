@@ -1,4 +1,4 @@
-# Welcome to your project
+# Welcome to your Lovable project
 
 ## Project info
 
@@ -26,48 +26,46 @@ Follow these steps:
 # Step 1: Clone the repository using the project's Git URL.
 git clone <YOUR_GIT_URL>
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Step 2: Navigate to the project directory
+cd BOR-MAGEDDON-1993
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Step 3: Install the necessary dependencies
+npm install
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Step 4: Start the development server with auto-reloading
 npm run dev
-```
+🛠️ Technologies Used
+This project bridges the gap between a modern web UI and a highly optimized retro 16-bit game engine:
 
-**Edit a file directly in GitHub**
+Phaser 3 (Core Game Engine, 2.5D Arcade Physics, WebGL Rendering)
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+React (Game HUD, Main Menus, Overlay UI)
 
-**Use GitHub Codespaces**
+TypeScript (Strict object-oriented typing for game entities and systems)
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Vite (Ultra-fast build tool and dev server)
 
-## What technologies are used for this project?
+Supabase (Backend database for saving player progression and Dinar counts)
 
-This project is built with:
+Tailwind CSS & shadcn-ui (UI Styling)
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+📦 Asset Pipeline Rules
+To ensure the game loads instantly and runs at 60 FPS in the browser, do not upload raw individual .wav files or single .png animation frames to this repository.
 
-## How can I deploy this project?
+All raw assets must be compiled before being placed in the public/assets/ folder:
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+Images: Must be packed into a Texture Atlas (.png + .json).
 
-## Can I connect a custom domain to my Lovable project?
+Audio: Must be compiled into an Audio Sprite (.mp3 + .json) using audiosprite --format phaser.
 
-Yes, you can!
+🌐 Building & Deployment
+Since this project is powered by Vite, deploying it to production is incredibly simple. You can host this game on any static hosting service (like Vercel, Netlify, or GitHub Pages).
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+To generate the final production build of the game, run:
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Bash
+npm run build
+This will compile all your React code, Phaser logic, and assets into a highly optimized dist/ folder. You simply upload the contents of that dist/ folder to your web host!
+
+
+This perfectly sets up your repository for a professional, independent workflow. Are you ready to dive into the Codespace and boot up the game, or do you need help setting up the Supabase database link first?
