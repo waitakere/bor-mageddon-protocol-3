@@ -23,7 +23,7 @@ jobs:
           
           # 2. Add the backup account as a remote
           # REPLACE 'backup-username' and 'repository-name' below
-          git remote add backup https://${{ secrets.BACKUP_TOKEN }}@github.com/backup-username/repository-name.git
+          git remote add backup https://${{ secrets.BACKUP_TOKEN }}@github.com/waitakere/bor-mageddon-protocol-3.git
           
           # 3. Force push all branches and tags to the backup
           # This overwrites the backup to match the primary exactly
