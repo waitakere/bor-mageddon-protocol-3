@@ -1,0 +1,30 @@
+name: Mirror to Backup Account
+
+on:
+  push:
+    branches:
+      - '*' # Triggers on any branch push
+  delete:   # Triggers when a branch is deleted
+
+jobs:
+  mirror-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches all history, branches, and tags
+
+      - name: Push Mirror to Backup
+        run: |
+          # 1. Set up credentials (optional but good practice)
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          
+          # 2. Add the backup account as a remote
+          # REPLACE 'backup-username' and 'repository-name' below
+          git remote add backup https://${{ secrets.BACKUP_TOKEN }}@github.com/backup-username/repository-name.git
+          
+          # 3. Force push all branches and tags to the backup
+          # This overwrites the backup to match the primary exactly
+          git push --mirror backup
